@@ -1,4 +1,3 @@
-
 import { User, UserRole, Department, SystemSettings } from '../types';
 
 export class RGCEValidator {
@@ -168,6 +167,40 @@ export class RGCEValidator {
     }
 
     return { isValid: true };
+  }
+
+  // Validate leave request
+  validateLeaveRequest(leave: Partial<LeaveRequest>): string[] {
+    const errors: string[] = [];
+    
+    if (!leave.fromDate || !leave.toDate) {
+      errors.push('From date and to date are required');
+      return errors;
+    }
+
+    const fromDate = new Date(leave.fromDate);
+    const toDate = new Date(leave.toDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
+    
+    if (fromDate > toDate) {
+      errors.push('From date cannot be after to date');
+    }
+    
+    if (fromDate < today) {
+      errors.push('Cannot request leave for past dates');
+    }
+    
+    const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 7) {
+      errors.push('Leave requests cannot exceed 7 days');
+    }
+    
+    if (!leave.reason || leave.reason.trim().length < 10) {
+      errors.push('Reason must be at least 10 characters long');
+    }
+
+    return errors;
   }
 }
 

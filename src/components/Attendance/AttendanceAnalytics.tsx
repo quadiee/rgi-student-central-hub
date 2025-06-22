@@ -178,7 +178,7 @@ const AttendanceAnalytics: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       stats.attendancePercentage >= 90 ? 'bg-green-100 text-green-800' :
-                      stats.attendancePercentance >= 75 ? 'bg-yellow-100 text-yellow-800' :
+                      stats.attendancePercentage >= 75 ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {stats.attendancePercentage}%

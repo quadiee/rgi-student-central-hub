@@ -81,6 +81,12 @@ export class AttendanceCalculator {
       };
     });
 
+    // Calculate subject-wise attendance (similar to course-wise but grouped differently)
+    const subjectWiseAttendance = courseWiseAttendance.map(course => ({
+      subject: course.courseName,
+      percentage: course.percentage
+    }));
+
     return {
       totalClasses,
       presentClasses,
@@ -88,6 +94,7 @@ export class AttendanceCalculator {
       leaveClasses,
       attendancePercentage,
       courseWiseAttendance,
+      subjectWiseAttendance,
       isAtRisk: attendancePercentage < this.settings.attendanceThreshold,
     };
   }

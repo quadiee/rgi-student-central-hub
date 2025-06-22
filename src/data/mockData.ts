@@ -7,489 +7,578 @@ import {
   TimetableEntry,
   Classroom,
   AttendanceRecord,
-  AttendanceStats,
+  LeaveRequest,
   FeeRecord,
   ExamRecord,
   User,
-  LeaveRequest,
-  Department,
+  AttendanceStats,
   DepartmentStats,
+  AcademicCalendar,
   SystemSettings,
 } from '../types';
 
-// Enhanced Users with RGCE structure
+// Mock Data for Students
+export const mockStudents: Student[] = [
+  {
+    id: 'STU001',
+    name: 'Alice Johnson',
+    rollNumber: '2021A001',
+    course: 'B.Tech CSE',
+    year: 3,
+    semester: 6,
+    email: 'alice.j@rgce.edu.in',
+    phone: '9876543210',
+    profileImage: 'https://example.com/alice.jpg',
+    admissionDate: '2021-08-15',
+    guardianName: 'Robert Johnson',
+    guardianPhone: '9876543211',
+    address: '123 Main Street, Anytown',
+    bloodGroup: 'O+',
+    emergencyContact: '9876543212',
+    department: 'CSE',
+    yearSection: '3-A',
+    attendancePercentage: 85,
+  },
+  {
+    id: 'STU002',
+    name: 'Bob Williams',
+    rollNumber: '2020B002',
+    course: 'B.Tech ECE',
+    year: 4,
+    semester: 8,
+    email: 'bob.w@rgce.edu.in',
+    phone: '9876543220',
+    profileImage: 'https://example.com/bob.jpg',
+    admissionDate: '2020-08-10',
+    guardianName: 'Linda Williams',
+    guardianPhone: '9876543221',
+    address: '456 Elm Street, Anytown',
+    bloodGroup: 'A-',
+    emergencyContact: '9876543222',
+    department: 'ECE',
+    yearSection: '4-B',
+    attendancePercentage: 78,
+  },
+  {
+    id: 'STU003',
+    name: 'Charlie Brown',
+    rollNumber: '2022C003',
+    course: 'B.Tech MECH',
+    year: 2,
+    semester: 4,
+    email: 'charlie.b@rgce.edu.in',
+    phone: '9876543230',
+    profileImage: 'https://example.com/charlie.jpg',
+    admissionDate: '2022-08-20',
+    guardianName: 'Patricia Brown',
+    guardianPhone: '9876543231',
+    address: '789 Oak Street, Anytown',
+    bloodGroup: 'B+',
+    emergencyContact: '9876543232',
+    department: 'MECH',
+    yearSection: '2-C',
+    attendancePercentage: 92,
+  },
+  {
+    id: 'STU004',
+    name: 'Diana Miller',
+    rollNumber: '2023D004',
+    course: 'B.Tech CIVIL',
+    year: 1,
+    semester: 2,
+    email: 'diana.m@rgce.edu.in',
+    phone: '9876543240',
+    profileImage: 'https://example.com/diana.jpg',
+    admissionDate: '2023-08-25',
+    guardianName: 'David Miller',
+    guardianPhone: '9876543241',
+    address: '101 Pine Street, Anytown',
+    bloodGroup: 'AB+',
+    emergencyContact: '9876543242',
+    department: 'CIVIL',
+    yearSection: '1-A',
+    attendancePercentage: 65,
+  },
+  {
+    id: 'STU005',
+    name: 'Eva Garcia',
+    rollNumber: '2021E005',
+    course: 'B.Tech EEE',
+    year: 3,
+    semester: 6,
+    email: 'eva.g@rgce.edu.in',
+    phone: '9876543250',
+    profileImage: 'https://example.com/eva.jpg',
+    admissionDate: '2021-09-01',
+    guardianName: 'Sophia Garcia',
+    guardianPhone: '9876543251',
+    address: '222 Maple Street, Anytown',
+    bloodGroup: 'O-',
+    emergencyContact: '9876543252',
+    department: 'EEE',
+    yearSection: '3-B',
+    attendancePercentage: 70,
+  },
+];
+
+// Mock Data for Faculty
+export const mockFaculty: Faculty[] = [
+  {
+    id: 'FAC001',
+    name: 'Dr. Rajesh Kumar',
+    email: 'rajesh.k@rgce.edu.in',
+    phone: '9444455555',
+    department: 'CSE',
+    designation: 'Professor',
+    employeeId: 'EMP1001',
+    subjects: ['Data Structures', 'Algorithms'],
+    profileImage: 'https://example.com/rajesh.jpg',
+    assignedCourses: ['CSE301', 'CSE401'],
+  },
+  {
+    id: 'FAC002',
+    name: 'Dr. Priya Sharma',
+    email: 'priya.s@rgce.edu.in',
+    phone: '9555566666',
+    department: 'ECE',
+    designation: 'Associate Professor',
+    employeeId: 'EMP1002',
+    subjects: ['Signals and Systems', 'Digital Communication'],
+    profileImage: 'https://example.com/priya.jpg',
+    assignedCourses: ['ECE302', 'ECE402'],
+  },
+  {
+    id: 'FAC003',
+    name: 'Mr. Arvind Patel',
+    email: 'arvind.p@rgce.edu.in',
+    phone: '9666677777',
+    department: 'MECH',
+    designation: 'Assistant Professor',
+    employeeId: 'EMP1003',
+    subjects: ['Thermodynamics', 'Fluid Mechanics'],
+    profileImage: 'https://example.com/arvind.jpg',
+    assignedCourses: ['MECH303', 'MECH403'],
+  },
+];
+
+// Mock Data for Subjects
+export const mockSubjects: Subject[] = [
+  {
+    id: 'SUB001',
+    name: 'Data Structures',
+    code: 'CSE301',
+    department: 'CSE',
+    semester: 3,
+    credits: 4,
+    type: 'Theory',
+  },
+  {
+    id: 'SUB002',
+    name: 'Signals and Systems',
+    code: 'ECE302',
+    department: 'ECE',
+    semester: 3,
+    credits: 4,
+    type: 'Theory',
+  },
+  {
+    id: 'SUB003',
+    name: 'Thermodynamics',
+    code: 'MECH303',
+    department: 'MECH',
+    semester: 3,
+    credits: 4,
+    type: 'Theory',
+  },
+];
+
+// Mock Data for Courses
+export const mockCourses: Course[] = [
+  {
+    id: 'CRS001',
+    courseCode: 'CSE301',
+    courseName: 'Data Structures',
+    department: 'CSE',
+    facultyEmail: 'rajesh.k@rgce.edu.in',
+    hoursPerWeek: 4,
+    semester: 3,
+    year: 2023,
+    yearSection: '3-A',
+    avgAttendance: 85,
+  },
+  {
+    id: 'CRS002',
+    courseCode: 'ECE302',
+    courseName: 'Signals and Systems',
+    department: 'ECE',
+    facultyEmail: 'priya.s@rgce.edu.in',
+    hoursPerWeek: 4,
+    semester: 3,
+    year: 2023,
+    yearSection: '3-B',
+    avgAttendance: 78,
+  },
+  {
+    id: 'CRS003',
+    courseCode: 'MECH303',
+    courseName: 'Thermodynamics',
+    department: 'MECH',
+    facultyEmail: 'arvind.p@rgce.edu.in',
+    hoursPerWeek: 4,
+    semester: 3,
+    year: 2023,
+    yearSection: '3-C',
+    avgAttendance: 92,
+  },
+];
+
+// Mock Data for Time Slots
+export const timeSlots: TimeSlot[] = [
+  { id: 'TS001', startTime: '09:00', endTime: '09:50', period: 1 },
+  { id: 'TS002', startTime: '10:00', endTime: '10:50', period: 2 },
+  { id: 'TS003', startTime: '11:00', endTime: '11:50', period: 3 },
+  { id: 'TS004', startTime: '12:00', endTime: '12:50', period: 4 },
+  { id: 'TS005', startTime: '14:00', endTime: '14:50', period: 5 },
+  { id: 'TS006', startTime: '15:00', endTime: '15:50', period: 6 },
+  { id: 'TS007', startTime: '16:00', endTime: '16:50', period: 7 },
+  { id: 'TS008', startTime: '17:00', endTime: '17:50', period: 8 },
+];
+
+// Mock Data for Timetable Entries
+export const mockTimetable: TimetableEntry[] = [
+  {
+    id: 'TT001',
+    dayOfWeek: 1,
+    timeSlot: timeSlots[0],
+    subjectId: 'SUB001',
+    facultyId: 'FAC001',
+    classroomId: 'CR001',
+    course: 'B.Tech CSE',
+    semester: 3,
+    year: 2023,
+  },
+  {
+    id: 'TT002',
+    dayOfWeek: 2,
+    timeSlot: timeSlots[1],
+    subjectId: 'SUB002',
+    facultyId: 'FAC002',
+    classroomId: 'CR002',
+    course: 'B.Tech ECE',
+    semester: 3,
+    year: 2023,
+  },
+  {
+    id: 'TT003',
+    dayOfWeek: 3,
+    timeSlot: timeSlots[2],
+    subjectId: 'SUB003',
+    facultyId: 'FAC003',
+    classroomId: 'CR003',
+    course: 'B.Tech MECH',
+    semester: 3,
+    year: 2023,
+  },
+];
+
+// Mock Data for Classrooms
+export const mockClassrooms: Classroom[] = [
+  {
+    id: 'CR001',
+    name: 'Lecture Hall 101',
+    capacity: 60,
+    type: 'Lecture Hall',
+    building: 'Academic Block A',
+    floor: 1,
+    facilities: ['Projector', 'Whiteboard', 'Audio System'],
+  },
+  {
+    id: 'CR002',
+    name: 'Electronics Lab 201',
+    capacity: 30,
+    type: 'Lab',
+    building: 'Technical Block B',
+    floor: 2,
+    facilities: ['Oscilloscopes', 'Function Generators', 'Power Supplies'],
+  },
+  {
+    id: 'CR003',
+    name: 'Mechanical Workshop 102',
+    capacity: 40,
+    type: 'Lab',
+    building: 'Workshop Block C',
+    floor: 1,
+    facilities: ['Lathe Machines', 'Milling Machines', 'Welding Equipment'],
+  },
+];
+
+// Mock Data for Attendance Records
+export const mockAttendance: AttendanceRecord[] = [
+  {
+    id: 'ATT001',
+    studentId: 'STU001',
+    courseCode: 'CSE301',
+    date: '2024-06-20',
+    hourNumber: 1,
+    status: 'Present',
+    facultyId: 'FAC001',
+    markedAt: '2024-06-20T09:15:00',
+    markedBy: 'FAC001',
+    academicYear: '2024-25',
+  },
+  {
+    id: 'ATT002',
+    studentId: 'STU002',
+    courseCode: 'ECE302',
+    date: '2024-06-20',
+    hourNumber: 2,
+    status: 'Absent',
+    facultyId: 'FAC002',
+    markedAt: '2024-06-20T10:10:00',
+    markedBy: 'FAC002',
+    academicYear: '2024-25',
+  },
+  {
+    id: 'ATT003',
+    studentId: 'STU003',
+    courseCode: 'MECH303',
+    date: '2024-06-20',
+    hourNumber: 3,
+    status: 'Present',
+    facultyId: 'FAC003',
+    markedAt: '2024-06-20T11:12:00',
+    markedBy: 'FAC003',
+    academicYear: '2024-25',
+  },
+  {
+    id: 'ATT004',
+    studentId: 'STU001',
+    courseCode: 'CSE301',
+    date: '2024-06-20',
+    hourNumber: 2,
+    status: 'Leave',
+    facultyId: 'FAC001',
+    markedAt: '2024-06-20T10:18:00',
+    markedBy: 'FAC001',
+    academicYear: '2024-25',
+  },
+  {
+    id: 'ATT005',
+    studentId: 'STU002',
+    courseCode: 'ECE302',
+    date: '2024-06-20',
+    hourNumber: 1,
+    status: 'Present',
+    facultyId: 'FAC002',
+    markedAt: '2024-06-20T09:25:00',
+    markedBy: 'FAC002',
+    academicYear: '2024-25',
+  },
+  {
+    id: 'ATT006',
+    studentId: 'STU003',
+    courseCode: 'MECH303',
+    date: '2024-06-20',
+    hourNumber: 4,
+    status: 'Absent',
+    facultyId: 'FAC003',
+    markedAt: '2024-06-20T12:20:00',
+    markedBy: 'FAC003',
+    academicYear: '2024-25',
+  },
+];
+
+// Mock Data for Leave Requests
+export const mockLeaves: LeaveRequest[] = [
+  {
+    id: 'LV001',
+    studentId: 'STU001',
+    fromDate: '2024-07-01',
+    toDate: '2024-07-03',
+    reason: 'Medical appointment',
+    facultyApproval: 'Approved',
+    hodApproval: 'Pending',
+    finalStatus: 'Pending',
+    approvedBy: 'rajesh.k@rgce.edu.in',
+    requestedOn: '2024-06-20T14:00:00',
+    courseCode: 'CSE301',
+  },
+  {
+    id: 'LV002',
+    studentId: 'STU002',
+    fromDate: '2024-07-05',
+    toDate: '2024-07-05',
+    reason: 'Family function',
+    facultyApproval: 'Pending',
+    hodApproval: 'Pending',
+    finalStatus: 'Pending',
+    requestedOn: '2024-06-20T15:00:00',
+    courseCode: 'ECE302',
+  },
+  {
+    id: 'LV003',
+    studentId: 'STU003',
+    fromDate: '2024-07-10',
+    toDate: '2024-07-12',
+    reason: 'Personal reasons',
+    facultyApproval: 'Approved',
+    hodApproval: 'Approved',
+    finalStatus: 'Approved',
+    approvedBy: 'arvind.p@rgce.edu.in',
+    requestedOn: '2024-06-20T16:00:00',
+    courseCode: 'MECH303',
+  },
+];
+
+// Mock Data for Fee Records
+export const mockFees: FeeRecord[] = [
+  {
+    id: 'FR001',
+    studentId: 'STU001',
+    feeType: 'Tuition Fee',
+    amount: 50000,
+    dueDate: '2024-07-31',
+    paidDate: '2024-06-15',
+    status: 'Paid',
+    semester: 1,
+    academicYear: '2024-25',
+    paymentMethod: 'Online',
+    receiptNumber: 'RCPT001',
+  },
+  {
+    id: 'FR002',
+    studentId: 'STU002',
+    feeType: 'Exam Fee',
+    amount: 5000,
+    dueDate: '2024-07-31',
+    paidDate: null,
+    status: 'Pending',
+    semester: 1,
+    academicYear: '2024-25',
+    paymentMethod: null,
+    receiptNumber: null,
+  },
+  {
+    id: 'FR003',
+    studentId: 'STU003',
+    feeType: 'Library Fee',
+    amount: 1000,
+    dueDate: '2024-07-31',
+    paidDate: '2024-06-20',
+    status: 'Paid',
+    semester: 1,
+    academicYear: '2024-25',
+    paymentMethod: 'Cash',
+    receiptNumber: 'RCPT003',
+  },
+];
+
+// Mock Data for Exam Records
+export const mockExams: ExamRecord[] = [
+  {
+    id: 'ER001',
+    studentId: 'STU001',
+    subject: 'Data Structures',
+    subjectId: 'SUB001',
+    examType: 'Mid-term',
+    marksObtained: 45,
+    totalMarks: 50,
+    examDate: '2024-06-15',
+    grade: 'A',
+    percentage: 90,
+    remarks: 'Excellent',
+  },
+  {
+    id: 'ER002',
+    studentId: 'STU002',
+    subject: 'Signals and Systems',
+    subjectId: 'SUB002',
+    examType: 'Mid-term',
+    marksObtained: 35,
+    totalMarks: 50,
+    examDate: '2024-06-16',
+    grade: 'B',
+    percentage: 70,
+    remarks: 'Good',
+  },
+  {
+    id: 'ER003',
+    studentId: 'STU003',
+    subject: 'Thermodynamics',
+    subjectId: 'SUB003',
+    examType: 'Mid-term',
+    marksObtained: 40,
+    totalMarks: 50,
+    examDate: '2024-06-17',
+    grade: 'A',
+    percentage: 80,
+    remarks: 'Very Good',
+  },
+];
+
+// Mock Data for Users
 export const mockUsers: User[] = [
   {
-    id: '1',
+    id: 'USR001',
     name: 'Admin User',
     email: 'admin@rgce.edu.in',
     role: 'admin',
     department: 'ADMIN',
-    profileImage: 'https://i.pravatar.cc/150?img=10',
-    permissions: ['all'],
+    permissions: ['read', 'write', 'delete'],
     isActive: true,
-    createdAt: '2024-01-01'
+    lastLogin: '2024-06-20T10:00:00',
+    createdAt: '2024-01-01T00:00:00',
   },
   {
-    id: '2',
-    name: 'Dr. Rajesh Kumar',
-    email: 'rajesh.kumar@rgce.edu.in',
-    role: 'hod',
-    department: 'CSE',
-    facultyId: 'fac1',
-    profileImage: 'https://i.pravatar.cc/150?img=6',
-    permissions: ['hod', 'faculty'],
-    isActive: true
-  },
-  {
-    id: '3',
-    name: 'Alice Johnson',
-    email: 'alice.johnson@rgce.edu.in',
+    id: 'USR002',
+    name: 'Student Alice',
+    email: 'alice.j@rgce.edu.in',
     role: 'student',
     department: 'CSE',
-    studentId: 'std1',
-    profileImage: 'https://i.pravatar.cc/150?img=1',
-    permissions: ['student'],
-    isActive: true
+    studentId: 'STU001',
   },
   {
-    id: '4',
-    name: 'Dr. Priya Sharma',
-    email: 'priya.sharma@rgce.edu.in',
+    id: 'USR003',
+    name: 'Faculty Rajesh',
+    email: 'rajesh.k@rgce.edu.in',
     role: 'faculty',
     department: 'CSE',
-    facultyId: 'fac2',
-    profileImage: 'https://i.pravatar.cc/150?img=7',
-    permissions: ['faculty'],
-    isActive: true
-  },
-  {
-    id: '5',
-    name: 'Dr. Principal',
-    email: 'principal@rgce.edu.in',
-    role: 'principal',
-    department: 'ADMIN',
-    profileImage: 'https://i.pravatar.cc/150?img=8',
-    permissions: ['principal', 'all'],
-    isActive: true
-  }
-];
-
-// Enhanced Students with department and year-section
-export const mockStudents: Student[] = [
-  {
-    id: 'std1',
-    name: 'Alice Johnson',
-    rollNumber: '21CSE001',
-    course: 'B.Tech Computer Science',
-    year: 3,
-    semester: 5,
-    department: 'CSE',
-    yearSection: '3-A',
-    email: 'alice.johnson@rgce.edu.in',
-    phone: '9876543210',
-    profileImage: 'https://i.pravatar.cc/150?img=1',
-    admissionDate: '2021-08-15',
-    guardianName: 'Robert Johnson',
-    guardianPhone: '9876543211',
-    address: '123 Highland, Anytown',
-    bloodGroup: 'O+',
-    emergencyContact: '9876543212',
-    attendancePercentage: 85
-  },
-  {
-    id: 'std2',
-    name: 'Raj Patel',
-    rollNumber: '21CSE002',
-    course: 'B.Tech Computer Science',
-    year: 3,
-    semester: 5,
-    department: 'CSE',
-    yearSection: '3-A',
-    email: 'raj.patel@rgce.edu.in',
-    phone: '9876543213',
-    profileImage: 'https://i.pravatar.cc/150?img=2',
-    admissionDate: '2021-08-16',
-    guardianName: 'Suresh Patel',
-    guardianPhone: '9876543214',
-    address: '456 Gandhi Nagar, Rajkot',
-    bloodGroup: 'A+',
-    emergencyContact: '9876543215',
-    attendancePercentage: 72 // At-risk student
-  },
-  {
-    id: 'std3',
-    name: 'Priya Mehta',
-    rollNumber: '21ECE001',
-    course: 'B.Tech Electronics',
-    year: 3,
-    semester: 5,
-    department: 'ECE',
-    yearSection: '3-B',
-    email: 'priya.mehta@rgce.edu.in',
-    phone: '9876543216',
-    profileImage: 'https://i.pravatar.cc/150?img=3',
-    admissionDate: '2021-08-17',
-    guardianName: 'Ramesh Mehta',
-    guardianPhone: '9876543217',
-    address: '789 Satellite, Ahmedabad',
-    bloodGroup: 'B+',
-    emergencyContact: '9876543218',
-    attendancePercentage: 90
-  },
-  {
-    id: 'std4',
-    name: 'Diana Miller',
-    rollNumber: '2021004',
-    course: 'Civil Engineering',
-    year: 3,
-    semester: 5,
-    email: 'diana.m@example.com',
-    phone: '456-789-0123',
-    profileImage: 'https://i.pravatar.cc/150?img=4',
-    admissionDate: '2021-08-18',
-    guardianName: 'Michael Miller',
-    guardianPhone: '456-789-0124',
-    address: '101 Upland, Anytown',
-    bloodGroup: 'AB+',
-    emergencyContact: '654-321-0987',
-    department: 'CIVIL',
-    yearSection: '3-A',
-    attendancePercentage: 88
-  },
-  {
-    id: 'std5',
-    name: 'Ethan Davis',
-    rollNumber: '2021005',
-    course: 'Chemical Engineering',
-    year: 3,
-    semester: 5,
-    email: 'ethan.d@example.com',
-    phone: '567-890-1234',
-    profileImage: 'https://i.pravatar.cc/150?img=5',
-    admissionDate: '2021-08-19',
-    guardianName: 'Susan Davis',
-    guardianPhone: '567-890-1235',
-    address: '112 Bottomland, Anytown',
-    bloodGroup: 'O-',
-    emergencyContact: '543-210-9876',
-    department: 'MECH',
-    yearSection: '3-B',
-    attendancePercentage: 76
+    facultyId: 'FAC001',
   },
 ];
 
-// Enhanced Faculty with assigned courses
-export const mockFaculty: Faculty[] = [
-  {
-    id: 'fac1',
-    name: 'Dr. Rajesh Kumar',
-    email: 'rajesh.kumar@rgce.edu.in',
-    phone: '9876543220',
-    department: 'CSE',
-    designation: 'HOD & Professor',
-    employeeId: 'RGCE001',
-    subjects: ['sub1', 'sub2'],
-    profileImage: 'https://i.pravatar.cc/150?img=6',
-    assignedCourses: ['CSE301', 'CSE302']
-  },
-  {
-    id: 'fac2',
-    name: 'Dr. Priya Sharma',
-    email: 'priya.sharma@rgce.edu.in',
-    phone: '9876543221',
-    department: 'CSE',
-    designation: 'Associate Professor',
-    employeeId: 'RGCE002',
-    subjects: ['sub3'],
-    profileImage: 'https://i.pravatar.cc/150?img=7',
-    assignedCourses: ['CSE303']
-  },
-  {
-    id: 'fac3',
-    name: 'Dr. Amit Joshi',
-    email: 'amit.joshi@rgce.edu.in',
-    phone: '9876543222',
-    department: 'ECE',
-    designation: 'Assistant Professor',
-    employeeId: 'RGCE003',
-    subjects: ['sub4'],
-    profileImage: 'https://i.pravatar.cc/150?img=8',
-    assignedCourses: ['ECE301']
-  }
-];
-
-// New Courses module
-export const mockCourses: Course[] = [
-  {
-    id: 'course1',
-    courseCode: 'CSE301',
-    courseName: 'Database Management Systems',
-    department: 'CSE',
-    facultyEmail: 'rajesh.kumar@rgce.edu.in',
-    hoursPerWeek: 6,
-    semester: 5,
-    year: 3,
-    yearSection: '3-A',
-    avgAttendance: 85
-  },
-  {
-    id: 'course2',
-    courseCode: 'CSE302',
-    courseName: 'Software Engineering',
-    department: 'CSE',
-    facultyEmail: 'rajesh.kumar@rgce.edu.in',
-    hoursPerWeek: 5,
-    semester: 5,
-    year: 3,
-    yearSection: '3-A',
-    avgAttendance: 78
-  },
-  {
-    id: 'course3',
-    courseCode: 'CSE303',
-    courseName: 'Computer Networks',
-    department: 'CSE',
-    facultyEmail: 'priya.sharma@rgce.edu.in',
-    hoursPerWeek: 4,
-    semester: 5,
-    year: 3,
-    yearSection: '3-A',
-    avgAttendance: 82
-  },
-  {
-    id: 'course4',
-    courseCode: 'ECE301',
-    courseName: 'Digital Signal Processing',
-    department: 'ECE',
-    facultyEmail: 'amit.joshi@rgce.edu.in',
-    hoursPerWeek: 5,
-    semester: 5,
-    year: 3,
-    yearSection: '3-B',
-    avgAttendance: 88
-  }
-];
-
-// Enhanced Subjects
-export const mockSubjects: Subject[] = [
-  {
-    id: 'sub1',
-    name: 'Database Management Systems',
-    code: 'CSE301',
-    department: 'CSE',
-    semester: 5,
-    credits: 4,
-    type: 'Theory',
-  },
-  {
-    id: 'sub2',
-    name: 'Software Engineering',
-    code: 'CSE302',
-    department: 'CSE',
-    semester: 5,
-    credits: 4,
-    type: 'Theory',
-  },
-  {
-    id: 'sub3',
-    name: 'Computer Networks',
-    code: 'CSE303',
-    department: 'CSE',
-    semester: 5,
-    credits: 3,
-    type: 'Theory',
-  },
-  {
-    id: 'sub4',
-    name: 'Digital Signal Processing',
-    code: 'ECE301',
-    department: 'ECE',
-    semester: 5,
-    credits: 4,
-    type: 'Theory',
-  },
-  {
-    id: 'sub5',
-    name: 'Thermodynamics',
-    code: 'ME201',
-    department: 'Mechanical Engineering',
-    semester: 3,
-    credits: 3,
-    type: 'Theory',
-  },
-];
-
-// New Leave Requests
-export const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: 'leave1',
-    studentId: 'std1',
-    fromDate: '2024-06-25',
-    toDate: '2024-06-26',
-    reason: 'Family function - cousin marriage',
-    facultyApproval: 'Approved',
-    hodApproval: 'Pending',
-    finalStatus: 'Pending',
-    requestedOn: '2024-06-20T10:00:00',
-    courseCode: 'CSE301'
-  },
-  {
-    id: 'leave2',
-    studentId: 'std2',
-    fromDate: '2024-06-28',
-    toDate: '2024-06-28',
-    reason: 'Medical appointment',
-    facultyApproval: 'Pending',
-    hodApproval: 'Pending',
-    finalStatus: 'Pending',
-    requestedOn: '2024-06-22T14:30:00'
-  },
-  {
-    id: 'leave3',
-    studentId: 'std3',
-    fromDate: '2024-06-20',
-    toDate: '2024-06-21',
-    reason: 'Technical symposium participation',
-    facultyApproval: 'Approved',
-    hodApproval: 'Approved',
-    finalStatus: 'Approved',
-    approvedBy: 'fac3',
-    requestedOn: '2024-06-18T09:15:00'
-  }
-];
-
-// Enhanced Attendance with hourly tracking
-export const mockAttendance: AttendanceRecord[] = [
-  {
-    id: 'att1',
-    studentId: 'std1',
-    courseCode: 'CSE301',
-    date: '2024-06-20',
-    hourNumber: 1,
-    status: 'Present',
-    facultyId: 'fac1',
-    markedAt: '2024-06-20T09:05:00',
-    markedBy: 'fac1',
-    academicYear: '2024-25'
-  },
-  {
-    id: 'att2',
-    studentId: 'std1',
-    courseCode: 'CSE301',
-    date: '2024-06-20',
-    hourNumber: 2,
-    status: 'Present',
-    facultyId: 'fac1',
-    markedAt: '2024-06-20T10:05:00',
-    markedBy: 'fac1',
-    academicYear: '2024-25'
-  },
-  {
-    id: 'att3',
-    studentId: 'std2',
-    courseCode: 'CSE301',
-    date: '2024-06-20',
-    hourNumber: 1,
-    status: 'Absent',
-    facultyId: 'fac1',
-    markedAt: '2024-06-20T09:05:00',
-    markedBy: 'fac1',
-    academicYear: '2024-25'
-  },
-  {
-    id: 'att4',
-    studentId: 'std3',
-    courseCode: 'ECE301',
-    date: '2024-06-21',
-    hourNumber: 1,
-    status: 'Leave',
-    facultyId: 'fac3',
-    markedAt: '2024-06-21T09:05:00',
-    markedBy: 'fac3',
-    academicYear: '2024-25'
-  }
-];
-
-// Department Statistics
-export const mockDepartmentStats: DepartmentStats[] = [
-  {
-    department: 'CSE',
-    totalStudents: 120,
-    avgAttendance: 82,
-    atRiskStudents: 8,
-    totalCourses: 12,
-    activeFaculty: 8
-  },
-  {
-    department: 'ECE',
-    totalStudents: 90,
-    avgAttendance: 86,
-    atRiskStudents: 5,
-    totalCourses: 10,
-    activeFaculty: 6
-  },
-  {
-    department: 'MECH',
-    totalStudents: 100,
-    avgAttendance: 79,
-    atRiskStudents: 12,
-    totalCourses: 11,
-    activeFaculty: 7
-  },
-  {
-    department: 'CIVIL',
-    totalStudents: 80,
-    avgAttendance: 88,
-    atRiskStudents: 3,
-    totalCourses: 9,
-    activeFaculty: 5
-  }
-];
-
-// System Settings
-export const mockSystemSettings: SystemSettings = {
-  attendanceThreshold: 75,
-  semesterStartDate: '2024-06-01',
-  semesterEndDate: '2024-11-30',
-  hoursPerDay: 8,
-  workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-  emailDomain: '@rgce.edu.in'
-};
-
-// Utility functions for calculations
 export const calculateAttendanceStats = (studentId: string): AttendanceStats => {
-  const studentAttendance = mockAttendance.filter(record => record.studentId === studentId);
+  const studentAttendance = mockAttendance.filter(a => a.studentId === studentId);
   const totalClasses = studentAttendance.length;
-  const presentClasses = studentAttendance.filter(record => record.status === 'Present').length;
-  const absentClasses = studentAttendance.filter(record => record.status === 'Absent').length;
-  const leaveClasses = studentAttendance.filter(record => record.status === 'Leave').length;
-
+  const presentClasses = studentAttendance.filter(a => a.status === 'Present').length;
+  const absentClasses = studentAttendance.filter(a => a.status === 'Absent').length;
+  const leaveClasses = studentAttendance.filter(a => a.status === 'Leave').length;
+  
   const attendancePercentage = totalClasses > 0 ? 
     Math.round(((presentClasses + leaveClasses) / totalClasses) * 100) : 0;
 
-  const courseWiseAttendance = mockCourses
-    .filter(course => {
-      // Get student's courses based on department and year
-      const student = mockStudents.find(s => s.id === studentId);
-      return student && course.department === student.department && course.year === student.year;
-    })
-    .map(course => {
-      const courseAttendance = studentAttendance.filter(record => record.courseCode === course.courseCode);
-      const courseTotal = courseAttendance.length;
-      const coursePresent = courseAttendance.filter(record => 
-        record.status === 'Present' || record.status === 'Leave'
-      ).length;
-      const percentage = courseTotal > 0 ? Math.round((coursePresent / courseTotal) * 100) : 0;
+  // Mock course-wise data
+  const courseWiseAttendance = [
+    {
+      courseCode: 'CSE301',
+      courseName: 'Data Structures',
+      totalHours: Math.floor(totalClasses / 2),
+      presentHours: Math.floor(presentClasses / 2),
+      percentage: Math.round(Math.random() * 20 + 75)
+    },
+    {
+      courseCode: 'CSE302', 
+      courseName: 'Database Management',
+      totalHours: Math.floor(totalClasses / 2),
+      presentHours: Math.floor(presentClasses / 2),
+      percentage: Math.round(Math.random() * 20 + 75)
+    }
+  ];
 
-      return {
-        courseCode: course.courseCode,
-        courseName: course.courseName,
-        totalHours: courseTotal,
-        presentHours: coursePresent,
-        percentage: percentage,
-      };
-    });
+  const subjectWiseAttendance = courseWiseAttendance.map(course => ({
+    subject: course.courseName,
+    percentage: course.percentage
+  }));
 
   return {
     totalClasses,
@@ -498,263 +587,7 @@ export const calculateAttendanceStats = (studentId: string): AttendanceStats => 
     leaveClasses,
     attendancePercentage,
     courseWiseAttendance,
-    isAtRisk: attendancePercentage < mockSystemSettings.attendanceThreshold,
+    subjectWiseAttendance,
+    isAtRisk: attendancePercentage < 75
   };
 };
-
-export const calculateCourseAvgAttendance = (courseCode: string): number => {
-  const courseAttendance = mockAttendance.filter(record => record.courseCode === courseCode);
-  if (courseAttendance.length === 0) return 0;
-
-  const studentIds = [...new Set(courseAttendance.map(record => record.studentId))];
-  const studentAttendances = studentIds.map(studentId => {
-    const studentCourseAttendance = courseAttendance.filter(record => record.studentId === studentId);
-    const total = studentCourseAttendance.length;
-    const present = studentCourseAttendance.filter(record => 
-      record.status === 'Present' || record.status === 'Leave'
-    ).length;
-    return total > 0 ? (present / total) * 100 : 0;
-  });
-
-  return Math.round(studentAttendances.reduce((sum, att) => sum + att, 0) / studentAttendances.length);
-};
-
-// Legacy exports for backward compatibility
-export const timeSlots: TimeSlot[] = [
-  { id: 'ts1', startTime: '9:00 AM', endTime: '10:00 AM', period: 1 },
-  { id: 'ts2', startTime: '10:00 AM', endTime: '11:00 AM', period: 2 },
-  { id: 'ts3', startTime: '11:00 AM', endTime: '12:00 PM', period: 3 },
-  { id: 'ts4', startTime: '1:00 PM', endTime: '2:00 PM', period: 4 },
-  { id: 'ts5', startTime: '2:00 PM', endTime: '3:00 PM', period: 5 },
-  { id: 'ts6', startTime: '3:00 PM', endTime: '4:00 PM', period: 6 },
-  { id: 'ts7', startTime: '4:00 PM', endTime: '5:00 PM', period: 7 },
-  { id: 'ts8', startTime: '5:00 PM', endTime: '6:00 PM', period: 8 },
-];
-
-export const mockTimetable: TimetableEntry[] = [
-  {
-    id: 'tt1',
-    dayOfWeek: 1,
-    timeSlot: timeSlots[0],
-    subjectId: 'sub1',
-    facultyId: 'fac1',
-    classroomId: 'cr1',
-    course: 'CSE301',
-    semester: 5,
-    year: 3,
-  },
-  {
-    id: 'tt2',
-    dayOfWeek: 1,
-    timeSlot: timeSlots[1],
-    subjectId: 'sub2',
-    facultyId: 'fac1',
-    classroomId: 'cr1',
-    course: 'CSE302',
-    semester: 5,
-    year: 3,
-  },
-  {
-    id: 'tt3',
-    dayOfWeek: 2, // Tuesday
-    timeSlot: timeSlots[0],
-    subjectId: 'sub3',
-    facultyId: 'fac2',
-    classroomId: 'cr3',
-    course: 'Electrical Engineering',
-    semester: 5,
-    year: 3,
-  },
-  {
-    id: 'tt4',
-    dayOfWeek: 3, // Wednesday
-    timeSlot: timeSlots[2],
-    subjectId: 'sub1',
-    facultyId: 'fac1',
-    classroomId: 'cr1',
-    course: 'Computer Science',
-    semester: 5,
-    year: 3,
-  },
-  {
-    id: 'tt5',
-    dayOfWeek: 4, // Thursday
-    timeSlot: timeSlots[1],
-    subjectId: 'sub4',
-    facultyId: 'fac2',
-    classroomId: 'cr2',
-    course: 'Electrical Engineering',
-    semester: 5,
-    year: 3,
-  },
-  {
-    id: 'tt6',
-    dayOfWeek: 5, // Friday
-    timeSlot: timeSlots[0],
-    subjectId: 'sub5',
-    facultyId: 'fac3',
-    classroomId: 'cr3',
-    course: 'Mechanical Engineering',
-    semester: 5,
-    year: 3,
-  },
-];
-
-export const mockClassrooms: Classroom[] = [
-  {
-    id: 'cr1',
-    name: 'CSE Lab 1',
-    capacity: 60,
-    type: 'Lab',
-    building: 'CSE Block',
-    floor: 1,
-    facilities: ['Projector', 'Computers', 'AC'],
-  },
-  {
-    id: 'cr2',
-    name: 'LH-101',
-    capacity: 120,
-    type: 'Lecture Hall',
-    building: 'Main Block',
-    floor: 1,
-    facilities: ['Projector', 'Mic System', 'AC'],
-  },
-  {
-    id: 'cr3',
-    name: 'Room 201',
-    capacity: 45,
-    type: 'Tutorial Room',
-    building: 'A',
-    floor: 2,
-    facilities: ['Whiteboard', 'Tables'],
-  },
-];
-
-// Keep existing mock data for compatibility
-export const mockFees: FeeRecord[] = [
-  {
-    id: 'fee1',
-    studentId: 'std1',
-    feeType: 'Semester Fee',
-    amount: 45000,
-    dueDate: '2024-07-15',
-    paidDate: '2024-07-10',
-    status: 'Paid',
-    semester: 5,
-    academicYear: '2024-25',
-    paymentMethod: 'Online',
-    receiptNumber: 'RGCE001'
-  },
-  {
-    id: 'fee2',
-    studentId: 'std2',
-    feeType: 'Tuition Fee',
-    amount: 45000,
-    dueDate: '2024-07-15',
-    status: 'Pending',
-    semester: 5,
-    academicYear: '2024-25'
-  },
-  {
-    id: 'fee3',
-    studentId: 'std3',
-    feeType: 'Lab Fee',
-    amount: 8000,
-    dueDate: '2024-06-15',
-    status: 'Overdue',
-    semester: 5,
-    academicYear: '2024-25'
-  },
-  {
-    id: 'fee4',
-    studentId: 'std4',
-    feeType: 'Library Fee',
-    amount: 2000,
-    dueDate: '2024-07-20',
-    paidDate: '2024-07-18',
-    status: 'Paid',
-    semester: 5,
-    academicYear: '2024-25',
-    paymentMethod: 'Cash',
-    receiptNumber: 'RCT002'
-  },
-  {
-    id: 'fee5',
-    studentId: 'std5',
-    feeType: 'Exam Fee',
-    amount: 1500,
-    dueDate: '2024-08-01',
-    status: 'Pending',
-    semester: 5,
-    academicYear: '2024-25'
-  }
-];
-
-export const mockExams: ExamRecord[] = [
-  {
-    id: 'exam1',
-    studentId: 'std1',
-    subject: 'Database Management Systems',
-    subjectId: 'sub1',
-    examType: 'Mid-term',
-    marksObtained: 85,
-    totalMarks: 100,
-    examDate: '2024-06-15',
-    grade: 'A',
-    percentage: 85,
-    remarks: 'Excellent performance'
-  },
-  {
-    id: 'exam2',
-    studentId: 'std2',
-    subject: 'Database Management',
-    subjectId: 'sub2',
-    examType: 'Mid-term',
-    marksObtained: 78,
-    totalMarks: 100,
-    examDate: '2024-06-16',
-    grade: 'B+',
-    percentage: 78
-  },
-  {
-    id: 'exam3',
-    studentId: 'std3',
-    subject: 'Data Structures',
-    subjectId: 'sub1',
-    examType: 'Final',
-    marksObtained: 92,
-    totalMarks: 100,
-    examDate: '2024-06-20',
-    grade: 'A+',
-    percentage: 92,
-    remarks: 'Outstanding'
-  },
-  {
-    id: 'exam4',
-    studentId: 'std4',
-    subject: 'Operating Systems',
-    subjectId: 'sub3',
-    examType: 'Quiz',
-    marksObtained: 65,
-    totalMarks: 100,
-    examDate: '2024-06-18',
-    grade: 'B',
-    percentage: 65
-  },
-  {
-    id: 'exam5',
-    studentId: 'std5',
-    subject: 'Computer Networks',
-    subjectId: 'sub4',
-    examType: 'Assignment',
-    marksObtained: 88,
-    totalMarks: 100,
-    examDate: '2024-06-22',
-    grade: 'A',
-    percentage: 88
-  }
-];
-
-// Backward compatibility exports
-export const mockFeeRecords = mockFees;
-export const mockExamRecords = mockExams;
