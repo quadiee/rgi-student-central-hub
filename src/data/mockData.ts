@@ -555,6 +555,10 @@ export const mockExamRecords: ExamRecord[] = [
   },
 ];
 
+// Export aliases for backward compatibility
+export const mockFees = mockFeeRecords;
+export const mockExams = mockExamRecords;
+
 // Mock Data for Users
 export const mockUsers: User[] = [
   {
