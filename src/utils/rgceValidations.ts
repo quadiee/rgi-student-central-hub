@@ -1,214 +1,144 @@
-import { User, UserRole, Department, SystemSettings } from '../types';
+import { LeaveRequest } from '../types';
+import { mockSystemSettings } from '../data/mockData';
 
-export class RGCEValidator {
-  private settings: SystemSettings;
+// Utility function to validate email format
+export const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
-  constructor(settings: SystemSettings) {
-    this.settings = settings;
+// Utility function to validate phone number format (basic)
+export const isValidPhoneNumber = (phone: string): boolean => {
+  const phoneRegex = /^[0-9]{10}$/;
+  return phoneRegex.test(phone);
+};
+
+// Utility function to validate date format (YYYY-MM-DD)
+export const isValidDateFormat = (date: string): boolean => {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  return dateRegex.test(date);
+};
+
+// Utility function to validate course code format (e.g., CSE101)
+export const isValidCourseCode = (code: string): boolean => {
+  const codeRegex = /^[A-Z]{2,4}\d{3}$/;
+  return codeRegex.test(code);
+};
+
+// Utility function to validate roll number format (e.g., 2021A001)
+export const isValidRollNumber = (roll: string): boolean => {
+  const rollRegex = /^\d{4}[A-Z]\d{3}$/;
+  return rollRegex.test(roll);
+};
+
+// Utility function to validate name (only alphabets and spaces)
+export const isValidName = (name: string): boolean => {
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    return nameRegex.test(name);
+};
+
+// Utility function to validate password strength (example criteria)
+export const isValidPassword = (password: string): boolean => {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return passwordRegex.test(password);
+};
+
+// Utility function to validate if a string is not empty
+export const isNotEmpty = (value: string): boolean => {
+  return value.trim().length > 0;
+};
+
+// Utility function to validate if a number is within a range
+export const isValidRange = (value: number, min: number, max: number): boolean => {
+  return value >= min && value <= max;
+};
+
+// Utility function to validate URL format
+export const isValidURL = (url: string): boolean => {
+  const urlRegex = /^(ftp|http|https):\/\/[^ "]+$/;
+  return urlRegex.test(url);
+};
+
+// Utility function to validate academic year format (e.g., 2023-24)
+export const isValidAcademicYear = (year: string): boolean => {
+  const yearRegex = /^\d{4}-\d{2}$/;
+  if (!yearRegex.test(year)) return false;
+  const [start, end] = year.split('-').map(Number);
+  return end === start % 100 + 1;
+};
+
+// Utility function to validate semester (1 to 8)
+export const isValidSemester = (semester: number): boolean => {
+  return semester >= 1 && semester <= 8;
+};
+
+// Utility function to validate marks (0 to 100)
+export const isValidMarks = (marks: number): boolean => {
+  return marks >= 0 && marks <= 100;
+};
+
+// Utility function to validate designation
+export const isValidDesignation = (designation: string): boolean => {
+    const designationRegex = /^[a-zA-Z\s.,]+$/;
+    return designationRegex.test(designation);
+};
+
+// Leave Request Validation
+export const validateLeaveRequest = (leaveData: Partial<LeaveRequest>): string[] => {
+  const errors: string[] = [];
+
+  // Validate required fields
+  if (!leaveData.studentId?.trim()) {
+    errors.push('Student ID is required');
   }
 
-  // Validate RGCE email format
-  validateEmail(email: string): { isValid: boolean; error?: string } {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (!emailRegex.test(email)) {
-      return { isValid: false, error: 'Invalid email format' };
-    }
-    
-    if (!email.endsWith(this.settings.emailDomain)) {
-      return { 
-        isValid: false, 
-        error: `Email must be from RGCE domain (${this.settings.emailDomain})` 
-      };
-    }
-    
-    return { isValid: true };
+  if (!leaveData.fromDate) {
+    errors.push('From date is required');
   }
 
-  // Validate user role and department combination
-  validateUserRole(role: UserRole, department: Department): { isValid: boolean; error?: string } {
-    // Principal and Admin can belong to ADMIN department
-    if ((role === 'principal' || role === 'admin') && department !== 'ADMIN') {
-      return { 
-        isValid: false, 
-        error: 'Principal and Admin roles must belong to ADMIN department' 
-      };
-    }
-
-    // HOD must belong to an academic department
-    if (role === 'hod' && department === 'ADMIN') {
-      return { 
-        isValid: false, 
-        error: 'HOD role cannot belong to ADMIN department' 
-      };
-    }
-
-    return { isValid: true };
+  if (!leaveData.toDate) {
+    errors.push('To date is required');
   }
 
-  // Check if user has permission for specific action
-  hasPermission(user: User, requiredPermission: string): boolean {
-    if (!user.isActive) return false;
-    
-    // Admin has all permissions
-    if (user.role === 'admin' || user.permissions?.includes('all')) {
-      return true;
-    }
-
-    // Principal has most permissions except admin-specific ones
-    if (user.role === 'principal' && !['user_management', 'system_settings'].includes(requiredPermission)) {
-      return true;
-    }
-
-    // Check specific permissions
-    return user.permissions?.includes(requiredPermission) || false;
+  if (!leaveData.reason?.trim()) {
+    errors.push('Reason is required');
   }
 
-  // Role-based permission matrix
-  getRolePermissions(role: UserRole): string[] {
-    switch (role) {
-      case 'admin':
-        return ['all'];
-      case 'principal':
-        return [
-          'view_all_students', 'view_all_faculty', 'view_all_courses',
-          'view_attendance_reports', 'view_department_stats',
-          'approve_leaves', 'view_system_reports'
-        ];
-      case 'hod':
-        return [
-          'view_dept_students', 'view_dept_faculty', 'view_dept_courses',
-          'manage_dept_attendance', 'approve_dept_leaves',
-          'view_dept_reports', 'manage_dept_timetable'
-        ];
-      case 'faculty':
-        return [
-          'mark_attendance', 'view_assigned_courses', 'view_student_list',
-          'approve_student_leaves', 'generate_attendance_reports',
-          'view_course_analytics'
-        ];
-      case 'student':
-        return [
-          'view_own_attendance', 'view_own_courses', 'request_leave',
-          'view_own_fees', 'view_own_exams', 'view_timetable'
-        ];
-      default:
-        return [];
-    }
-  }
-
-  // Validate department codes
-  validateDepartment(department: string): boolean {
-    const validDepartments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN'];
-    return validDepartments.includes(department as Department);
-  }
-
-  // Validate roll number format for RGCE
-  validateRollNumber(rollNumber: string, department: Department, year: number): { isValid: boolean; error?: string } {
-    // Expected format: YYDEPTnnn (e.g., 21CSE001)
-    const rollPattern = new RegExp(`^\\d{2}${department}\\d{3}$`);
-    
-    if (!rollPattern.test(rollNumber)) {
-      return {
-        isValid: false,
-        error: `Roll number must follow format: YY${department}nnn (e.g., 21${department}001)`
-      };
-    }
-
-    // Extract year from roll number and validate
-    const rollYear = parseInt(`20${rollNumber.substring(0, 2)}`);
-    const currentYear = new Date().getFullYear();
-    const expectedYear = currentYear - year + 1;
-
-    if (rollYear !== expectedYear) {
-      return {
-        isValid: false,
-        error: `Roll number year (${rollYear}) doesn't match student's current year`
-      };
-    }
-
-    return { isValid: true };
-  }
-
-  // Validate course code format
-  validateCourseCode(courseCode: string, department: Department): { isValid: boolean; error?: string } {
-    // Expected format: DEPTnnn (e.g., CSE301)
-    const coursePattern = new RegExp(`^${department}\\d{3}$`);
-    
-    if (!coursePattern.test(courseCode)) {
-      return {
-        isValid: false,
-        error: `Course code must follow format: ${department}nnn (e.g., ${department}301)`
-      };
-    }
-
-    return { isValid: true };
-  }
-
-  // Validate academic year format
-  validateAcademicYear(academicYear: string): { isValid: boolean; error?: string } {
-    const yearPattern = /^\d{4}-\d{2}$/;
-    
-    if (!yearPattern.test(academicYear)) {
-      return {
-        isValid: false,
-        error: 'Academic year must be in format YYYY-YY (e.g., 2024-25)'
-      };
-    }
-
-    const [startYear, endYearSuffix] = academicYear.split('-');
-    const endYear = `20${endYearSuffix}`;
-    
-    if (parseInt(endYear) - parseInt(startYear) !== 1) {
-      return {
-        isValid: false,
-        error: 'Academic year must be consecutive (e.g., 2024-25)'
-      };
-    }
-
-    return { isValid: true };
-  }
-
-  // Validate leave request
-  validateLeaveRequest(leave: Partial<LeaveRequest>): string[] {
-    const errors: string[] = [];
-    
-    if (!leave.fromDate || !leave.toDate) {
-      errors.push('From date and to date are required');
-      return errors;
-    }
-
-    const fromDate = new Date(leave.fromDate);
-    const toDate = new Date(leave.toDate);
+  // Validate date logic
+  if (leaveData.fromDate && leaveData.toDate) {
+    const fromDate = new Date(leaveData.fromDate);
+    const toDate = new Date(leaveData.toDate);
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
-    
-    if (fromDate > toDate) {
-      errors.push('From date cannot be after to date');
-    }
     
     if (fromDate < today) {
-      errors.push('Cannot request leave for past dates');
+      errors.push('From date cannot be in the past');
     }
     
+    if (toDate < fromDate) {
+      errors.push('To date must be after from date');
+    }
+
+    // Check if leave duration is reasonable (max 30 days)
     const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysDiff > 7) {
-      errors.push('Leave requests cannot exceed 7 days');
+    if (daysDiff > 30) {
+      errors.push('Leave duration cannot exceed 30 days');
     }
-    
-    if (!leave.reason || leave.reason.trim().length < 10) {
-      errors.push('Reason must be at least 10 characters long');
-    }
-
-    return errors;
   }
-}
 
-// Default RGCE validation instance
-import { mockSystemSettings } from '../data/mockData';
-export const rgceValidator = new RGCEValidator(mockSystemSettings);
+  // Validate reason length
+  if (leaveData.reason && leaveData.reason.trim().length < 10) {
+    errors.push('Reason must be at least 10 characters long');
+  }
 
-// Utility functions for common validations
-export const validateRGCEEmail = (email: string) => rgceValidator.validateEmail(email);
-export const checkUserPermission = (user: User, permission: string) => rgceValidator.hasPermission(user, permission);
-export const getRolePermissions = (role: UserRole) => rgceValidator.getRolePermissions(role);
+  // Validate course code if provided
+  if (leaveData.courseCode && !isValidCourseCode(leaveData.courseCode)) {
+    errors.push('Invalid course code format');
+  }
+
+  return errors;
+};
+
+// System Settings Validation
+export const getSystemSettings = () => {
+  return mockSystemSettings;
+};

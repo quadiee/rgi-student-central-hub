@@ -431,7 +431,7 @@ export const mockLeaves: LeaveRequest[] = [
 ];
 
 // Mock Data for Fee Records
-export const mockFees: FeeRecord[] = [
+export const mockFeeRecords: FeeRecord[] = [
   {
     id: 'FR001',
     studentId: 'STU001',
@@ -471,10 +471,23 @@ export const mockFees: FeeRecord[] = [
     paymentMethod: 'Cash',
     receiptNumber: 'RCPT003',
   },
+  {
+    id: 'FR004',
+    studentId: 'STU004',
+    feeType: 'Tuition Fee',
+    amount: 50000,
+    dueDate: '2024-06-30',
+    paidDate: null,
+    status: 'Overdue',
+    semester: 1,
+    academicYear: '2024-25',
+    paymentMethod: null,
+    receiptNumber: null,
+  },
 ];
 
 // Mock Data for Exam Records
-export const mockExams: ExamRecord[] = [
+export const mockExamRecords: ExamRecord[] = [
   {
     id: 'ER001',
     studentId: 'STU001',
@@ -514,6 +527,32 @@ export const mockExams: ExamRecord[] = [
     percentage: 80,
     remarks: 'Very Good',
   },
+  {
+    id: 'ER004',
+    studentId: 'STU004',
+    subject: 'Data Structures',
+    subjectId: 'SUB001',
+    examType: 'Assignment',
+    marksObtained: 18,
+    totalMarks: 25,
+    examDate: '2024-06-10',
+    grade: 'B+',
+    percentage: 72,
+    remarks: 'Good work',
+  },
+  {
+    id: 'ER005',
+    studentId: 'STU005',
+    subject: 'Signals and Systems',
+    subjectId: 'SUB002',
+    examType: 'Quiz',
+    marksObtained: 8,
+    totalMarks: 10,
+    examDate: '2024-06-12',
+    grade: 'A',
+    percentage: 80,
+    remarks: 'Well done',
+  },
 ];
 
 // Mock Data for Users
@@ -546,6 +585,16 @@ export const mockUsers: User[] = [
     facultyId: 'FAC001',
   },
 ];
+
+// Mock System Settings
+export const mockSystemSettings: SystemSettings = {
+  attendanceThreshold: 75,
+  semesterStartDate: '2024-08-01',
+  semesterEndDate: '2024-12-15',
+  hoursPerDay: 8,
+  workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  emailDomain: '@rgce.edu.in'
+};
 
 export const calculateAttendanceStats = (studentId: string): AttendanceStats => {
   const studentAttendance = mockAttendance.filter(a => a.studentId === studentId);
