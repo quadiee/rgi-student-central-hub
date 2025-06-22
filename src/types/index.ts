@@ -138,8 +138,9 @@ export interface User {
   role: UserRole;
   studentId?: string;
   facultyId?: string;
-  permissions: string[];
-  isActive: boolean;
+  profileImage?: string;
+  permissions?: string[];
+  isActive?: boolean;
   lastLogin?: string;
 }
 

@@ -18,14 +18,18 @@ export const mockUsers: User[] = [
     name: 'Admin User',
     email: 'admin@college.edu',
     role: 'admin',
-    profileImage: 'https://i.pravatar.cc/150?img=10'
+    profileImage: 'https://i.pravatar.cc/150?img=10',
+    permissions: ['all'],
+    isActive: true
   },
   {
     id: '2',
     name: 'Dr. Smith',
     email: 'smith@college.edu',
     role: 'faculty',
-    profileImage: 'https://i.pravatar.cc/150?img=6'
+    profileImage: 'https://i.pravatar.cc/150?img=6',
+    permissions: ['faculty'],
+    isActive: true
   },
   {
     id: '3',
@@ -33,7 +37,9 @@ export const mockUsers: User[] = [
     email: 'alice.j@college.edu',
     role: 'student',
     studentId: 'std1',
-    profileImage: 'https://i.pravatar.cc/150?img=1'
+    profileImage: 'https://i.pravatar.cc/150?img=1',
+    permissions: ['student'],
+    isActive: true
   }
 ];
 
