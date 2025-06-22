@@ -62,9 +62,9 @@ const Index = () => {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex w-full">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-        <div className="ml-64">
+        <div className="flex-1 ml-64">
           <Header />
           <main className="p-6 pt-8">
             {renderContent()}

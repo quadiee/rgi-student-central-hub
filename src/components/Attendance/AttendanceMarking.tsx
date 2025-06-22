@@ -4,6 +4,7 @@ import { Check, X, Clock, Users, Calendar, QrCode } from 'lucide-react';
 import { Button } from '../ui/button';
 import { mockStudents, mockSubjects, mockTimetable, timeSlots } from '../../data/mockData';
 import { AttendanceRecord } from '../../types';
+import QRScanner from './QRScanner';
 
 interface AttendanceMarkingProps {
   onAttendanceMarked?: (attendance: AttendanceRecord[]) => void;
@@ -14,6 +15,7 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
   const [selectedPeriod, setSelectedPeriod] = useState('');
   const [attendanceData, setAttendanceData] = useState<{[key: string]: 'Present' | 'Absent' | 'Leave'}>({});
   const [isMarkingMode, setIsMarkingMode] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const currentDate = new Date().toISOString().split('T')[0];
   const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -23,6 +25,11 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
       ...prev,
       [studentId]: status
     }));
+  };
+
+  const handleQRScan = (studentId: string, status: 'Present' | 'Absent') => {
+    handleStatusChange(studentId, status);
+    setShowQRScanner(false);
   };
 
   const handleSubmitAttendance = () => {
@@ -64,6 +71,10 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
   };
 
   const stats = getAttendanceStats();
+
+  if (showQRScanner) {
+    return <QRScanner onScanComplete={handleQRScan} onClose={() => setShowQRScanner(false)} />;
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
@@ -123,7 +134,12 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
               <span>Start Marking</span>
             </Button>
 
-            <Button variant="outline" className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center space-x-2"
+              onClick={() => setShowQRScanner(true)}
+              disabled={!selectedSubject || !selectedPeriod}
+            >
               <QrCode className="w-4 h-4" />
               <span>QR Code Mode</span>
             </Button>
@@ -155,9 +171,21 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
             </div>
           </div>
 
-          {/* Student List */}
-          <div className="space-y-3">
+          <div className="flex justify-between items-center">
             <h4 className="font-medium text-gray-800">Students - {mockSubjects.find(s => s.id === selectedSubject)?.name}</h4>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowQRScanner(true)}
+              className="flex items-center space-x-2"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>QR Scanner</span>
+            </Button>
+          </div>
+
+          {/* Student List */}
+          <div className="space-y-3 max-h-96 overflow-y-auto">
             {mockStudents.map(student => (
               <div key={student.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                 <div className="flex items-center space-x-3">
