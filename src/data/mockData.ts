@@ -9,7 +9,33 @@ import {
   AttendanceStats,
   FeeRecord,
   ExamRecord,
+  User,
 } from '../types';
+
+export const mockUsers: User[] = [
+  {
+    id: '1',
+    name: 'Admin User',
+    email: 'admin@college.edu',
+    role: 'admin',
+    profileImage: 'https://i.pravatar.cc/150?img=10'
+  },
+  {
+    id: '2',
+    name: 'Dr. Smith',
+    email: 'smith@college.edu',
+    role: 'faculty',
+    profileImage: 'https://i.pravatar.cc/150?img=6'
+  },
+  {
+    id: '3',
+    name: 'Alice Johnson',
+    email: 'alice.j@college.edu',
+    role: 'student',
+    studentId: 'std1',
+    profileImage: 'https://i.pravatar.cc/150?img=1'
+  }
+];
 
 export const mockStudents: Student[] = [
   {
@@ -407,7 +433,7 @@ export const calculateAttendanceStats = (studentId: string): AttendanceStats => 
   };
 };
 
-export const mockFeeRecords: FeeRecord[] = [
+export const mockFees: FeeRecord[] = [
   {
     id: 'fee1',
     studentId: 'std1',
@@ -466,7 +492,7 @@ export const mockFeeRecords: FeeRecord[] = [
   }
 ];
 
-export const mockExamRecords: ExamRecord[] = [
+export const mockExams: ExamRecord[] = [
   {
     id: 'exam1',
     studentId: 'std1',
@@ -530,3 +556,7 @@ export const mockExamRecords: ExamRecord[] = [
     percentage: 88
   }
 ];
+
+// Keep the old exports for backward compatibility
+export const mockFeeRecords = mockFees;
+export const mockExamRecords = mockExams;
