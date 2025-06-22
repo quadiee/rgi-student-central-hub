@@ -600,6 +600,102 @@ export const mockSystemSettings: SystemSettings = {
   emailDomain: '@rgce.edu.in'
 };
 
+// AttendanceCalculator class for calculating attendance statistics
+export class AttendanceCalculator {
+  private attendanceRecords: AttendanceRecord[];
+  private students: Student[];
+  private courses: Course[];
+  private leaves: LeaveRequest[];
+  private systemSettings: SystemSettings;
+
+  constructor(
+    attendanceRecords: AttendanceRecord[],
+    students: Student[],
+    courses: Course[],
+    leaves: LeaveRequest[],
+    systemSettings: SystemSettings
+  ) {
+    this.attendanceRecords = attendanceRecords;
+    this.students = students;
+    this.courses = courses;
+    this.leaves = leaves;
+    this.systemSettings = systemSettings;
+  }
+
+  calculateDepartmentStats(department: Department) {
+    const deptStudents = this.students.filter(s => s.department === department);
+    const deptCourses = this.courses.filter(c => c.department === department);
+    const deptFaculty = mockFaculty.filter(f => f.department === department);
+
+    const totalStudents = deptStudents.length;
+    const activeFaculty = deptFaculty.length;
+    const totalCourses = deptCourses.length;
+
+    const avgAttendance = Math.round(
+      deptStudents.reduce((sum, student) => 
+        sum + (student.attendancePercentage || 0), 0
+      ) / totalStudents
+    );
+
+    const atRiskStudents = deptStudents.filter(s => 
+      (s.attendancePercentage || 0) < this.systemSettings.attendanceThreshold
+    ).length;
+
+    return {
+      department,
+      totalStudents,
+      activeFaculty,
+      totalCourses,
+      avgAttendance,
+      atRiskStudents
+    };
+  }
+
+  calculateStudentAttendance(studentId: string) {
+    const student = this.students.find(s => s.id === studentId);
+    if (!student) {
+      return {
+        attendancePercentage: 0,
+        presentClasses: 0,
+        absentClasses: 0,
+        leaveClasses: 0,
+        totalClasses: 0
+      };
+    }
+
+    const studentRecords = this.attendanceRecords.filter(r => r.studentId === studentId);
+    const studentLeaves = this.leaves.filter(l => l.studentId === studentId && l.finalStatus === 'Approved');
+
+    const presentClasses = studentRecords.filter(r => r.status === 'Present').length;
+    const absentClasses = studentRecords.filter(r => r.status === 'Absent').length;
+    const leaveClasses = studentLeaves.length;
+    const totalClasses = presentClasses + absentClasses + leaveClasses;
+
+    const attendancePercentage = totalClasses > 0 
+      ? Math.round(((presentClasses + leaveClasses) / totalClasses) * 100)
+      : 0;
+
+    return {
+      attendancePercentage,
+      presentClasses,
+      absentClasses,
+      leaveClasses,
+      totalClasses
+    };
+  }
+
+  getAtRiskStudents(department?: Department) {
+    const studentsToCheck = department 
+      ? this.students.filter(s => s.department === department)
+      : this.students;
+
+    return studentsToCheck.filter(student => 
+      (student.attendancePercentage || 0) < this.systemSettings.attendanceThreshold
+    );
+  }
+}
+
+// Mock Data for Attendance Stats
 export const calculateAttendanceStats = (studentId: string): AttendanceStats => {
   const studentAttendance = mockAttendance.filter(a => a.studentId === studentId);
   const totalClasses = studentAttendance.length;

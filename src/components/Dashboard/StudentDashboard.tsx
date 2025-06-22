@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar, TrendingUp, Clock, AlertTriangle, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,6 +19,11 @@ const StudentDashboard: React.FC = () => {
     if (percentage >= 85) return 'text-green-600 bg-green-50';
     if (percentage >= 75) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';
+  };
+
+  const handleLeaveSubmit = (leave: any) => {
+    console.log('Leave submitted:', leave);
+    setShowLeaveForm(false);
   };
 
   return (
@@ -180,7 +184,19 @@ const StudentDashboard: React.FC = () => {
       {showLeaveForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <LeaveRequestForm onClose={() => setShowLeaveForm(false)} />
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Request Leave</h3>
+              <button
+                onClick={() => setShowLeaveForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <LeaveRequestForm 
+              studentId={user.studentId}
+              onSubmit={handleLeaveSubmit}
+            />
           </div>
         </div>
       )}

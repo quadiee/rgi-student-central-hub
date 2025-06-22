@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Users, UserCheck, FileText, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -6,6 +5,7 @@ import { mockStudents, mockCourses, mockAttendance, mockLeaves } from '../../dat
 import BatchAttendanceMarking from '../Attendance/BatchAttendanceMarking';
 import LeaveApprovalQueue from '../Leave/LeaveApprovalQueue';
 import { Button } from '../ui/button';
+import { AttendanceRecord } from '../../types';
 
 const FacultyDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -37,6 +37,11 @@ const FacultyDashboard: React.FC = () => {
     record.date === new Date().toISOString().split('T')[0] &&
     record.facultyId === user.facultyId
   );
+
+  const handleBatchAttendanceSubmit = (records: AttendanceRecord[]) => {
+    console.log('Batch attendance submitted:', records);
+    // In a real app, you would save these records to the database
+  };
 
   return (
     <div className="space-y-6">
@@ -169,7 +174,10 @@ const FacultyDashboard: React.FC = () => {
 
       {activeView === 'attendance' && (
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <BatchAttendanceMarking />
+          <BatchAttendanceMarking 
+            facultyEmail={user.email || ''}
+            onBatchSubmit={handleBatchAttendanceSubmit}
+          />
         </div>
       )}
 
