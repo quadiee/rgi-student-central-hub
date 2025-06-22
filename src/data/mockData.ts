@@ -1,3 +1,4 @@
+
 import {
   Student,
   Faculty,
@@ -15,6 +16,7 @@ import {
   DepartmentStats,
   AcademicCalendar,
   SystemSettings,
+  Department,
 } from '../types';
 
 // Mock Data for Students
