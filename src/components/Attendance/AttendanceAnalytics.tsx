@@ -144,9 +144,9 @@ const AttendanceAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Subject-wise Performance */}
+      {/* Course-wise Performance */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Subject-wise Attendance</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Course-wise Attendance</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -164,21 +164,21 @@ const AttendanceAnalytics: React.FC = () => {
                     <div className="font-medium text-gray-900">{student.name}</div>
                     <div className="text-sm text-gray-500">{student.rollNumber}</div>
                   </td>
-                  {stats.subjectWiseAttendance.map((subject, index) => (
+                  {stats.courseWiseAttendance.map((course, index) => (
                     <td key={index} className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        subject.percentage >= 90 ? 'bg-green-100 text-green-800' :
-                        subject.percentage >= 75 ? 'bg-yellow-100 text-yellow-800' :
+                        course.percentage >= 90 ? 'bg-green-100 text-green-800' :
+                        course.percentage >= 75 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {subject.percentage}%
+                        {course.percentage}%
                       </span>
                     </td>
                   ))}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       stats.attendancePercentage >= 90 ? 'bg-green-100 text-green-800' :
-                      stats.attendancePercentage >= 75 ? 'bg-yellow-100 text-yellow-800' :
+                      stats.attendancePercentance >= 75 ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {stats.attendancePercentage}%

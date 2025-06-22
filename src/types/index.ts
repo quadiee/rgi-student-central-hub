@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   name: string;
@@ -190,6 +189,10 @@ export interface AttendanceStats {
     courseName: string;
     totalHours: number;
     presentHours: number;
+    percentage: number;
+  }[];
+  subjectWiseAttendance: {
+    subject: string;
     percentage: number;
   }[];
   isAtRisk: boolean; // < 75% attendance

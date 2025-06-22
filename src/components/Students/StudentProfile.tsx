@@ -15,7 +15,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
   const studentExams = mockExams.filter(e => e.studentId === student.id);
 
   const attendancePercentage = studentAttendance.length > 0 
-    ? Math.round((studentAttendance.filter(a => a.status === 'Present').length / studentAttendance.length) * 100)
+    ? Math.round((studentAttendance.filter(a => a.status === 'Present' || a.status === 'Leave').length / studentAttendance.length) * 100)
     : 0;
 
   const totalFeePaid = studentFees.filter(f => f.status === 'Paid').reduce((sum, f) => sum + f.amount, 0);
@@ -122,12 +122,12 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
             {studentAttendance.slice(0, 5).map((record) => (
               <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-800">{record.subject}</p>
-                  <p className="text-sm text-gray-600">{record.date}</p>
+                  <p className="font-medium text-gray-800">{record.courseCode}</p>
+                  <p className="text-sm text-gray-600">{record.date} - Hour {record.hourNumber}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   record.status === 'Present' ? 'bg-green-100 text-green-800' :
-                  record.status === 'Late' ? 'bg-yellow-100 text-yellow-800' :
+                  record.status === 'Leave' ? 'bg-yellow-100 text-yellow-800' :
                   'bg-red-100 text-red-800'
                 }`}>
                   {record.status}

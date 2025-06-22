@@ -12,13 +12,13 @@ interface AttendanceMarkingProps {
 const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarked }) => {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('');
-  const [attendanceData, setAttendanceData] = useState<{[key: string]: 'Present' | 'Absent' | 'Late'}>({});
+  const [attendanceData, setAttendanceData] = useState<{[key: string]: 'Present' | 'Absent' | 'Leave'}>({});
   const [isMarkingMode, setIsMarkingMode] = useState(false);
 
   const currentDate = new Date().toISOString().split('T')[0];
   const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
-  const handleStatusChange = (studentId: string, status: 'Present' | 'Absent' | 'Late') => {
+  const handleStatusChange = (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
     setAttendanceData(prev => ({
       ...prev,
       [studentId]: status
@@ -28,20 +28,19 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
   const handleSubmitAttendance = () => {
     if (!selectedSubject || !selectedPeriod) return;
 
+    const selectedSubjectData = mockSubjects.find(s => s.id === selectedSubject);
+    const selectedTimeSlot = timeSlots.find(t => t.id === selectedPeriod);
+
     const attendanceRecords: AttendanceRecord[] = mockStudents.map(student => ({
       id: `${student.id}-${currentDate}-${selectedPeriod}`,
       studentId: student.id,
-      subject: mockSubjects.find(s => s.id === selectedSubject)?.name || '',
-      subjectId: selectedSubject,
+      courseCode: selectedSubjectData?.code || '',
       date: currentDate,
-      timeSlot: timeSlots.find(t => t.id === selectedPeriod)?.startTime + '-' + timeSlots.find(t => t.id === selectedPeriod)?.endTime || '',
-      period: timeSlots.find(t => t.id === selectedPeriod)?.period || 1,
+      hourNumber: selectedTimeSlot?.period || 1,
       status: attendanceData[student.id] || 'Absent',
-      faculty: 'Current Faculty',
       facultyId: 'FAC001',
       markedAt: new Date().toISOString(),
       markedBy: 'FAC001',
-      className: 'CS-5th-Sem',
       academicYear: '2024-25'
     }));
 
@@ -58,10 +57,10 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
     const total = mockStudents.length;
     const present = Object.values(attendanceData).filter(status => status === 'Present').length;
     const absent = Object.values(attendanceData).filter(status => status === 'Absent').length;
-    const late = Object.values(attendanceData).filter(status => status === 'Late').length;
-    const pending = total - present - absent - late;
+    const leave = Object.values(attendanceData).filter(status => status === 'Leave').length;
+    const pending = total - present - absent - leave;
 
-    return { total, present, absent, late, pending };
+    return { total, present, absent, leave, pending };
   };
 
   const stats = getAttendanceStats();
@@ -147,8 +146,8 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
               <div className="text-sm text-red-800">Absent</div>
             </div>
             <div className="bg-yellow-50 p-3 rounded-lg text-center">
-              <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
-              <div className="text-sm text-yellow-800">Late</div>
+              <div className="text-2xl font-bold text-yellow-600">{stats.leave}</div>
+              <div className="text-sm text-yellow-800">Leave</div>
             </div>
             <div className="bg-gray-50 p-3 rounded-lg text-center">
               <div className="text-2xl font-bold text-gray-600">{stats.pending}</div>
@@ -185,9 +184,9 @@ const AttendanceMarking: React.FC<AttendanceMarkingProps> = ({ onAttendanceMarke
                     <Check className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleStatusChange(student.id, 'Late')}
+                    onClick={() => handleStatusChange(student.id, 'Leave')}
                     className={`p-2 rounded-lg transition-colors ${
-                      attendanceData[student.id] === 'Late'
+                      attendanceData[student.id] === 'Leave'
                         ? 'bg-yellow-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-yellow-100'
                     }`}

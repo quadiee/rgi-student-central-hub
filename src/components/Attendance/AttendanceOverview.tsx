@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar, Users, TrendingUp, AlertTriangle, Clock, BarChart3, QrCode } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -14,7 +13,7 @@ const AttendanceOverview: React.FC = () => {
   const todayAttendance = mockAttendance.filter(a => a.date === '2024-06-20');
   const presentToday = todayAttendance.filter(a => a.status === 'Present').length;
   const absentToday = todayAttendance.filter(a => a.status === 'Absent').length;
-  const lateToday = todayAttendance.filter(a => a.status === 'Late').length;
+  const leaveToday = todayAttendance.filter(a => a.status === 'Leave').length;
 
   const attendanceRate = totalStudents > 0 ? Math.round((presentToday / totalStudents) * 100) : 0;
 
@@ -52,8 +51,8 @@ const AttendanceOverview: React.FC = () => {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-600 text-sm">Late Today</p>
-                    <p className="text-3xl font-bold text-yellow-600">{lateToday}</p>
+                    <p className="text-gray-600 text-sm">On Leave Today</p>
+                    <p className="text-3xl font-bold text-yellow-600">{leaveToday}</p>
                   </div>
                   <div className="p-3 bg-yellow-100 rounded-lg">
                     <Clock className="w-6 h-6 text-yellow-600" />
@@ -85,16 +84,16 @@ const AttendanceOverview: React.FC = () => {
                         Student
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Subject
+                        Course Code
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Faculty
+                        Hour
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Time
+                        Marked At
                       </th>
                     </tr>
                   </thead>
@@ -117,22 +116,22 @@ const AttendanceOverview: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.subject}
+                            {record.courseCode}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.faculty}
+                            Hour {record.hourNumber}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                               record.status === 'Present' ? 'bg-green-100 text-green-800' :
-                              record.status === 'Late' ? 'bg-yellow-100 text-yellow-800' :
+                              record.status === 'Leave' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-red-100 text-red-800'
                             }`}>
                               {record.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {record.timeSlot}
+                            {new Date(record.markedAt).toLocaleTimeString()}
                           </td>
                         </tr>
                       );
