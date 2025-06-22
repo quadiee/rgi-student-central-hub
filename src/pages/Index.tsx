@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AuthProvider } from '../contexts/AuthContext';
 import Sidebar from '../components/Layout/Sidebar';
@@ -9,6 +8,7 @@ import StudentProfile from '../components/Students/StudentProfile';
 import AttendanceOverview from '../components/Attendance/AttendanceOverview';
 import FeeManagement from '../components/Fees/FeeManagement';
 import ExamManagement from '../components/Exams/ExamManagement';
+import AdminPanel from '../components/Admin/AdminPanel';
 import { Student } from '../types';
 
 const Index = () => {
@@ -49,12 +49,7 @@ const Index = () => {
           </div>
         );
       case 'settings':
-        return (
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Settings</h2>
-            <p className="text-gray-600">Settings module coming soon...</p>
-          </div>
-        );
+        return <AdminPanel />;
       default:
         return <Dashboard />;
     }
