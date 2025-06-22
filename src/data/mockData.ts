@@ -1,365 +1,477 @@
+import {
+  Student,
+  Faculty,
+  Subject,
+  TimeSlot,
+  TimetableEntry,
+  Classroom,
+  AttendanceRecord,
+  AttendanceStats,
+  FeeRecord,
+  ExamRecord,
+} from '../types';
 
-import { Student, AttendanceRecord, FeeRecord, ExamRecord, User, Faculty, Subject, TimeSlot, TimetableEntry, Classroom, AttendanceSession, AttendanceStats } from '../types';
-
-export const mockUsers: User[] = [
-  { 
-    id: '1', 
-    name: 'Admin User', 
-    email: 'admin@rgi.edu', 
-    role: 'admin',
-    permissions: ['all'],
-    isActive: true,
-    lastLogin: '2024-06-20T10:00:00Z'
+export const mockStudents: Student[] = [
+  {
+    id: 'std1',
+    name: 'Alice Johnson',
+    rollNumber: '2021001',
+    course: 'Computer Science',
+    year: 3,
+    semester: 5,
+    email: 'alice.j@example.com',
+    phone: '123-456-7890',
+    profileImage: 'https://i.pravatar.cc/150?img=1',
+    admissionDate: '2021-08-15',
+    guardianName: 'Robert Johnson',
+    guardianPhone: '123-456-7891',
+    address: '123 Highland, Anytown',
+    bloodGroup: 'O+',
+    emergencyContact: '987-654-3210',
   },
-  { 
-    id: '2', 
-    name: 'Dr. Sharma', 
-    email: 'sharma@rgi.edu', 
-    role: 'faculty',
-    facultyId: 'FAC001',
-    permissions: ['attendance', 'grades', 'student_view'],
-    isActive: true,
-    lastLogin: '2024-06-20T09:30:00Z'
+  {
+    id: 'std2',
+    name: 'Bob Smith',
+    rollNumber: '2021002',
+    course: 'Electrical Engineering',
+    year: 3,
+    semester: 5,
+    email: 'bob.s@example.com',
+    phone: '234-567-8901',
+    profileImage: 'https://i.pravatar.cc/150?img=2',
+    admissionDate: '2021-08-16',
+    guardianName: 'Linda Smith',
+    guardianPhone: '234-567-8902',
+    address: '456 Lowland, Anytown',
+    bloodGroup: 'A-',
+    emergencyContact: '876-543-2109',
   },
-  { 
-    id: '3', 
-    name: 'Rahul Kumar', 
-    email: 'rahul@rgi.edu', 
-    role: 'student', 
-    studentId: 'RGI001',
-    permissions: ['view_own_data'],
-    isActive: true,
-    lastLogin: '2024-06-20T08:45:00Z'
+  {
+    id: 'std3',
+    name: 'Charlie Brown',
+    rollNumber: '2021003',
+    course: 'Mechanical Engineering',
+    year: 3,
+    semester: 5,
+    email: 'charlie.b@example.com',
+    phone: '345-678-9012',
+    profileImage: 'https://i.pravatar.cc/150?img=3',
+    admissionDate: '2021-08-17',
+    guardianName: 'Patricia Brown',
+    guardianPhone: '345-678-9013',
+    address: '789 Midlane, Anytown',
+    bloodGroup: 'B+',
+    emergencyContact: '765-432-1098',
   },
-  { 
-    id: '4', 
-    name: 'Priya Singh', 
-    email: 'priya@rgi.edu', 
-    role: 'student', 
-    studentId: 'RGI002',
-    permissions: ['view_own_data'],
-    isActive: true,
-    lastLogin: '2024-06-20T09:15:00Z'
+  {
+    id: 'std4',
+    name: 'Diana Miller',
+    rollNumber: '2021004',
+    course: 'Civil Engineering',
+    year: 3,
+    semester: 5,
+    email: 'diana.m@example.com',
+    phone: '456-789-0123',
+    profileImage: 'https://i.pravatar.cc/150?img=4',
+    admissionDate: '2021-08-18',
+    guardianName: 'Michael Miller',
+    guardianPhone: '456-789-0124',
+    address: '101 Upland, Anytown',
+    bloodGroup: 'AB+',
+    emergencyContact: '654-321-0987',
+  },
+  {
+    id: 'std5',
+    name: 'Ethan Davis',
+    rollNumber: '2021005',
+    course: 'Chemical Engineering',
+    year: 3,
+    semester: 5,
+    email: 'ethan.d@example.com',
+    phone: '567-890-1234',
+    profileImage: 'https://i.pravatar.cc/150?img=5',
+    admissionDate: '2021-08-19',
+    guardianName: 'Susan Davis',
+    guardianPhone: '567-890-1235',
+    address: '112 Bottomland, Anytown',
+    bloodGroup: 'O-',
+    emergencyContact: '543-210-9876',
   },
 ];
 
 export const mockFaculty: Faculty[] = [
   {
-    id: 'FAC001',
-    name: 'Dr. Rajesh Sharma',
-    email: 'sharma@rgi.edu',
-    phone: '+91 9876543220',
+    id: 'fac1',
+    name: 'Dr. Smith',
+    email: 'smith@example.com',
+    phone: '111-222-3333',
     department: 'Computer Science',
     designation: 'Professor',
     employeeId: 'EMP001',
-    subjects: ['Data Structures', 'Algorithms', 'Database Management']
+    subjects: ['sub1', 'sub2'],
+    profileImage: 'https://i.pravatar.cc/150?img=6',
   },
   {
-    id: 'FAC002',
-    name: 'Prof. Anita Gupta',
-    email: 'gupta@rgi.edu',
-    phone: '+91 9876543221',
-    department: 'Computer Science',
+    id: 'fac2',
+    name: 'Dr. Jones',
+    email: 'jones@example.com',
+    phone: '222-333-4444',
+    department: 'Electrical Engineering',
     designation: 'Associate Professor',
     employeeId: 'EMP002',
-    subjects: ['Database Management', 'Web Development', 'Software Engineering']
-  }
+    subjects: ['sub3', 'sub4'],
+    profileImage: 'https://i.pravatar.cc/150?img=7',
+  },
+  {
+    id: 'fac3',
+    name: 'Dr. Williams',
+    email: 'williams@example.com',
+    phone: '333-444-5555',
+    department: 'Mechanical Engineering',
+    designation: 'Assistant Professor',
+    employeeId: 'EMP003',
+    subjects: ['sub5'],
+    profileImage: 'https://i.pravatar.cc/150?img=8',
+  },
 ];
 
 export const mockSubjects: Subject[] = [
   {
-    id: 'SUB001',
+    id: 'sub1',
     name: 'Data Structures',
+    code: 'CS201',
+    department: 'Computer Science',
+    semester: 3,
+    credits: 4,
+    type: 'Theory',
+  },
+  {
+    id: 'sub2',
+    name: 'Database Management',
     code: 'CS301',
     department: 'Computer Science',
     semester: 5,
     credits: 4,
-    type: 'Theory'
+    type: 'Theory',
   },
   {
-    id: 'SUB002',
-    name: 'Database Management',
-    code: 'CS302',
-    department: 'Computer Science',
-    semester: 5,
+    id: 'sub3',
+    name: 'Circuit Analysis',
+    code: 'EE201',
+    department: 'Electrical Engineering',
+    semester: 3,
     credits: 3,
-    type: 'Theory'
+    type: 'Theory',
   },
   {
-    id: 'SUB003',
-    name: 'Data Structures Lab',
-    code: 'CS301L',
-    department: 'Computer Science',
+    id: 'sub4',
+    name: 'Power Systems',
+    code: 'EE301',
+    department: 'Electrical Engineering',
     semester: 5,
-    credits: 2,
-    type: 'Lab'
-  }
+    credits: 4,
+    type: 'Theory',
+  },
+  {
+    id: 'sub5',
+    name: 'Thermodynamics',
+    code: 'ME201',
+    department: 'Mechanical Engineering',
+    semester: 3,
+    credits: 3,
+    type: 'Theory',
+  },
 ];
 
 export const timeSlots: TimeSlot[] = [
-  { id: 'TS001', startTime: '09:00', endTime: '10:00', period: 1 },
-  { id: 'TS002', startTime: '10:00', endTime: '11:00', period: 2 },
-  { id: 'TS003', startTime: '11:15', endTime: '12:15', period: 3 },
-  { id: 'TS004', startTime: '12:15', endTime: '13:15', period: 4 },
-  { id: 'TS005', startTime: '14:00', endTime: '15:00', period: 5 },
-  { id: 'TS006', startTime: '15:00', endTime: '16:00', period: 6 }
-];
-
-export const mockClassrooms: Classroom[] = [
-  {
-    id: 'CR001',
-    name: 'LH-101',
-    capacity: 60,
-    type: 'Lecture Hall',
-    building: 'Academic Block A',
-    floor: 1,
-    facilities: ['Projector', 'AC', 'Sound System']
-  },
-  {
-    id: 'CR002',
-    name: 'LAB-201',
-    capacity: 30,
-    type: 'Lab',
-    building: 'Academic Block B',
-    floor: 2,
-    facilities: ['Computers', 'Projector', 'AC']
-  }
+  { id: 'ts1', startTime: '9:00 AM', endTime: '10:00 AM', period: 1 },
+  { id: 'ts2', startTime: '10:00 AM', endTime: '11:00 AM', period: 2 },
+  { id: 'ts3', startTime: '11:00 AM', endTime: '12:00 PM', period: 3 },
+  { id: 'ts4', startTime: '1:00 PM', endTime: '2:00 PM', period: 4 },
+  { id: 'ts5', startTime: '2:00 PM', endTime: '3:00 PM', period: 5 },
 ];
 
 export const mockTimetable: TimetableEntry[] = [
   {
-    id: 'TT001',
+    id: 'tt1',
     dayOfWeek: 1, // Monday
     timeSlot: timeSlots[0],
-    subjectId: 'SUB001',
-    facultyId: 'FAC001',
-    classroomId: 'CR001',
-    course: 'Computer Science Engineering',
+    subjectId: 'sub1',
+    facultyId: 'fac1',
+    classroomId: 'cr1',
+    course: 'Computer Science',
     semester: 5,
-    year: 3
+    year: 3,
   },
   {
-    id: 'TT002',
+    id: 'tt2',
     dayOfWeek: 1, // Monday
     timeSlot: timeSlots[1],
-    subjectId: 'SUB002',
-    facultyId: 'FAC002',
-    classroomId: 'CR001',
-    course: 'Computer Science Engineering',
+    subjectId: 'sub2',
+    facultyId: 'fac1',
+    classroomId: 'cr2',
+    course: 'Computer Science',
     semester: 5,
-    year: 3
-  }
+    year: 3,
+  },
+  {
+    id: 'tt3',
+    dayOfWeek: 2, // Tuesday
+    timeSlot: timeSlots[0],
+    subjectId: 'sub3',
+    facultyId: 'fac2',
+    classroomId: 'cr3',
+    course: 'Electrical Engineering',
+    semester: 5,
+    year: 3,
+  },
+  {
+    id: 'tt4',
+    dayOfWeek: 3, // Wednesday
+    timeSlot: timeSlots[2],
+    subjectId: 'sub1',
+    facultyId: 'fac1',
+    classroomId: 'cr1',
+    course: 'Computer Science',
+    semester: 5,
+    year: 3,
+  },
+  {
+    id: 'tt5',
+    dayOfWeek: 4, // Thursday
+    timeSlot: timeSlots[1],
+    subjectId: 'sub4',
+    facultyId: 'fac2',
+    classroomId: 'cr2',
+    course: 'Electrical Engineering',
+    semester: 5,
+    year: 3,
+  },
+  {
+    id: 'tt6',
+    dayOfWeek: 5, // Friday
+    timeSlot: timeSlots[0],
+    subjectId: 'sub5',
+    facultyId: 'fac3',
+    classroomId: 'cr3',
+    course: 'Mechanical Engineering',
+    semester: 5,
+    year: 3,
+  },
 ];
 
-export const mockStudents: Student[] = [
+export const mockClassrooms: Classroom[] = [
   {
-    id: 'RGI001',
-    name: 'Rahul Kumar',
-    rollNumber: '21CS001',
-    course: 'Computer Science Engineering',
-    year: 3,
-    semester: 5,
-    email: 'rahul@rgi.edu',
-    phone: '+91 9876543210',
-    admissionDate: '2021-08-15',
-    guardianName: 'Suresh Kumar',
-    guardianPhone: '+91 9876543215',
-    address: '123 Main Street, Delhi',
-    bloodGroup: 'O+',
-    emergencyContact: '+91 9876543216'
+    id: 'cr1',
+    name: 'Room 101',
+    capacity: 60,
+    type: 'Lecture Hall',
+    building: 'A',
+    floor: 1,
+    facilities: ['Projector', 'Whiteboard'],
   },
   {
-    id: 'RGI002',
-    name: 'Priya Singh',
-    rollNumber: '21CS002',
-    course: 'Computer Science Engineering',
-    year: 3,
-    semester: 5,
-    email: 'priya@rgi.edu',
-    phone: '+91 9876543211',
-    admissionDate: '2021-08-15',
-    guardianName: 'Rajesh Singh',
-    guardianPhone: '+91 9876543217',
-    address: '456 Park Avenue, Mumbai',
-    bloodGroup: 'A+',
-    emergencyContact: '+91 9876543218'
+    id: 'cr2',
+    name: 'Lab A',
+    capacity: 30,
+    type: 'Lab',
+    building: 'B',
+    floor: 2,
+    facilities: ['Computers', 'Equipment'],
   },
   {
-    id: 'RGI003',
-    name: 'Amit Patel',
-    rollNumber: '21ME001',
-    course: 'Mechanical Engineering',
-    year: 2,
-    semester: 3,
-    email: 'amit@rgi.edu',
-    phone: '+91 9876543212',
-    admissionDate: '2021-08-15',
-    guardianName: 'Bharat Patel',
-    guardianPhone: '+91 9876543219',
-    address: '789 Gandhi Road, Ahmedabad',
-    bloodGroup: 'B+',
-    emergencyContact: '+91 9876543220'
+    id: 'cr3',
+    name: 'Room 201',
+    capacity: 45,
+    type: 'Tutorial Room',
+    building: 'A',
+    floor: 2,
+    facilities: ['Whiteboard', 'Tables'],
   },
-  {
-    id: 'RGI004',
-    name: 'Sneha Reddy',
-    rollNumber: '21EE001',
-    course: 'Electrical Engineering',
-    year: 1,
-    semester: 2,
-    email: 'sneha@rgi.edu',
-    phone: '+91 9876543213',
-    admissionDate: '2021-08-15',
-    guardianName: 'Venkat Reddy',
-    guardianPhone: '+91 9876543221',
-    address: '321 Tech City, Hyderabad',
-    bloodGroup: 'AB+',
-    emergencyContact: '+91 9876543222'
-  }
 ];
 
 export const mockAttendance: AttendanceRecord[] = [
   {
-    id: '1',
-    studentId: 'RGI001',
+    id: 'att1',
+    studentId: 'std1',
     subject: 'Data Structures',
-    subjectId: 'SUB001',
+    subjectId: 'sub1',
     date: '2024-06-20',
-    timeSlot: '09:00-10:00',
+    timeSlot: '9:00 AM',
     period: 1,
     status: 'Present',
-    faculty: 'Dr. Sharma',
-    facultyId: 'FAC001',
-    markedAt: '2024-06-20T09:05:00Z',
-    markedBy: 'FAC001',
-    className: 'CS-5th-Sem',
-    academicYear: '2024-25'
+    faculty: 'Dr. Smith',
+    facultyId: 'fac1',
+    markedAt: '2024-06-20T09:05:00',
+    markedBy: 'fac1',
+    className: 'CS301',
+    academicYear: '2024',
   },
   {
-    id: '2',
-    studentId: 'RGI001',
+    id: 'att2',
+    studentId: 'std2',
     subject: 'Database Management',
-    subjectId: 'SUB002',
+    subjectId: 'sub2',
     date: '2024-06-20',
-    timeSlot: '10:00-11:00',
+    timeSlot: '10:00 AM',
     period: 2,
     status: 'Absent',
-    faculty: 'Prof. Gupta',
-    facultyId: 'FAC002',
-    markedAt: '2024-06-20T10:05:00Z',
-    markedBy: 'FAC002',
-    className: 'CS-5th-Sem',
-    academicYear: '2024-25'
+    faculty: 'Dr. Smith',
+    facultyId: 'fac1',
+    markedAt: '2024-06-20T10:10:00',
+    markedBy: 'fac1',
+    className: 'CS301',
+    academicYear: '2024',
   },
   {
-    id: '3',
-    studentId: 'RGI002',
-    subject: 'Data Structures',
-    subjectId: 'SUB001',
+    id: 'att3',
+    studentId: 'std3',
+    subject: 'Thermodynamics',
+    subjectId: 'sub5',
     date: '2024-06-20',
-    timeSlot: '09:00-10:00',
+    timeSlot: '9:00 AM',
     period: 1,
-    status: 'Present',
-    faculty: 'Dr. Sharma',
-    facultyId: 'FAC001',
-    markedAt: '2024-06-20T09:05:00Z',
-    markedBy: 'FAC001',
-    className: 'CS-5th-Sem',
-    academicYear: '2024-25'
-  },
-  {
-    id: '4',
-    studentId: 'RGI002',
-    subject: 'Database Management',
-    subjectId: 'SUB002',
-    date: '2024-06-20',
-    timeSlot: '10:00-11:00',
-    period: 2,
     status: 'Late',
-    faculty: 'Prof. Gupta',
-    facultyId: 'FAC002',
-    markedAt: '2024-06-20T10:15:00Z',
-    markedBy: 'FAC002',
-    className: 'CS-5th-Sem',
-    academicYear: '2024-25'
-  }
-];
-
-export const mockAttendanceSessions: AttendanceSession[] = [
-  {
-    id: 'AS001',
-    subjectId: 'SUB001',
-    facultyId: 'FAC001',
-    date: '2024-06-20',
-    timeSlot: '09:00-10:00',
-    period: 1,
-    className: 'CS-5th-Sem',
-    totalStudents: 2,
-    presentCount: 2,
-    absentCount: 0,
-    lateCount: 0,
-    isActive: false,
-    createdAt: '2024-06-20T09:00:00Z'
+    faculty: 'Dr. Williams',
+    facultyId: 'fac3',
+    markedAt: '2024-06-20T09:15:00',
+    markedBy: 'fac3',
+    className: 'ME201',
+    academicYear: '2024',
   },
   {
-    id: 'AS002',
-    subjectId: 'SUB002',
-    facultyId: 'FAC002',
+    id: 'att4',
+    studentId: 'std4',
+    subject: 'Circuit Analysis',
+    subjectId: 'sub3',
     date: '2024-06-20',
-    timeSlot: '10:00-11:00',
+    timeSlot: '10:00 AM',
     period: 2,
-    className: 'CS-5th-Sem',
-    totalStudents: 2,
-    presentCount: 0,
-    absentCount: 1,
-    lateCount: 1,
-    isActive: false,
-    createdAt: '2024-06-20T10:00:00Z'
-  }
+    status: 'Present',
+    faculty: 'Dr. Jones',
+    facultyId: 'fac2',
+    markedAt: '2024-06-20T10:05:00',
+    markedBy: 'fac2',
+    className: 'EE201',
+    academicYear: '2024',
+  },
+  {
+    id: 'att5',
+    studentId: 'std5',
+    subject: 'Power Systems',
+    subjectId: 'sub4',
+    date: '2024-06-20',
+    timeSlot: '2:00 PM',
+    period: 5,
+    status: 'Present',
+    faculty: 'Dr. Jones',
+    facultyId: 'fac2',
+    markedAt: '2024-06-20T14:05:00',
+    markedBy: 'fac2',
+    className: 'EE301',
+    academicYear: '2024',
+  },
 ];
 
-export const mockFees: FeeRecord[] = [
+export const calculateAttendanceStats = (studentId: string): AttendanceStats => {
+  const studentAttendance = mockAttendance.filter(record => record.studentId === studentId);
+  const totalClasses = studentAttendance.length;
+  const presentClasses = studentAttendance.filter(record => record.status === 'Present').length;
+  const absentClasses = studentAttendance.filter(record => record.status === 'Absent').length;
+  const lateClasses = studentAttendance.filter(record => record.status === 'Late').length;
+
+  const attendancePercentage = totalClasses > 0 ? Math.round((presentClasses + lateClasses) / totalClasses * 100) : 0;
+
+  const subjectWiseAttendance = mockSubjects.map(subject => {
+    const subjectAttendance = studentAttendance.filter(record => record.subjectId === subject.id);
+    const subjectTotal = subjectAttendance.length;
+    const subjectPresent = subjectAttendance.filter(record => record.status === 'Present').length;
+    const percentage = subjectTotal > 0 ? Math.round(subjectPresent / subjectTotal * 100) : 0;
+
+    return {
+      subjectId: subject.id,
+      subjectName: subject.name,
+      totalClasses: subjectTotal,
+      presentClasses: subjectPresent,
+      percentage: percentage,
+    };
+  });
+
+  return {
+    totalClasses,
+    presentClasses,
+    absentClasses,
+    lateClasses,
+    attendancePercentage,
+    subjectWiseAttendance,
+  };
+};
+
+export const mockFeeRecords: FeeRecord[] = [
   {
-    id: '1',
-    studentId: 'RGI001',
+    id: 'fee1',
+    studentId: 'std1',
     feeType: 'Tuition Fee',
-    amount: 75000,
+    amount: 45000,
     dueDate: '2024-07-15',
     paidDate: '2024-07-10',
     status: 'Paid',
     semester: 5,
     academicYear: '2024-25',
     paymentMethod: 'Online',
-    receiptNumber: 'RCP001'
+    receiptNumber: 'RCT001'
   },
   {
-    id: '2',
-    studentId: 'RGI001',
-    feeType: 'Library Fee',
-    amount: 2000,
-    dueDate: '2024-07-20',
+    id: 'fee2',
+    studentId: 'std2',
+    feeType: 'Tuition Fee',
+    amount: 45000,
+    dueDate: '2024-07-15',
     status: 'Pending',
     semester: 5,
     academicYear: '2024-25'
   },
   {
-    id: '3',
-    studentId: 'RGI002',
-    feeType: 'Tuition Fee',
-    amount: 75000,
-    dueDate: '2024-07-15',
+    id: 'fee3',
+    studentId: 'std3',
+    feeType: 'Lab Fee',
+    amount: 8000,
+    dueDate: '2024-06-15',
     status: 'Overdue',
+    semester: 5,
+    academicYear: '2024-25'
+  },
+  {
+    id: 'fee4',
+    studentId: 'std4',
+    feeType: 'Library Fee',
+    amount: 2000,
+    dueDate: '2024-07-20',
+    paidDate: '2024-07-18',
+    status: 'Paid',
+    semester: 5,
+    academicYear: '2024-25',
+    paymentMethod: 'Cash',
+    receiptNumber: 'RCT002'
+  },
+  {
+    id: 'fee5',
+    studentId: 'std5',
+    feeType: 'Exam Fee',
+    amount: 1500,
+    dueDate: '2024-08-01',
+    status: 'Pending',
     semester: 5,
     academicYear: '2024-25'
   }
 ];
 
-export const mockExams: ExamRecord[] = [
+export const mockExamRecords: ExamRecord[] = [
   {
-    id: '1',
-    studentId: 'RGI001',
+    id: 'exam1',
+    studentId: 'std1',
     subject: 'Data Structures',
-    subjectId: 'SUB001',
+    subjectId: 'sub1',
     examType: 'Mid-term',
     marksObtained: 85,
     totalMarks: 100,
@@ -369,71 +481,52 @@ export const mockExams: ExamRecord[] = [
     remarks: 'Excellent performance'
   },
   {
-    id: '2',
-    studentId: 'RGI001',
+    id: 'exam2',
+    studentId: 'std2',
     subject: 'Database Management',
-    subjectId: 'SUB002',
-    examType: 'Assignment',
+    subjectId: 'sub2',
+    examType: 'Mid-term',
     marksObtained: 78,
     totalMarks: 100,
-    examDate: '2024-06-18',
+    examDate: '2024-06-16',
     grade: 'B+',
-    percentage: 78,
-    remarks: 'Good work'
+    percentage: 78
   },
   {
-    id: '3',
-    studentId: 'RGI002',
+    id: 'exam3',
+    studentId: 'std3',
     subject: 'Data Structures',
-    subjectId: 'SUB001',
-    examType: 'Mid-term',
+    subjectId: 'sub1',
+    examType: 'Final',
     marksObtained: 92,
     totalMarks: 100,
-    examDate: '2024-06-15',
+    examDate: '2024-06-20',
     grade: 'A+',
     percentage: 92,
-    remarks: 'Outstanding performance'
+    remarks: 'Outstanding'
+  },
+  {
+    id: 'exam4',
+    studentId: 'std4',
+    subject: 'Operating Systems',
+    subjectId: 'sub3',
+    examType: 'Quiz',
+    marksObtained: 65,
+    totalMarks: 100,
+    examDate: '2024-06-18',
+    grade: 'B',
+    percentage: 65
+  },
+  {
+    id: 'exam5',
+    studentId: 'std5',
+    subject: 'Computer Networks',
+    subjectId: 'sub4',
+    examType: 'Assignment',
+    marksObtained: 88,
+    totalMarks: 100,
+    examDate: '2024-06-22',
+    grade: 'A',
+    percentage: 88
   }
 ];
-
-// Helper function to calculate attendance stats
-export const calculateAttendanceStats = (studentId: string): AttendanceStats => {
-  const studentAttendance = mockAttendance.filter(a => a.studentId === studentId);
-  const totalClasses = studentAttendance.length;
-  const presentClasses = studentAttendance.filter(a => a.status === 'Present').length;
-  const absentClasses = studentAttendance.filter(a => a.status === 'Absent').length;
-  const lateClasses = studentAttendance.filter(a => a.status === 'Late').length;
-  const attendancePercentage = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
-
-  // Subject-wise attendance calculation
-  const subjectMap = new Map();
-  studentAttendance.forEach(record => {
-    if (!subjectMap.has(record.subjectId)) {
-      subjectMap.set(record.subjectId, {
-        subjectId: record.subjectId,
-        subjectName: record.subject,
-        totalClasses: 0,
-        presentClasses: 0
-      });
-    }
-    const subject = subjectMap.get(record.subjectId);
-    subject.totalClasses++;
-    if (record.status === 'Present') {
-      subject.presentClasses++;
-    }
-  });
-
-  const subjectWiseAttendance = Array.from(subjectMap.values()).map(subject => ({
-    ...subject,
-    percentage: subject.totalClasses > 0 ? Math.round((subject.presentClasses / subject.totalClasses) * 100) : 0
-  }));
-
-  return {
-    totalClasses,
-    presentClasses,
-    absentClasses,
-    lateClasses,
-    attendancePercentage,
-    subjectWiseAttendance
-  };
-};

@@ -7,6 +7,8 @@ import Dashboard from '../components/Dashboard/Dashboard';
 import StudentList from '../components/Students/StudentList';
 import StudentProfile from '../components/Students/StudentProfile';
 import AttendanceOverview from '../components/Attendance/AttendanceOverview';
+import FeeManagement from '../components/Fees/FeeManagement';
+import ExamManagement from '../components/Exams/ExamManagement';
 import { Student } from '../types';
 
 const Index = () => {
@@ -36,19 +38,9 @@ const Index = () => {
       case 'attendance':
         return <AttendanceOverview />;
       case 'fees':
-        return (
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Fee Management</h2>
-            <p className="text-gray-600">Fee management module coming soon...</p>
-          </div>
-        );
+        return <FeeManagement />;
       case 'exams':
-        return (
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Exam Management</h2>
-            <p className="text-gray-600">Exam management module coming soon...</p>
-          </div>
-        );
+        return <ExamManagement />;
       case 'reports':
         return (
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">

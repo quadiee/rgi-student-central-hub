@@ -42,7 +42,7 @@ const TimetableView: React.FC = () => {
         ))}
 
         {timeSlots.map(slot => (
-          <React.Fragment key={slot.id}>
+          <div key={slot.id} className="contents">
             <div className="text-center py-4 bg-gray-50 rounded-lg">
               <div className="text-sm font-medium text-gray-800">
                 {slot.startTime} - {slot.endTime}
@@ -76,7 +76,7 @@ const TimetableView: React.FC = () => {
                 </div>
               );
             })}
-          </React.Fragment>
+          </div>
         ))}
       </div>
     </div>
