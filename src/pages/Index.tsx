@@ -9,6 +9,7 @@ import StudentProfile from '../components/Students/StudentProfile';
 import AttendanceOverview from '../components/Attendance/AttendanceOverview';
 import FeeManagement from '../components/Fees/FeeManagement';
 import ExamManagement from '../components/Exams/ExamManagement';
+import LeaveManagement from '../components/Leave/LeaveManagement';
 import AdminPanel from '../components/Admin/AdminPanel';
 import ReportGenerator from '../components/Reports/ReportGenerator';
 import MobileQuickActions from '../components/Mobile/MobileQuickActions';
@@ -47,6 +48,8 @@ const Index = () => {
         return <FeeManagement />;
       case 'exams':
         return <ExamManagement />;
+      case 'leaves':
+        return <LeaveManagement />;
       case 'reports':
         return <ReportGenerator />;
       case 'settings':

@@ -5,45 +5,33 @@ import { LucideIcon } from 'lucide-react';
 interface StatsCardProps {
   title: string;
   value: string | number;
-  change?: string;
-  changeType?: 'positive' | 'negative' | 'neutral';
   icon: LucideIcon;
-  gradient: string;
+  color: 'blue' | 'green' | 'red' | 'yellow' | 'purple' | 'indigo';
+  trend?: string;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({
-  title,
-  value,
-  change,
-  changeType = 'neutral',
-  icon: Icon,
-  gradient
-}) => {
-  const getChangeColor = () => {
-    switch (changeType) {
-      case 'positive':
-        return 'text-green-600';
-      case 'negative':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
-    }
+const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, trend }) => {
+  const colorClasses = {
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-green-100 text-green-600',
+    red: 'bg-red-100 text-red-600',
+    yellow: 'bg-yellow-100 text-yellow-600',
+    purple: 'bg-purple-100 text-purple-600',
+    indigo: 'bg-indigo-100 text-indigo-600'
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+    <div className="bg-white rounded-xl shadow-lg p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-600 text-sm font-medium">{title}</p>
-          <p className="text-3xl font-bold text-gray-800 mt-2">{value}</p>
-          {change && (
-            <p className={`text-sm mt-2 ${getChangeColor()}`}>
-              {change}
-            </p>
+          <p className="text-gray-600 text-sm">{title}</p>
+          <p className="text-3xl font-bold text-gray-800">{value}</p>
+          {trend && (
+            <p className="text-sm text-gray-500 mt-1">{trend}</p>
           )}
         </div>
-        <div className={`p-3 rounded-xl bg-gradient-to-r ${gradient}`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
+          <Icon className="w-6 h-6" />
         </div>
       </div>
     </div>
