@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import FacultyDashboard from './FacultyDashboard';
 import HODDashboard from './HODDashboard';

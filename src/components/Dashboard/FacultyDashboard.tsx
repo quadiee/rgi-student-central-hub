@@ -21,28 +21,28 @@ const FacultyDashboard: React.FC = () => {
       title: 'Classes Today',
       value: totalClasses,
       icon: Calendar,
-      color: 'blue',
+      color: 'blue' as const,
       trend: '+2 from yesterday'
     },
     {
       title: 'Present Students',
       value: presentToday,
       icon: Users,
-      color: 'green',
+      color: 'green' as const,
       trend: '85% attendance rate'
     },
     {
       title: 'Absent Students',
       value: absentToday,
       icon: AlertTriangle,
-      color: 'red',
+      color: 'red' as const,
       trend: '15% absence rate'
     },
     {
       title: 'Pending Leaves',
       value: pendingLeaves,
       icon: FileText,
-      color: 'yellow',
+      color: 'yellow' as const,
       trend: 'Need approval'
     }
   ];

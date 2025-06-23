@@ -19,28 +19,28 @@ const HODDashboard: React.FC = () => {
       title: 'Department Students',
       value: departmentStudents.length,
       icon: Users,
-      color: 'blue',
+      color: 'blue' as const,
       trend: '+5 this semester'
     },
     {
       title: 'Avg Attendance',
       value: `${avgAttendance}%`,
       icon: TrendingUp,
-      color: 'green',
+      color: 'green' as const,
       trend: '+2% from last month'
     },
     {
       title: 'At-Risk Students',
       value: atRiskStudents,
       icon: AlertTriangle,
-      color: 'red',
+      color: 'red' as const,
       trend: 'Need attention'
     },
     {
       title: 'Pending Approvals',
       value: pendingLeaves,
       icon: FileText,
-      color: 'yellow',
+      color: 'yellow' as const,
       trend: 'Leave requests'
     }
   ];

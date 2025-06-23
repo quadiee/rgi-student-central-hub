@@ -19,28 +19,28 @@ const PrincipalDashboard: React.FC = () => {
       title: 'Total Students',
       value: totalStudents,
       icon: Users,
-      color: 'blue',
+      color: 'blue' as const,
       trend: '+50 this year'
     },
     {
       title: 'College Average',
       value: `${collegeAvgAttendance}%`,
       icon: TrendingUp,
-      color: 'green',
+      color: 'green' as const,
       trend: '+3% from last semester'
     },
     {
       title: 'Departments',
       value: departments,
       icon: Building,
-      color: 'purple',
+      color: 'purple' as const,
       trend: 'All active'
     },
     {
       title: 'Faculty Members',
       value: facultyCount,
       icon: Award,
-      color: 'indigo',
+      color: 'indigo' as const,
       trend: '5 new this year'
     }
   ];
