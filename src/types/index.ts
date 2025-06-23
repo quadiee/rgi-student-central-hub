@@ -1,3 +1,4 @@
+
 export interface Student {
   id: string;
   name: string;
@@ -168,6 +169,9 @@ export interface User {
   email: string; // Must be @rgce.edu.in
   role: UserRole;
   department: Department;
+  rollNumber?: string; // For students
+  yearSection?: string; // For students
+  attendancePercentage?: number; // For students
   studentId?: string;
   facultyId?: string;
   profileImage?: string;
@@ -175,6 +179,7 @@ export interface User {
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
+  avatar?: string;
 }
 
 // Enhanced Attendance Statistics

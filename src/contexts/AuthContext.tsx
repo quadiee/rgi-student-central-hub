@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()),
           email,
           role,
-          department: role === 'student' ? 'CSE' : 'Computer Science',
+          department: role === 'student' ? 'CSE' : 'CSE',
           rollNumber: role === 'student' ? '21CSE001' : undefined,
           yearSection: role === 'student' ? '3rd Year - A' : undefined,
           attendancePercentage: role === 'student' ? 85 : undefined,
