@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import MobileSidebar from '../components/Layout/MobileSidebar';
@@ -7,7 +6,7 @@ import Dashboard from '../components/Dashboard/Dashboard';
 import StudentList from '../components/Students/StudentList';
 import StudentProfile from '../components/Students/StudentProfile';
 import AttendanceOverview from '../components/Attendance/AttendanceOverview';
-import FeeManagement from '../components/Fees/FeeManagement';
+import EnhancedFeeManagement from '../components/Fees/EnhancedFeeManagement';
 import ExamManagement from '../components/Exams/ExamManagement';
 import LeaveManagement from '../components/Leave/LeaveManagement';
 import AdminPanel from '../components/Admin/AdminPanel';
@@ -48,7 +47,7 @@ const AppContent = () => {
       case 'attendance':
         return <AttendanceOverview />;
       case 'fees':
-        return <FeeManagement />;
+        return <EnhancedFeeManagement />;
       case 'exams':
         return <ExamManagement />;
       case 'leaves':
