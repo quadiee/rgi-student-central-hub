@@ -11,13 +11,13 @@ const Dashboard: React.FC = () => {
 
   const renderDashboard = () => {
     switch (user?.role) {
-      case 'Student':
+      case 'student':
         return <StudentDashboard />;
-      case 'Faculty':
+      case 'faculty':
         return <FacultyDashboard />;
-      case 'HOD':
+      case 'hod':
         return <HODDashboard />;
-      case 'Principal':
+      case 'principal':
         return <PrincipalDashboard />;
       default:
         return <StudentDashboard />;
