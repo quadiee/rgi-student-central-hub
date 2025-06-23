@@ -1,4 +1,3 @@
-
 // Database service layer for CRUD operations
 export interface DatabaseService {
   // Users
@@ -31,6 +30,12 @@ export interface DatabaseService {
   createLeave(leave: any): Promise<any>;
   updateLeave(id: string, leave: any): Promise<any>;
   deleteLeave(id: string): Promise<void>;
+
+  // Fees
+  getFeeRecords(filters?: any): Promise<any[]>;
+  createFeeRecord(feeRecord: any): Promise<any>;
+  updateFeeRecord(id: string, feeRecord: any): Promise<any>;
+  deleteFeeRecord(id: string): Promise<void>;
 }
 
 // Mock implementation (to be replaced with actual database)
@@ -194,6 +199,75 @@ class MockDatabaseService implements DatabaseService {
 
   async deleteLeave(id: string): Promise<void> {
     this.leaves = this.leaves.filter(l => l.id !== id);
+  }
+
+  async getFeeRecords(filters?: any): Promise<any[]> {
+    // Mock fee records
+    const mockFeeRecords = [
+      {
+        id: '1',
+        studentId: filters?.studentId || '1',
+        feeType: 'Tuition Fee',
+        amount: 50000,
+        dueDate: '2024-07-15',
+        paidDate: '2024-06-10',
+        status: 'Paid',
+        semester: 6,
+        academicYear: '2023-24',
+        paymentMethod: 'Online',
+        receiptNumber: 'RCP001'
+      },
+      {
+        id: '2',
+        studentId: filters?.studentId || '1',
+        feeType: 'Lab Fee',
+        amount: 5000,
+        dueDate: '2024-12-15',
+        status: 'Pending',
+        semester: 7,
+        academicYear: '2024-25'
+      },
+      {
+        id: '3',
+        studentId: filters?.studentId || '1',
+        feeType: 'Library Fee',
+        amount: 2000,
+        dueDate: '2024-12-15',
+        status: 'Pending',
+        semester: 7,
+        academicYear: '2024-25'
+      }
+    ];
+
+    let result = mockFeeRecords;
+    
+    if (filters?.studentId) {
+      result = result.filter(f => f.studentId === filters.studentId);
+    }
+    if (filters?.department) {
+      // Filter by department logic would go here
+      result = result.filter(f => f.semester >= 1); // Placeholder
+    }
+    if (filters?.status) {
+      result = result.filter(f => f.status === filters.status);
+    }
+    
+    return result;
+  }
+
+  async createFeeRecord(feeRecord: any): Promise<any> {
+    const newRecord = { ...feeRecord, id: Date.now().toString() };
+    return newRecord;
+  }
+
+  async updateFeeRecord(id: string, feeRecord: any): Promise<any> {
+    // Mock update
+    return { ...feeRecord, id };
+  }
+
+  async deleteFeeRecord(id: string): Promise<void> {
+    // Mock delete
+    console.log(`Fee record ${id} deleted`);
   }
 }
 
