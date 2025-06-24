@@ -1,11 +1,10 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Calendar, Mail, Phone, MapPin, TrendingUp, Clock, FileText, Edit } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, Clock, FileText, Edit, DollarSign } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Student } from '../../types';
-import { mockAttendance, mockSubjects } from '../../data/mockData';
+import { mockFeeRecords } from '../../data/mockData';
 import { useIsMobile } from '../../hooks/use-mobile';
-import MobileAttendanceCard from '../Mobile/MobileAttendanceCard';
 
 interface StudentProfileProps {
   student: Student;
@@ -16,25 +15,10 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const isMobile = useIsMobile();
 
-  const studentAttendance = mockAttendance.filter(a => a.studentId === student.id);
-  const attendanceBySubject = mockSubjects.map(subject => {
-    const subjectAttendance = studentAttendance.filter(a => a.courseCode === subject.code);
-    const present = subjectAttendance.filter(a => a.status === 'Present').length;
-    const total = subjectAttendance.length;
-    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-
-    return {
-      subject: subject.name,
-      code: subject.code,
-      present,
-      total,
-      percentage
-    };
-  });
-
-  const recentAttendance = studentAttendance
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 10);
+  const studentFeeRecords = mockFeeRecords.filter(record => record.studentId === student.id);
+  const totalFees = studentFeeRecords.reduce((sum, record) => sum + record.amount, 0);
+  const totalPaid = studentFeeRecords.reduce((sum, record) => sum + (record.paidAmount || 0), 0);
+  const totalDue = totalFees - totalPaid;
 
   return (
     <div className="space-y-6">
@@ -93,11 +77,11 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
 
           <div className="text-center">
             <div className={`text-3xl font-bold ${
-              student.attendancePercentage >= 75 ? 'text-green-600' : 'text-red-600'
+              totalDue === 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              {student.attendancePercentage}%
+              ₹{totalDue.toLocaleString()}
             </div>
-            <div className="text-sm text-gray-500">Overall Attendance</div>
+            <div className="text-sm text-gray-500">Amount Due</div>
           </div>
         </div>
       </div>
@@ -107,8 +91,8 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
         <div className={`flex ${isMobile ? 'overflow-x-auto' : 'flex-wrap'} gap-1`}>
           {[
             { id: 'overview', label: 'Overview', icon: TrendingUp },
-            { id: 'attendance', label: 'Attendance Log', icon: Calendar },
-            { id: 'subjects', label: 'Subject Wise', icon: FileText },
+            { id: 'fees', label: 'Fee Details', icon: DollarSign },
+            { id: 'profile', label: 'Personal Info', icon: FileText },
           ].map(tab => {
             const Icon = tab.icon;
             return (
@@ -134,52 +118,44 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Attendance Summary</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">Fee Summary</h4>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Classes:</span>
-                  <span className="font-medium">{studentAttendance.length}</span>
+                  <span className="text-gray-600">Total Fees:</span>
+                  <span className="font-medium">₹{totalFees.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Present:</span>
-                  <span className="font-medium text-green-600">
-                    {studentAttendance.filter(a => a.status === 'Present').length}
-                  </span>
+                  <span className="text-gray-600">Amount Paid:</span>
+                  <span className="font-medium text-green-600">₹{totalPaid.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Absent:</span>
-                  <span className="font-medium text-red-600">
-                    {studentAttendance.filter(a => a.status === 'Absent').length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">On Leave:</span>
-                  <span className="font-medium text-yellow-600">
-                    {studentAttendance.filter(a => a.status === 'Leave').length}
+                  <span className="text-gray-600">Amount Due:</span>
+                  <span className={`font-medium ${totalDue > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    ₹{totalDue.toLocaleString()}
                   </span>
                 </div>
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Performance Status</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">Payment Status</h4>
               <div className="space-y-4">
                 <div className={`p-4 rounded-lg ${
-                  student.attendancePercentage >= 75 
+                  totalDue === 0 
                     ? 'bg-green-50 border border-green-200' 
                     : 'bg-red-50 border border-red-200'
                 }`}>
                   <div className={`font-medium ${
-                    student.attendancePercentage >= 75 ? 'text-green-800' : 'text-red-800'
+                    totalDue === 0 ? 'text-green-800' : 'text-red-800'
                   }`}>
-                    {student.attendancePercentage >= 75 ? 'Good Standing' : 'At Risk'}
+                    {totalDue === 0 ? 'All Fees Paid' : 'Payment Pending'}
                   </div>
                   <div className={`text-sm ${
-                    student.attendancePercentage >= 75 ? 'text-green-600' : 'text-red-600'
+                    totalDue === 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {student.attendancePercentage >= 75 
-                      ? 'Meeting minimum attendance requirement'
-                      : 'Below 75% minimum requirement'
+                    {totalDue === 0 
+                      ? 'All semester fees have been paid'
+                      : `₹${totalDue.toLocaleString()} pending payment`
                     }
                   </div>
                 </div>
@@ -188,95 +164,82 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
           </div>
         )}
 
-        {activeTab === 'attendance' && (
+        {activeTab === 'fees' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">Recent Attendance</h4>
-            {isMobile ? (
-              <div className="space-y-3">
-                {recentAttendance.map((record, index) => {
-                  const subject = mockSubjects.find(s => s.code === record.courseCode);
-                  return (
-                    <MobileAttendanceCard
-                      key={index}
-                      subject={subject?.name || record.courseCode}
-                      date={record.date}
-                      status={record.status}
-                      hour={record.hourNumber}
-                      totalHours={8}
-                      percentage={student.attendancePercentage}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hour</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <h4 className="text-lg font-semibold text-gray-800 mb-4">Fee Records</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Academic Year</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Semester</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fee Type</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {studentFeeRecords.map((record, index) => (
+                    <tr key={index}>
+                      <td className="px-4 py-2 text-sm text-gray-900">{record.academicYear}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{record.semester}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{record.feeType}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">₹{record.amount.toLocaleString()}</td>
+                      <td className="px-4 py-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          record.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                          record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {recentAttendance.map((record, index) => {
-                      const subject = mockSubjects.find(s => s.code === record.courseCode);
-                      return (
-                        <tr key={index}>
-                          <td className="px-4 py-2 text-sm text-gray-900">{record.date}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{subject?.name || record.courseCode}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">Hour {record.hourNumber}</td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              record.status === 'Present' ? 'bg-green-100 text-green-800' :
-                              record.status === 'Leave' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {record.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {activeTab === 'subjects' && (
+        {activeTab === 'profile' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">Subject-wise Attendance</h4>
-            <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
-              {attendanceBySubject.map((subject, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                  <h5 className="font-medium text-gray-900 mb-2">{subject.subject}</h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Classes Attended:</span>
-                      <span>{subject.present} / {subject.total}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          subject.percentage >= 75 ? 'bg-green-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${subject.percentage}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Percentage:</span>
-                      <span className={`font-medium ${
-                        subject.percentage >= 75 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {subject.percentage}%
-                      </span>
-                    </div>
+            <h4 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h4>
+            <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-6`}>
+              <div>
+                <h5 className="font-medium text-gray-700 mb-2">Contact Information</h5>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600">Phone:</span>
+                    <span className="font-medium">{student.phone}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600">Email:</span>
+                    <span className="font-medium">{student.email}</span>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                    <span className="text-gray-600">Address:</span>
+                    <span className="font-medium">{student.address}</span>
                   </div>
                 </div>
-              ))}
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-gray-700 mb-2">Guardian Information</h5>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-gray-600">Name:</span>
+                    <span className="font-medium ml-2">{student.guardianName}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Phone:</span>
+                    <span className="font-medium ml-2">{student.guardianPhone}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

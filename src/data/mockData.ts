@@ -85,7 +85,7 @@ export const mockStudents = [
     totalFees: 120000,
     paidAmount: 80000,
     dueAmount: 40000,
-    feeStatus: 'Partial'
+    feeStatus: 'Pending'
   },
   {
     id: '3',
@@ -154,7 +154,7 @@ export const mockFeeRecords: FeeRecord[] = [
     feeType: 'Tuition Fee',
     amount: 60000,
     dueDate: '2024-12-15',
-    status: 'Partial',
+    status: 'Pending',
     paidAmount: 20000,
     lastPaymentDate: '2024-12-01'
   },

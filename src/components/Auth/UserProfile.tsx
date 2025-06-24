@@ -58,13 +58,13 @@ const UserProfile: React.FC = () => {
           </div>
         )}
 
-        {user.attendancePercentage && (
+        {user.employeeId && (
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-3">
-              <Clock className="w-5 h-5 text-gray-500" />
-              <span className="text-gray-700">Attendance</span>
+              <Shield className="w-5 h-5 text-gray-500" />
+              <span className="text-gray-700">Employee ID</span>
             </div>
-            <span className="text-gray-900 font-medium">{user.attendancePercentage}%</span>
+            <span className="text-gray-900 font-medium">{user.employeeId}</span>
           </div>
         )}
 

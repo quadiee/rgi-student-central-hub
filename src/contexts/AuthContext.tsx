@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           department: role === 'student' ? 'CSE' : 'CSE',
           rollNumber: role === 'student' ? '21CSE001' : undefined,
           yearSection: role === 'student' ? '3rd Year - A' : undefined,
-          attendancePercentage: role === 'student' ? 85 : undefined,
+          employeeId: role !== 'student' ? 'EMP001' : undefined,
           avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${email}`,
         };
       }

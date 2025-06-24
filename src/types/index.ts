@@ -54,6 +54,20 @@ export interface FeeRecord {
   academicYear: string;
   paymentMethod?: 'Cash' | 'Online' | 'Cheque' | 'DD';
   receiptNumber?: string;
+  paidAmount?: number;
+  lastPaymentDate?: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  studentId: string;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  courseCode?: string;
+  facultyApproval: 'Pending' | 'Approved' | 'Denied';
+  hodApproval: 'Pending' | 'Approved' | 'Denied';
+  requestedOn: string;
 }
 
 // Enhanced User with department and RGCE-specific fields
@@ -74,6 +88,7 @@ export interface User {
   yearSection?: string; // For students
   studentId?: string;
   facultyId?: string;
+  employeeId?: string;
   profileImage?: string;
   permissions?: string[];
   isActive?: boolean;

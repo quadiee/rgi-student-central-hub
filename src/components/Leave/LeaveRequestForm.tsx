@@ -3,14 +3,9 @@ import React, { useState } from 'react';
 import { Calendar, Clock, FileText, Send } from 'lucide-react';
 import { Button } from '../ui/button';
 import { LeaveRequest } from '../../types';
-import { validateLeaveRequest } from '../../utils/rgceValidations';
+import { useToast } from '../ui/use-toast';
 
-interface LeaveRequestFormProps {
-  studentId: string;
-  onSubmit: (leave: Partial<LeaveRequest>) => void;
-}
-
-const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ studentId, onSubmit }) => {
+const LeaveRequestForm: React.FC = () => {
   const [formData, setFormData] = useState({
     fromDate: '',
     toDate: '',
@@ -19,16 +14,22 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ studentId, onSubmit
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Validate form data
-    const validationErrors = validateLeaveRequest({
-      ...formData,
-      studentId
-    });
+    // Basic validation
+    const validationErrors: string[] = [];
+    if (!formData.fromDate) validationErrors.push('From date is required');
+    if (!formData.toDate) validationErrors.push('To date is required');
+    if (!formData.reason || formData.reason.length < 10) {
+      validationErrors.push('Reason must be at least 10 characters');
+    }
+    if (new Date(formData.fromDate) > new Date(formData.toDate)) {
+      validationErrors.push('From date cannot be after to date');
+    }
     
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -36,29 +37,32 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ studentId, onSubmit
       return;
     }
 
-    // Submit leave request
-    const leaveRequest: Partial<LeaveRequest> = {
-      studentId,
-      fromDate: formData.fromDate,
-      toDate: formData.toDate,
-      reason: formData.reason,
-      courseCode: formData.courseCode || undefined,
-      facultyApproval: 'Pending',
-      hodApproval: 'Pending',
-      requestedOn: new Date().toISOString()
-    };
+    try {
+      // Simulate leave request submission
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Success",
+        description: "Leave request submitted successfully",
+      });
 
-    onSubmit(leaveRequest);
-    
-    // Reset form
-    setFormData({
-      fromDate: '',
-      toDate: '',
-      reason: '',
-      courseCode: ''
-    });
-    setErrors([]);
-    setIsSubmitting(false);
+      // Reset form
+      setFormData({
+        fromDate: '',
+        toDate: '',
+        reason: '',
+        courseCode: ''
+      });
+      setErrors([]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit leave request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
