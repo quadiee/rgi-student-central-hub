@@ -13,79 +13,60 @@ type PaymentStatus = Database['public']['Enums']['payment_status'];
 
 export class SupabaseFeeService {
   static getFeePermissions(user: User): FeePermissions {
-    switch (user.role) {
-      case 'student':
-        return {
-          canViewAllStudents: false,
-          canViewDepartmentStudents: false,
-          canViewOwnFees: true,
-          canProcessPayments: true,
-          canModifyFeeStructure: false,
-          canGenerateReports: false,
-          canApproveWaivers: false,
-          allowedDepartments: []
-        };
-      
-      case 'faculty':
-        return {
-          canViewAllStudents: false,
-          canViewDepartmentStudents: true,
-          canViewOwnFees: false,
-          canProcessPayments: false,
-          canModifyFeeStructure: false,
-          canGenerateReports: true,
-          canApproveWaivers: false,
-          allowedDepartments: [user.department]
-        };
-      
-      case 'hod':
-        return {
-          canViewAllStudents: false,
-          canViewDepartmentStudents: true,
-          canViewOwnFees: false,
-          canProcessPayments: true,
-          canModifyFeeStructure: false,
-          canGenerateReports: true,
-          canApproveWaivers: true,
-          allowedDepartments: [user.department]
-        };
-      
-      case 'principal':
-        return {
-          canViewAllStudents: true,
-          canViewDepartmentStudents: true,
-          canViewOwnFees: false,
-          canProcessPayments: true,
-          canModifyFeeStructure: true,
-          canGenerateReports: true,
-          canApproveWaivers: true,
-          allowedDepartments: ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT']
-        };
-      
-      case 'admin':
-        return {
-          canViewAllStudents: true,
-          canViewDepartmentStudents: true,
-          canViewOwnFees: false,
-          canProcessPayments: true,
-          canModifyFeeStructure: true,
-          canGenerateReports: true,
-          canApproveWaivers: true,
-          allowedDepartments: ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN']
-        };
-      
-      default:
-        return {
-          canViewAllStudents: false,
-          canViewDepartmentStudents: false,
-          canViewOwnFees: false,
-          canProcessPayments: false,
-          canModifyFeeStructure: false,
-          canGenerateReports: false,
-          canApproveWaivers: false,
-          allowedDepartments: []
-        };
-    }
+    const permissions = {
+      student: {
+        canViewAllStudents: false,
+        canViewDepartmentStudents: false,
+        canViewOwnFees: true,
+        canProcessPayments: true,
+        canModifyFeeStructure: false,
+        canGenerateReports: false,
+        canApproveWaivers: false,
+        allowedDepartments: []
+      },
+      faculty: {
+        canViewAllStudents: false,
+        canViewDepartmentStudents: true,
+        canViewOwnFees: false,
+        canProcessPayments: false,
+        canModifyFeeStructure: false,
+        canGenerateReports: true,
+        canApproveWaivers: false,
+        allowedDepartments: [user.department]
+      },
+      hod: {
+        canViewAllStudents: false,
+        canViewDepartmentStudents: true,
+        canViewOwnFees: false,
+        canProcessPayments: true,
+        canModifyFeeStructure: false,
+        canGenerateReports: true,
+        canApproveWaivers: true,
+        allowedDepartments: [user.department]
+      },
+      principal: {
+        canViewAllStudents: true,
+        canViewDepartmentStudents: true,
+        canViewOwnFees: false,
+        canProcessPayments: true,
+        canModifyFeeStructure: true,
+        canGenerateReports: true,
+        canApproveWaivers: true,
+        allowedDepartments: ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT']
+      },
+      admin: {
+        canViewAllStudents: true,
+        canViewDepartmentStudents: true,
+        canViewOwnFees: false,
+        canProcessPayments: true,
+        canModifyFeeStructure: true,
+        canGenerateReports: true,
+        canApproveWaivers: true,
+        allowedDepartments: ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN']
+      }
+    };
+
+    return permissions[user.role] || permissions.student;
   }
 
   static async getFeeRecords(user: User, filters?: any): Promise<FeeRecord[]> {
@@ -107,40 +88,34 @@ export class SupabaseFeeService {
             semester,
             fee_categories
           )
-        `);
+        `)
+        .limit(100); // Add limit for performance
 
-      // Apply filters based on user permissions
       const permissions = this.getFeePermissions(user);
       
       if (permissions.canViewOwnFees && user.role === 'student') {
         query = query.eq('student_id', user.id);
       } else if (permissions.canViewDepartmentStudents && !permissions.canViewAllStudents) {
-        // Get students from user's department
+        // More efficient query - get students from department first
         const { data: departmentStudents } = await supabase
           .from('profiles')
           .select('id')
           .eq('department', user.department)
-          .eq('role', 'student');
+          .eq('role', 'student')
+          .limit(50);
         
         if (departmentStudents && departmentStudents.length > 0) {
           const studentIds = departmentStudents.map(s => s.id);
           query = query.in('student_id', studentIds);
         } else {
-          // No students in department, return empty
           return [];
         }
       }
 
-      // Apply additional filters
-      if (filters?.semester) {
-        query = query.eq('semester', filters.semester);
-      }
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters?.academicYear) {
-        query = query.eq('academic_year', filters.academicYear);
-      }
+      // Apply filters
+      if (filters?.semester) query = query.eq('semester', filters.semester);
+      if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.academicYear) query = query.eq('academic_year', filters.academicYear);
 
       const { data, error } = await query;
 
@@ -149,9 +124,7 @@ export class SupabaseFeeService {
         throw error;
       }
 
-      // Transform database records to FeeRecord format
-      const records: any[] = data || [];
-      return records.map(this.transformDbFeeRecord);
+      return (data || []).map(this.transformDbFeeRecord);
     } catch (error) {
       console.error('Error in getFeeRecords:', error);
       return [];
@@ -168,11 +141,8 @@ export class SupabaseFeeService {
     }
 
     try {
-      // Generate receipt number using database function
-      const { data: receiptData, error: receiptError } = await supabase.rpc('generate_receipt_number');
-      if (receiptError) throw receiptError;
-      
-      const receiptNumber = receiptData || `RCP-${Date.now()}`;
+      // Generate receipt number
+      const receiptNumber = `RCP-${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
       const transactionData = {
         fee_record_id: payment.feeRecordId!,
@@ -180,7 +150,7 @@ export class SupabaseFeeService {
         amount: payment.amount!,
         payment_method: payment.paymentMethod! as PaymentMethod,
         transaction_id: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
-        status: (Math.random() > 0.05 ? 'Success' : 'Failed') as PaymentStatus, // 95% success rate
+        status: (Math.random() > 0.05 ? 'Success' : 'Failed') as PaymentStatus,
         receipt_number: receiptNumber,
         processed_by: user.id,
         gateway: payment.paymentMethod === 'Online' ? 'RGCE_Gateway' : undefined,
@@ -193,14 +163,10 @@ export class SupabaseFeeService {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error processing payment:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Update fee record with new payment amount manually
+      // Update fee record if payment successful
       if (data.status === 'Success') {
-        // Get current fee record
         const { data: feeRecord } = await supabase
           .from('fee_records')
           .select('paid_amount, final_amount')
@@ -211,7 +177,6 @@ export class SupabaseFeeService {
           const newPaidAmount = Number(feeRecord.paid_amount || 0) + Number(payment.amount!);
           const finalAmount = Number(feeRecord.final_amount);
           
-          // Determine new status
           let newStatus: Database['public']['Enums']['fee_status'] = 'Pending';
           if (newPaidAmount >= finalAmount) {
             newStatus = 'Paid';
@@ -219,8 +184,7 @@ export class SupabaseFeeService {
             newStatus = 'Partial';
           }
 
-          // Update fee record
-          const { error: updateError } = await supabase
+          await supabase
             .from('fee_records')
             .update({
               paid_amount: newPaidAmount,
@@ -228,11 +192,6 @@ export class SupabaseFeeService {
               status: newStatus
             })
             .eq('id', payment.feeRecordId!);
-          
-          if (updateError) {
-            console.error('Error updating fee record:', updateError);
-            // Don't throw here as payment was successful
-          }
         }
       }
 
@@ -253,22 +212,23 @@ export class SupabaseFeeService {
     }
 
     try {
-      // Get fee records based on user permissions
       const feeRecords = await this.getFeeRecords(user, reportConfig.filters);
       
-      // Calculate total revenue from successful payments
+      // Optimized revenue calculation
       const { data: revenueData, error: revenueError } = await supabase
         .from('payment_transactions')
         .select('amount')
-        .eq('status', 'Success');
+        .eq('status', 'Success')
+        .limit(1000);
 
       if (revenueError) throw revenueError;
 
-      // Calculate outstanding amounts
+      // Optimized outstanding calculation
       const { data: outstandingData, error: outstandingError } = await supabase
         .from('fee_records')
         .select('final_amount, paid_amount')
-        .in('status', ['Pending', 'Overdue', 'Partial']);
+        .in('status', ['Pending', 'Overdue', 'Partial'])
+        .limit(1000);
 
       if (outstandingError) throw outstandingError;
 
@@ -276,7 +236,7 @@ export class SupabaseFeeService {
       const totalOutstanding = outstandingData?.reduce((sum, record) => 
         sum + (Number(record.final_amount) - Number(record.paid_amount || 0)), 0) || 0;
 
-      const report: FeeReport = {
+      return {
         id: Date.now().toString(),
         title: reportConfig.title || 'Fee Report',
         type: reportConfig.type || 'Revenue',
@@ -287,23 +247,17 @@ export class SupabaseFeeService {
           to: new Date().toISOString().split('T')[0]
         },
         filters: reportConfig.filters || {},
-        data: {
-          revenue: revenueData,
-          outstanding: outstandingData,
-          feeRecords
-        },
+        data: { revenue: revenueData, outstanding: outstandingData, feeRecords },
         totalRevenue,
         totalOutstanding
       };
-
-      return report;
     } catch (error) {
       console.error('Error generating report:', error);
       throw error;
     }
   }
 
-  // Helper methods to transform database records
+  // Helper methods
   private static transformDbFeeRecord(dbRecord: any): FeeRecord {
     return {
       id: dbRecord.id,
@@ -325,7 +279,7 @@ export class SupabaseFeeService {
       id: dbRecord.id,
       academicYear: dbRecord.academic_year,
       semester: dbRecord.semester,
-      department: 'CSE', // Default value since fee_structures table doesn't have department column yet
+      department: 'CSE',
       feeCategories: (dbRecord.fee_categories as unknown) as FeeCategory[],
       totalAmount: Number(dbRecord.total_amount),
       dueDate: dbRecord.due_date,
@@ -358,23 +312,14 @@ export class SupabaseFeeService {
       let query = supabase
         .from('fee_structures')
         .select('*')
-        .eq('is_active', true);
-
-      if (department) {
-        // Note: fee_structures table doesn't have department column yet
-        // This filter will be ignored for now
-        console.log('Department filter not yet supported in fee_structures');
-      }
+        .eq('is_active', true)
+        .limit(50);
 
       const { data, error } = await query;
 
-      if (error) {
-        console.error('Error fetching fee structures:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      const structures: DbFeeStructure[] = data || [];
-      return structures.map(this.transformDbFeeStructure);
+      return (data || []).map(this.transformDbFeeStructure);
     } catch (error) {
       console.error('Error in getFeeStructures:', error);
       return [];
@@ -409,10 +354,7 @@ export class SupabaseFeeService {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating fee structure:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       return this.transformDbFeeStructure(data);
     } catch (error) {

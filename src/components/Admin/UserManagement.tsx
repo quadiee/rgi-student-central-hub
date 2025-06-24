@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, Search, Shield } from 'lucide-react';
+import { Search, Shield, User, Users } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
@@ -18,17 +19,22 @@ interface UserProfile {
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
   const { toast } = useToast();
 
   const roles = ['student', 'faculty', 'hod', 'principal', 'admin'];
-  const departments = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
   useEffect(() => {
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchTerm, selectedRole]);
 
   const loadUsers = async () => {
     try {
@@ -36,10 +42,19 @@ const UserManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, email, role, department, roll_number, employee_id, is_active, created_at')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit for performance
 
       if (error) throw error;
-      setUsers(data || []);
+      
+      const usersData = data || [];
+      setUsers(usersData);
+      
+      // Calculate stats
+      const total = usersData.length;
+      const active = usersData.filter(u => u.is_active).length;
+      setStats({ total, active, inactive: total - active });
+      
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -50,6 +65,25 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterUsers = () => {
+    let filtered = users;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.roll_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.employee_id?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (selectedRole !== 'all') {
+      filtered = filtered.filter(user => user.role === selectedRole);
+    }
+    
+    setFilteredUsers(filtered);
   };
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
@@ -77,12 +111,31 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    return matchesSearch && matchesRole;
-  });
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Shield className="w-4 h-4" />;
+      case 'principal':
+        return <Users className="w-4 h-4" />;
+      default:
+        return <User className="w-4 h-4" />;
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'principal':
+        return 'bg-purple-100 text-purple-800';
+      case 'hod':
+        return 'bg-blue-100 text-blue-800';
+      case 'faculty':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   if (loading) {
     return (
@@ -96,6 +149,11 @@ const UserManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-800">User Management</h3>
+        <div className="flex space-x-4 text-sm text-gray-600">
+          <span>Total: {stats.total}</span>
+          <span>Active: {stats.active}</span>
+          <span>Inactive: {stats.inactive}</span>
+        </div>
       </div>
 
       {/* Filters */}
@@ -154,15 +212,15 @@ const UserManagement: React.FC = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <img 
-                          className="h-10 w-10 rounded-full" 
-                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`}
-                          alt={user.name}
-                        />
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-sm font-medium text-gray-600">
+                            {user.name?.charAt(0) || user.email.charAt(0)}
+                          </span>
+                        </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        <div className="text-sm font-medium text-gray-900">{user.name || 'No Name'}</div>
                         <div className="text-sm text-gray-500">{user.email}</div>
                         {user.roll_number && (
                           <div className="text-xs text-gray-400">Roll: {user.roll_number}</div>
@@ -174,15 +232,9 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                      user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                      user.role === 'principal' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'hod' ? 'bg-blue-100 text-blue-800' :
-                      user.role === 'faculty' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role === 'admin' && <Shield className="w-3 h-3 mr-1" />}
-                      {user.role}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getRoleColor(user.role)}`}>
+                      {getRoleIcon(user.role)}
+                      <span className="ml-1">{user.role}</span>
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -198,16 +250,14 @@ const UserManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                        className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
-                      >
-                        {user.is_active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleUserStatus(user.id, user.is_active)}
+                      className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
+                    >
+                      {user.is_active ? 'Deactivate' : 'Activate'}
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -217,7 +267,9 @@ const UserManagement: React.FC = () => {
 
         {filteredUsers.length === 0 && (
           <div className="text-center py-8">
-            <p className="text-gray-500">No users found</p>
+            <p className="text-gray-500">
+              {searchTerm || selectedRole !== 'all' ? 'No users match your filters' : 'No users found'}
+            </p>
           </div>
         )}
       </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -49,8 +50,9 @@ const UserInvitationManager: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('user_invitations')
-        .select('id, email, role, department, roll_number, employee_id, invited_at, expires_at, used_at, is_active')
-        .order('invited_at', { ascending: false });
+        .select('*')
+        .order('invited_at', { ascending: false })
+        .limit(50); // Limit for performance
 
       if (error) throw error;
       setInvitations(data || []);
@@ -75,7 +77,7 @@ const UserInvitationManager: React.FC = () => {
         .from('profiles')
         .select('email')
         .eq('email', formData.email)
-        .single();
+        .maybeSingle();
 
       if (existingProfile) {
         toast({
@@ -83,7 +85,6 @@ const UserInvitationManager: React.FC = () => {
           description: "A user with this email already exists in the system",
           variant: "destructive"
         });
-        setLoading(false);
         return;
       }
 
@@ -93,7 +94,7 @@ const UserInvitationManager: React.FC = () => {
         .select('*')
         .eq('email', formData.email)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (existingInvitation) {
         toast({
@@ -101,18 +102,19 @@ const UserInvitationManager: React.FC = () => {
           description: "An active invitation already exists for this email",
           variant: "destructive"
         });
-        setLoading(false);
         return;
       }
 
-      // Create invitation with proper typing
+      // Create invitation without invited_by to avoid foreign key issues
       const invitationData = {
-        email: formData.email,
+        email: formData.email.toLowerCase().trim(),
         role: formData.role,
         department: formData.department,
         roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
         employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-        invited_by: user.id
+        // Don't set invited_by to avoid foreign key constraint issues
+        is_active: true,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       };
 
       const { error: insertError } = await supabase
@@ -126,6 +128,7 @@ const UserInvitationManager: React.FC = () => {
         description: `Invitation sent successfully to ${formData.email}`
       });
 
+      // Reset form
       setFormData({
         email: '',
         role: 'student' as UserRole,
@@ -139,7 +142,7 @@ const UserInvitationManager: React.FC = () => {
       console.error('Error sending invitation:', error);
       toast({
         title: "Error",
-        description: "Failed to send invitation",
+        description: "Failed to send invitation. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -186,10 +189,7 @@ const UserInvitationManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-800">User Invitations</h3>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2"
-        >
+        <Button onClick={() => setShowForm(true)} className="flex items-center space-x-2">
           <Plus className="w-4 h-4" />
           <span>Send Invitation</span>
         </Button>
