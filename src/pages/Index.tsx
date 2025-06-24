@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import MobileSidebar from '../components/Layout/MobileSidebar';
 import Header from '../components/Layout/Header';
@@ -16,6 +15,14 @@ const AppContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  // Role-based redirect after login
+  useEffect(() => {
+    if (user && activeTab === 'dashboard') {
+      // Keep user on dashboard initially, they can navigate as needed
+      return;
+    }
+  }, [user, activeTab]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -26,6 +33,38 @@ const AppContent = () => {
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal']}>
             <AdminPanel />
+          </ProtectedRoute>
+        );
+      case 'students':
+        return (
+          <ProtectedRoute allowedRoles={['admin', 'principal', 'hod', 'faculty']}>
+            <div className="text-center py-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Student Management</h2>
+              <p className="text-gray-600">Student management features coming soon...</p>
+            </div>
+          </ProtectedRoute>
+        );
+      case 'attendance':
+        return (
+          <div className="text-center py-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Attendance Management</h2>
+            <p className="text-gray-600">Attendance features coming soon...</p>
+          </div>
+        );
+      case 'exams':
+        return (
+          <div className="text-center py-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Exam Management</h2>
+            <p className="text-gray-600">Exam management features coming soon...</p>
+          </div>
+        );
+      case 'reports':
+        return (
+          <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
+            <div className="text-center py-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Reports</h2>
+              <p className="text-gray-600">Reporting features coming soon...</p>
+            </div>
           </ProtectedRoute>
         );
       default:

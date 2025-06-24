@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import StudentFeeDashboard from './StudentFeeDashboard';
-import HODFeeDashboard from './HODFeeDashboard';
+import StudentFeeView from './StudentFeeView';
+import HODFeeView from './HODFeeView';
+import PrincipalFeeView from './PrincipalFeeView';
 import AdminReportGenerator from './AdminReportGenerator';
 import ProtectedRoute from '../Auth/ProtectedRoute';
 
@@ -14,21 +15,21 @@ const EnhancedFeeManagement: React.FC = () => {
       case 'student':
         return (
           <ProtectedRoute allowedRoles={['student']}>
-            <StudentFeeDashboard />
+            <StudentFeeView />
           </ProtectedRoute>
         );
       
       case 'faculty':
         return (
           <ProtectedRoute allowedRoles={['faculty']}>
-            <HODFeeDashboard />
+            <HODFeeView />
           </ProtectedRoute>
         );
       
       case 'hod':
         return (
           <ProtectedRoute allowedRoles={['hod']}>
-            <HODFeeDashboard />
+            <HODFeeView />
           </ProtectedRoute>
         );
       
@@ -36,7 +37,7 @@ const EnhancedFeeManagement: React.FC = () => {
         return (
           <ProtectedRoute allowedRoles={['principal']}>
             <div className="space-y-6">
-              <HODFeeDashboard />
+              <PrincipalFeeView />
               <AdminReportGenerator />
             </div>
           </ProtectedRoute>
@@ -46,7 +47,7 @@ const EnhancedFeeManagement: React.FC = () => {
         return (
           <ProtectedRoute allowedRoles={['admin']}>
             <div className="space-y-6">
-              <HODFeeDashboard />
+              <PrincipalFeeView />
               <AdminReportGenerator />
             </div>
           </ProtectedRoute>

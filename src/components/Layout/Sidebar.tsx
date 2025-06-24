@@ -11,7 +11,7 @@ import {
   UserCheck,
   GraduationCap
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -26,29 +26,38 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
     ];
 
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'principal') {
       return [
         ...baseItems,
-        { id: 'students', label: 'Students', icon: Users },
-        { id: 'attendance', label: 'Attendance', icon: UserCheck },
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
-        { id: 'exams', label: 'Exams', icon: FileText },
-        { id: 'reports', label: 'Reports', icon: BookOpen },
-        { id: 'settings', label: 'Settings', icon: Settings }
-      ];
-    } else if (user?.role === 'faculty') {
-      return [
-        ...baseItems,
-        { id: 'students', label: 'My Students', icon: Users },
+        { id: 'admin', label: 'Admin Panel', icon: Settings },
+        { id: 'students', label: 'Students', icon: Users },
         { id: 'attendance', label: 'Attendance', icon: UserCheck },
         { id: 'exams', label: 'Exams', icon: FileText },
         { id: 'reports', label: 'Reports', icon: BookOpen }
       ];
+    } else if (user?.role === 'hod') {
+      return [
+        ...baseItems,
+        { id: 'fees', label: 'Fee Management', icon: CreditCard },
+        { id: 'students', label: 'Department Students', icon: Users },
+        { id: 'attendance', label: 'Attendance', icon: UserCheck },
+        { id: 'exams', label: 'Exams', icon: FileText },
+        { id: 'reports', label: 'Reports', icon: BookOpen }
+      ];
+    } else if (user?.role === 'faculty') {
+      return [
+        ...baseItems,
+        { id: 'fees', label: 'Fee Management', icon: CreditCard },
+        { id: 'students', label: 'My Students', icon: Users },
+        { id: 'attendance', label: 'Attendance', icon: UserCheck },
+        { id: 'exams', label: 'Exams', icon: FileText }
+      ];
     } else {
       return [
         ...baseItems,
-        { id: 'attendance', label: 'My Attendance', icon: UserCheck },
         { id: 'fees', label: 'Fee Status', icon: CreditCard },
+        { id: 'attendance', label: 'My Attendance', icon: UserCheck },
         { id: 'exams', label: 'My Results', icon: FileText }
       ];
     }
@@ -64,8 +73,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800">RGI Portal</h1>
-            <p className="text-sm text-gray-500">Student Management</p>
+            <h1 className="text-xl font-bold text-gray-800">RGCE Portal</h1>
+            <p className="text-sm text-gray-500">Finance Management</p>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Bell, Menu, User, Search, LogOut } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
 import NotificationCenter from '../Notifications/NotificationCenter';
 
@@ -10,10 +10,14 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
@@ -94,11 +98,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   <span>Profile</span>
                 </button>
                 <button 
-                  onClick={logout}
+                  onClick={handleSignOut}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             )}
