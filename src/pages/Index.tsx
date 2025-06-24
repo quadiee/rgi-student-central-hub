@@ -1,68 +1,40 @@
+
 import React, { useState } from 'react';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import MobileSidebar from '../components/Layout/MobileSidebar';
 import Header from '../components/Layout/Header';
 import Dashboard from '../components/Dashboard/Dashboard';
-import StudentList from '../components/Students/StudentList';
-import StudentProfile from '../components/Students/StudentProfile';
-import AttendanceOverview from '../components/Attendance/AttendanceOverview';
 import EnhancedFeeManagement from '../components/Fees/EnhancedFeeManagement';
-import ExamManagement from '../components/Exams/ExamManagement';
-import LeaveManagement from '../components/Leave/LeaveManagement';
 import AdminPanel from '../components/Admin/AdminPanel';
-import ReportGenerator from '../components/Reports/ReportGenerator';
-import MobileQuickActions from '../components/Mobile/MobileQuickActions';
-import AuthPage from '../components/Auth/AuthPage';
 import ProtectedRoute from '../components/Auth/ProtectedRoute';
-import { Student } from '../types';
+import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
 
 const AppContent = () => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
-
-  const handleViewStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setActiveTab('student-profile');
-  };
-
-  const handleBackToStudents = () => {
-    setSelectedStudent(null);
-    setActiveTab('students');
-  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
-      case 'students':
-        return <StudentList onViewStudent={handleViewStudent} />;
-      case 'student-profile':
-        return selectedStudent ? (
-          <StudentProfile student={selectedStudent} onBack={handleBackToStudents} />
-        ) : null;
-      case 'attendance':
-        return <AttendanceOverview />;
       case 'fees':
         return <EnhancedFeeManagement />;
-      case 'exams':
-        return <ExamManagement />;
-      case 'leaves':
-        return <LeaveManagement />;
-      case 'reports':
-        return <ReportGenerator />;
-      case 'settings':
-        return <AdminPanel />;
+      case 'admin':
+        return (
+          <ProtectedRoute allowedRoles={['admin', 'principal']}>
+            <AdminPanel />
+          </ProtectedRoute>
+        );
       default:
         return <Dashboard />;
     }
   };
 
   // Show loading screen while checking authentication
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -79,7 +51,7 @@ const AppContent = () => {
 
   // Show authentication page if user is not logged in
   if (!user) {
-    return <AuthPage />;
+    return <SupabaseAuthPage />;
   }
 
   // Main application interface
@@ -96,11 +68,8 @@ const AppContent = () => {
           <div className="flex flex-col min-h-screen">
             <Header onMenuClick={() => setSidebarOpen(true)} />
             <main className="flex-1 p-4 pb-20">
-              <ProtectedRoute>
-                {renderContent()}
-              </ProtectedRoute>
+              {renderContent()}
             </main>
-            <MobileQuickActions activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         </>
       ) : (
@@ -114,9 +83,7 @@ const AppContent = () => {
           <div className="flex-1 ml-64">
             <Header />
             <main className="p-6 pt-8">
-              <ProtectedRoute>
-                {renderContent()}
-              </ProtectedRoute>
+              {renderContent()}
             </main>
           </div>
         </div>
@@ -126,11 +93,7 @@ const AppContent = () => {
 };
 
 const Index = () => {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AppContent />;
 };
 
 export default Index;

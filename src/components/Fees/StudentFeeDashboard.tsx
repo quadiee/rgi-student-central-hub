@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Download, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { CreditCard, Download, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
-import { FeeService } from '../../services/feeService';
+import { SupabaseFeeService } from '../../services/supabaseFeeService';
 import { FeeRecord } from '../../types';
 import { useIsMobile } from '../../hooks/use-mobile';
 
@@ -22,10 +22,14 @@ const StudentFeeDashboard: React.FC = () => {
   }, []);
 
   const loadFeeRecords = async () => {
+    if (!user) return;
+    
     try {
-      const records = await FeeService.getFeeRecords(user!);
+      setLoading(true);
+      const records = await SupabaseFeeService.getFeeRecords(user);
       setFeeRecords(records);
     } catch (error) {
+      console.error('Error loading fee records:', error);
       toast({
         title: "Error",
         description: "Failed to load fee records",
@@ -37,11 +41,13 @@ const StudentFeeDashboard: React.FC = () => {
   };
 
   const handlePayment = async (feeRecord: FeeRecord, paymentMethod: string) => {
+    if (!user) return;
+
     try {
       const pendingAmount = feeRecord.amount - (feeRecord.amount * 0.7); // Mock calculation
       
-      await FeeService.processPayment(user!, {
-        studentId: user!.studentId!,
+      await SupabaseFeeService.processPayment(user, {
+        studentId: user.id,
         feeRecordId: feeRecord.id,
         amount: pendingAmount,
         paymentMethod: paymentMethod as any
@@ -55,6 +61,7 @@ const StudentFeeDashboard: React.FC = () => {
       setShowPaymentModal(false);
       loadFeeRecords();
     } catch (error) {
+      console.error('Payment error:', error);
       toast({
         title: "Payment Failed",
         description: "Payment processing failed. Please try again.",
@@ -63,47 +70,15 @@ const StudentFeeDashboard: React.FC = () => {
     }
   };
 
-  const mockFeeRecords: FeeRecord[] = [
-    {
-      id: '1',
-      studentId: user?.studentId || '1',
-      feeType: 'Tuition Fee',
-      amount: 50000,
-      dueDate: '2024-07-15',
-      paidDate: '2024-06-10',
-      status: 'Paid',
-      semester: 6,
-      academicYear: '2023-24',
-      paymentMethod: 'Online',
-      receiptNumber: 'RCP001'
-    },
-    {
-      id: '2',
-      studentId: user?.studentId || '1',
-      feeType: 'Lab Fee',
-      amount: 5000,
-      dueDate: '2024-12-15',
-      status: 'Pending',
-      semester: 7,
-      academicYear: '2024-25'
-    },
-    {
-      id: '3',
-      studentId: user?.studentId || '1',
-      feeType: 'Library Fee',
-      amount: 2000,
-      dueDate: '2024-12-15',
-      status: 'Pending',
-      semester: 7,
-      academicYear: '2024-25'
-    }
-  ];
-
-  const totalDue = mockFeeRecords.filter(f => f.status === 'Pending').reduce((sum, f) => sum + f.amount, 0);
-  const totalPaid = mockFeeRecords.filter(f => f.status === 'Paid').reduce((sum, f) => sum + f.amount, 0);
+  const totalDue = feeRecords.filter(f => f.status === 'Pending').reduce((sum, f) => sum + f.amount, 0);
+  const totalPaid = feeRecords.filter(f => f.status === 'Paid').reduce((sum, f) => sum + f.amount, 0);
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
@@ -151,113 +126,121 @@ const StudentFeeDashboard: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Fee Details</h3>
         
-        {isMobile ? (
-          <div className="space-y-4">
-            {mockFeeRecords.map(record => (
-              <div key={record.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900">{record.feeType}</h4>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    record.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                    record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {record.status}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Amount:</span>
-                    <p className="font-medium">₹{record.amount.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Due Date:</span>
-                    <p className="font-medium">{record.dueDate}</p>
-                  </div>
-                </div>
-                
-                {record.status === 'Pending' && (
-                  <Button 
-                    className="w-full mt-3" 
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFee(record);
-                      setShowPaymentModal(true);
-                    }}
-                  >
-                    Pay Now
-                  </Button>
-                )}
-                
-                {record.receiptNumber && (
-                  <Button variant="outline" className="w-full mt-2" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Receipt
-                  </Button>
-                )}
-              </div>
-            ))}
+        {feeRecords.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No fee records found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fee Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {mockFeeRecords.map(record => (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{record.feeType}</div>
-                      <div className="text-sm text-gray-500">Semester {record.semester}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ₹{record.amount.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.dueDate}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          <>
+            {isMobile ? (
+              <div className="space-y-4">
+                {feeRecords.map(record => (
+                  <div key={record.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-900">{record.feeType}</h4>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         record.status === 'Paid' ? 'bg-green-100 text-green-800' :
                         record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {record.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {record.status === 'Pending' && (
-                          <Button 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedFee(record);
-                              setShowPaymentModal(true);
-                            }}
-                          >
-                            Pay Now
-                          </Button>
-                        )}
-                        {record.receiptNumber && (
-                          <Button variant="outline" size="sm">
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Amount:</span>
+                        <p className="font-medium">₹{record.amount.toLocaleString()}</p>
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span className="text-gray-500">Due Date:</span>
+                        <p className="font-medium">{record.dueDate}</p>
+                      </div>
+                    </div>
+                    
+                    {record.status === 'Pending' && (
+                      <Button 
+                        className="w-full mt-3" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedFee(record);
+                          setShowPaymentModal(true);
+                        }}
+                      >
+                        Pay Now
+                      </Button>
+                    )}
+                    
+                    {record.receiptNumber && (
+                      <Button variant="outline" className="w-full mt-2" size="sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Receipt
+                      </Button>
+                    )}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fee Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {feeRecords.map(record => (
+                      <tr key={record.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{record.feeType}</div>
+                          <div className="text-sm text-gray-500">Semester {record.semester}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{record.amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.dueDate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            record.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                            record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            {record.status === 'Pending' && (
+                              <Button 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedFee(record);
+                                  setShowPaymentModal(true);
+                                }}
+                              >
+                                Pay Now
+                              </Button>
+                            )}
+                            {record.receiptNumber && (
+                              <Button variant="outline" size="sm">
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 

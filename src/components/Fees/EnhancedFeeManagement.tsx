@@ -1,10 +1,9 @@
 
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import StudentFeeDashboard from './StudentFeeDashboard';
 import HODFeeDashboard from './HODFeeDashboard';
 import AdminReportGenerator from './AdminReportGenerator';
-import FeeManagement from './FeeManagement'; // Original component for faculty
 import ProtectedRoute from '../Auth/ProtectedRoute';
 
 const EnhancedFeeManagement: React.FC = () => {
@@ -22,7 +21,7 @@ const EnhancedFeeManagement: React.FC = () => {
       case 'faculty':
         return (
           <ProtectedRoute allowedRoles={['faculty']}>
-            <FeeManagement />
+            <HODFeeDashboard />
           </ProtectedRoute>
         );
       
