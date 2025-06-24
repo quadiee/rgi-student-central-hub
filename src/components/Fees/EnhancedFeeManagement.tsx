@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { useEnhancedAuth } from '../../contexts/EnhancedAuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import CSVFeeUploader from './CSVFeeUploader';
 import RealTimeFeeDashboard from './RealTimeFeeDashboard';
 import StudentPaymentPortal from './StudentPaymentPortal';
 import AdminDashboard from '../Admin/AdminDashboard';
 
 const EnhancedFeeManagement: React.FC = () => {
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
 
   if (!user) {
     return (

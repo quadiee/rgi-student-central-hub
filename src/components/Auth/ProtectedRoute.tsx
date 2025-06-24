@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { useEnhancedAuth } from '../../contexts/EnhancedAuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { UserRole } from '../../types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
+  allowedRoles?: UserRole[];
   fallback?: React.ReactNode;
 }
 
@@ -13,18 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles,
   fallback 
 }) => {
-  const { user, isLoading } = useEnhancedAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   if (!user) {
     return fallback || (

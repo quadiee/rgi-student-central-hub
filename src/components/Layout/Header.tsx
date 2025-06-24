@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Bell, Menu, User, Search, LogOut } from 'lucide-react';
-import { useEnhancedAuth } from '../../contexts/EnhancedAuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
 import NotificationCenter from '../Notifications/NotificationCenter';
 import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
@@ -11,13 +11,13 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { user, logout } = useEnhancedAuth();
+  const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleSignOut = async () => {
-    await logout();
+    await signOut();
   };
 
   const getDepartmentName = (deptCode: string) => {
