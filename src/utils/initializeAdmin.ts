@@ -12,16 +12,29 @@ export const initializeAdminInvitation = async () => {
 
     if (invitationError) {
       console.error('Error checking invitation details:', invitationError);
+      return { success: false, error: invitationError };
     }
 
-    if (invitationDetails && Array.isArray(invitationDetails) && invitationDetails.length > 0 && invitationDetails[0].is_valid) {
-      console.log('Admin invitation already exists and is valid');
-      return { success: true, message: 'Admin invitation already exists' };
+    console.log('Invitation details response:', invitationDetails);
+
+    if (invitationDetails && Array.isArray(invitationDetails) && invitationDetails.length > 0) {
+      const invitation = invitationDetails[0];
+      console.log('Found existing invitation:', invitation);
+      
+      if (invitation.is_valid && invitation.role === 'admin') {
+        console.log('Valid admin invitation already exists');
+        return { success: true, message: 'Valid admin invitation already exists' };
+      } else if (invitation.role !== 'admin') {
+        console.log('Existing invitation has wrong role:', invitation.role);
+        // The invitation exists but has wrong role - this should be handled by creating a new one
+      } else {
+        console.log('Existing invitation is not valid or expired');
+      }
     }
 
     console.log('Creating new admin invitation...');
     
-    // Create admin invitation using the new RPC function
+    // Create admin invitation using the RPC function
     const { data, error } = await supabase.rpc('create_admin_invitation_if_not_exists');
 
     if (error) {
@@ -30,7 +43,11 @@ export const initializeAdminInvitation = async () => {
     }
 
     console.log('Admin invitation process completed:', data);
-    return { success: true, message: 'Admin invitation process completed' };
+    return { 
+      success: true, 
+      message: data?.message || 'Admin invitation process completed',
+      data 
+    };
   } catch (error) {
     console.error('Error initializing admin invitation:', error);
     return { success: false, error };

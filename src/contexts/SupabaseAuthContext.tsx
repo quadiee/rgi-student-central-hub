@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           
           if (profile) {
+            console.log('User profile loaded:', profile);
             const appUser: AppUser = {
               id: profile.id,
               name: profile.name,
@@ -83,6 +84,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Use the correct Lovable project URL for email verification
     const redirectUrl = 'https://c828c58b-ec78-4a9f-a0a8-de7b97d79438.lovableproject.com/';
     
+    console.log('Signing up user with data:', userData);
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -93,8 +96,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     if (!error) {
+      console.log('Signup successful, marking invitation as used for:', email);
       // Mark invitation as used
-      await supabase.rpc('mark_invitation_used', { invitation_email: email });
+      const { error: markError } = await supabase.rpc('mark_invitation_used', { 
+        invitation_email: email 
+      });
+      
+      if (markError) {
+        console.error('Error marking invitation as used:', markError);
+      }
     }
 
     return { error };
@@ -109,12 +119,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     if (error) {
       console.error('Sign in error:', error);
+    } else {
+      console.log('Sign in successful for:', email);
     }
     
     return { error };
   };
 
   const signOut = async () => {
+    console.log('Signing out user');
     const { error } = await supabase.auth.signOut();
     return { error };
   };
@@ -128,7 +141,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (error) {
       console.error('Error getting invitation details:', error);
     } else {
-      console.log('Invitation details:', data);
+      console.log('Invitation details retrieved:', data);
+      if (data && data.length > 0) {
+        const invitation = data[0];
+        console.log('Invitation validity check:', {
+          is_active: invitation.is_active,
+          expires_at: invitation.expires_at,
+          used_at: invitation.used_at,
+          is_valid: invitation.is_valid,
+          role: invitation.role
+        });
+      }
     }
     
     return { data: data?.[0], error };
