@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Calendar, Download, Filter, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { FeeService } from '../../services/feeService';
 import { useIsMobile } from '../../hooks/use-mobile';
