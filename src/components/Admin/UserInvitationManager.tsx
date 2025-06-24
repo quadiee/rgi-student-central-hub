@@ -7,12 +7,16 @@ import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
+import type { Database } from '../../integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
+type Department = Database['public']['Enums']['department'];
 
 interface Invitation {
   id: string;
   email: string;
-  role: string;
-  department: string;
+  role: UserRole;
+  department: Department;
   roll_number?: string;
   employee_id?: string;
   invited_at: string;
@@ -29,14 +33,14 @@ const UserInvitationManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    role: 'student',
-    department: 'CSE',
+    role: 'student' as UserRole,
+    department: 'CSE' as Department,
     rollNumber: '',
     employeeId: ''
   });
 
-  const roles = ['student', 'faculty', 'hod', 'principal', 'admin'];
-  const departments = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
+  const roles: UserRole[] = ['student', 'faculty', 'hod', 'principal', 'admin'];
+  const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
   useEffect(() => {
     loadInvitations();
@@ -102,13 +106,13 @@ const UserInvitationManager: React.FC = () => {
         return;
       }
 
-      // Create invitation
+      // Create invitation with proper typing
       const invitationData = {
         email: formData.email,
         role: formData.role,
         department: formData.department,
-        roll_number: formData.role === 'student' ? formData.rollNumber : null,
-        employee_id: formData.role !== 'student' ? formData.employeeId : null,
+        roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
+        employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
         invited_by: user.id
       };
 
@@ -125,8 +129,8 @@ const UserInvitationManager: React.FC = () => {
 
       setFormData({
         email: '',
-        role: 'student',
-        department: 'CSE',
+        role: 'student' as UserRole,
+        department: 'CSE' as Department,
         rollNumber: '',
         employeeId: ''
       });
@@ -216,7 +220,7 @@ const UserInvitationManager: React.FC = () => {
                   <select
                     id="role"
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
@@ -233,7 +237,7 @@ const UserInvitationManager: React.FC = () => {
                   <select
                     id="department"
                     value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value as Department })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
