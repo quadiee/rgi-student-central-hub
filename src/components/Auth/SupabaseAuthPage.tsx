@@ -25,6 +25,7 @@ const SupabaseAuthPage: React.FC = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
+      console.error('Login error:', error);
       toast({
         title: "Login Failed",
         description: error.message,
@@ -156,6 +157,15 @@ const SupabaseAuthPage: React.FC = () => {
             Register with Invitation
           </Button>
         </div>
+
+        {/* Development Helper */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-700 mb-2">Development Mode:</p>
+            <p className="text-xs text-blue-600">Admin: praveen@rgce.edu.in</p>
+            <p className="text-xs text-blue-600">If you need to register as admin, click "Register with Invitation" above.</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -38,11 +38,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (session?.user) {
           // Fetch user profile from profiles table
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
+          
+          if (profileError) {
+            console.error('Error fetching user profile:', profileError);
+          }
           
           if (profile) {
             const appUser: AppUser = {
@@ -94,10 +98,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signIn = async (email: string, password: string) => {
+    console.log('Attempting to sign in with email:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
+    
+    if (error) {
+      console.error('Sign in error:', error);
+    }
+    
     return { error };
   };
 
@@ -107,9 +117,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getInvitationDetails = async (email: string) => {
+    console.log('Getting invitation details for:', email);
     const { data, error } = await supabase.rpc('get_invitation_details', {
       invitation_email: email
     });
+    
+    if (error) {
+      console.error('Error getting invitation details:', error);
+    } else {
+      console.log('Invitation details:', data);
+    }
+    
     return { data: data?.[0], error };
   };
 
