@@ -80,12 +80,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const signUp = async (email: string, password: string, userData: any) => {
+    // Use the correct Lovable project URL for email verification
+    const redirectUrl = 'https://c828c58b-ec78-4a9f-a0a8-de7b97d79438.lovableproject.com/';
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: userData,
-        emailRedirectTo: `${window.location.origin}/`
+        emailRedirectTo: redirectUrl
       }
     });
 
