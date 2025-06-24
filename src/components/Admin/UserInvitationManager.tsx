@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -50,7 +49,7 @@ const UserInvitationManager: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('user_invitations')
-        .select('*')
+        .select('id, email, role, department, roll_number, employee_id, invited_at, expires_at, used_at, is_active')
         .order('invited_at', { ascending: false });
 
       if (error) throw error;

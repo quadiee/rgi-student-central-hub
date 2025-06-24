@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Edit, Trash2, Search, Shield } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -36,7 +35,7 @@ const UserManagement: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, name, email, role, department, roll_number, employee_id, is_active, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

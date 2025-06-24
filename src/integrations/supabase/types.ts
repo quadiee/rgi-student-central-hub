@@ -315,6 +315,7 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          department: Database["public"]["Enums"]["department"] | null
           email: string
           employee_id: string | null
           guardian_name: string | null
@@ -323,6 +324,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           phone: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
           roll_number: string | null
           updated_at: string | null
           year_section: string | null
@@ -330,6 +332,7 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string | null
+          department?: Database["public"]["Enums"]["department"] | null
           email: string
           employee_id?: string | null
           guardian_name?: string | null
@@ -338,6 +341,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
           updated_at?: string | null
           year_section?: string | null
@@ -345,6 +349,7 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string | null
+          department?: Database["public"]["Enums"]["department"] | null
           email?: string
           employee_id?: string | null
           guardian_name?: string | null
@@ -353,6 +358,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
           updated_at?: string | null
           year_section?: string | null
@@ -361,6 +367,7 @@ export type Database = {
       }
       user_invitations: {
         Row: {
+          department: Database["public"]["Enums"]["department"] | null
           email: string
           employee_id: string | null
           expires_at: string | null
@@ -368,10 +375,12 @@ export type Database = {
           invited_at: string | null
           invited_by: string | null
           is_active: boolean | null
+          role: Database["public"]["Enums"]["user_role"] | null
           roll_number: string | null
           used_at: string | null
         }
         Insert: {
+          department?: Database["public"]["Enums"]["department"] | null
           email: string
           employee_id?: string | null
           expires_at?: string | null
@@ -379,10 +388,12 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           is_active?: boolean | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
           used_at?: string | null
         }
         Update: {
+          department?: Database["public"]["Enums"]["department"] | null
           email?: string
           employee_id?: string | null
           expires_at?: string | null
@@ -390,6 +401,7 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           is_active?: boolean | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
           used_at?: string | null
         }
@@ -432,6 +444,22 @@ export type Database = {
       generate_receipt_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_invitation_details: {
+        Args: { invitation_email: string }
+        Returns: {
+          id: string
+          email: string
+          role: Database["public"]["Enums"]["user_role"]
+          department: Database["public"]["Enums"]["department"]
+          roll_number: string
+          employee_id: string
+          invited_at: string
+          expires_at: string
+          used_at: string
+          is_active: boolean
+          is_valid: boolean
+        }[]
       }
       mark_invitation_used: {
         Args: { invitation_email: string }

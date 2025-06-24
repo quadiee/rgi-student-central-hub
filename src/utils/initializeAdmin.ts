@@ -6,11 +6,15 @@ export const initializeAdminInvitation = async () => {
     console.log('Checking for existing admin invitation...');
     
     // Check if admin invitation already exists using the RPC function
-    const { data: invitationDetails } = await supabase.rpc('get_invitation_details', {
+    const { data: invitationDetails, error: invitationError } = await supabase.rpc('get_invitation_details', {
       invitation_email: 'praveen@rgce.edu.in'
     });
 
-    if (invitationDetails && invitationDetails.length > 0 && invitationDetails[0].is_valid) {
+    if (invitationError) {
+      console.error('Error checking invitation details:', invitationError);
+    }
+
+    if (invitationDetails && Array.isArray(invitationDetails) && invitationDetails.length > 0 && invitationDetails[0].is_valid) {
       console.log('Admin invitation already exists and is valid');
       return { success: true, message: 'Admin invitation already exists' };
     }

@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile from profiles table
+          // Fetch user profile from profiles table with role and department
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
