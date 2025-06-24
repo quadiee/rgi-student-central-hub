@@ -7,6 +7,7 @@ import MultiUserTestPanel from './MultiUserTestPanel';
 import StudentFeeView from './StudentFeeView';
 import HODFeeView from './HODFeeView';
 import PrincipalFeeView from './PrincipalFeeView';
+import AdminDashboard from '../Admin/AdminDashboard';
 
 const EnhancedFeeManagement: React.FC = () => {
   const { user } = useAuth();
@@ -30,8 +31,10 @@ const EnhancedFeeManagement: React.FC = () => {
         return <HODFeeView />;
       
       case 'principal':
-      case 'admin':
         return <PrincipalFeeView />;
+      
+      case 'admin':
+        return <AdminDashboard />;
       
       default:
         return (
@@ -43,13 +46,18 @@ const EnhancedFeeManagement: React.FC = () => {
     }
   };
 
+  // For admin users, show the full admin dashboard instead of fee management
+  if (user.role === 'admin') {
+    return renderRoleSpecificView();
+  }
+
   return (
     <div className="space-y-6">
       {/* System Status - Visible to all authenticated users */}
       <FeeSystemStatus />
       
-      {/* Admin Tools - Only visible to admins */}
-      {user.role === 'admin' && (
+      {/* Admin Tools - Only visible to admins and principals */}
+      {['admin', 'principal'].includes(user.role) && (
         <>
           <SampleDataGenerator />
           <MultiUserTestPanel />
