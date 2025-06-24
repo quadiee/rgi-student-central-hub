@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const role = metadata.role || 'admin';
       const departmentString = metadata.department || 'ADMIN';
       
-      // Ensure department is a valid Department type
+      // Ensure department matches current database schema
       const validDepartments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN'];
       const department: Department = validDepartments.includes(departmentString as Department) 
         ? departmentString as Department 

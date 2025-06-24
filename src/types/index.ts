@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   name: string;
@@ -162,14 +161,10 @@ export interface ExamRecord {
 // Enhanced User with department and RGCE-specific fields
 export type UserRole = 'student' | 'faculty' | 'hod' | 'principal' | 'admin';
 
-// Updated Department types to match RGCE structure
+// Updated Department types to match current Supabase database schema
 export type Department = 
-  // Engineering Departments
-  | 'CSE' | 'ECE' | 'EEE' | 'MECH' | 'BME' | 'PE' | 'AIDS'
-  // Arts & Science Departments  
-  | 'CS' | 'CORP' | 'AF' | 'BCOM' | 'BBA'
-  // Administration
-  | 'ADMIN';
+  // Current database departments
+  | 'CSE' | 'ECE' | 'EEE' | 'MECH' | 'CIVIL' | 'IT' | 'ADMIN';
 
 export interface User {
   id: string;

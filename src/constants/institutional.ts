@@ -28,18 +28,18 @@ export const INSTITUTION = {
     establishedYear: "1998"
   },
   
-  // Departments
+  // Departments - Updated to match current database schema
   departments: {
     engineering: [
-      "Computer Science & Engineering",
-      "Electronics & Communication Engineering", 
-      "Electrical & Electronics Engineering",
-      "Mechanical Engineering",
-      "Biomedical Engineering",
-      "Petroleum Engineering",
-      "Artificial Intelligence & Data Science"
+      "Computer Science & Engineering", // CSE
+      "Electronics & Communication Engineering", // ECE 
+      "Electrical & Electronics Engineering", // EEE
+      "Mechanical Engineering", // MECH
+      "Civil Engineering", // CIVIL
+      "Information Technology" // IT
     ],
     artsScience: [
+      // These will be added when database schema is updated
       "Computer Science",
       "Corporate Secretaryship", 
       "Accounting & Finance",
@@ -55,22 +55,15 @@ export const INSTITUTION = {
   ]
 } as const;
 
+// Updated to match current database schema
 export const DEPARTMENT_CODES = {
-  // Engineering
+  // Current Engineering Departments
   "CSE": "Computer Science & Engineering",
   "ECE": "Electronics & Communication Engineering", 
   "EEE": "Electrical & Electronics Engineering",
   "MECH": "Mechanical Engineering",
-  "BME": "Biomedical Engineering",
-  "PE": "Petroleum Engineering",
-  "AIDS": "Artificial Intelligence & Data Science",
-  
-  // Arts & Science
-  "CS": "Computer Science",
-  "CORP": "Corporate Secretaryship",
-  "AF": "Accounting & Finance", 
-  "BCOM": "Commerce (General)",
-  "BBA": "Business Administration",
+  "CIVIL": "Civil Engineering",
+  "IT": "Information Technology",
   
   // Administration
   "ADMIN": "Administration"
