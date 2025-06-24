@@ -3,6 +3,7 @@ import React from 'react';
 import { Home, CreditCard, Settings, X, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
+import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
 
 interface MobileSidebarProps {
   activeTab: string;
@@ -33,6 +34,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
     user && item.roles.includes(user.role)
   );
 
+  const getDepartmentName = (deptCode: string) => {
+    return DEPARTMENT_CODES[deptCode as keyof typeof DEPARTMENT_CODES] || deptCode;
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -56,8 +61,8 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 <span className="text-white font-bold text-lg">R</span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-800">RGCE</h2>
-                <p className="text-xs text-gray-600">Finance Portal</p>
+                <h2 className="text-lg font-bold text-gray-800">{INSTITUTION.shortName}</h2>
+                <p className="text-xs text-gray-600">Student Portal</p>
               </div>
             </div>
             <button 
@@ -66,6 +71,15 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Institution Info */}
+          <div className="px-6 py-4 bg-blue-50 border-b border-blue-100">
+            <h3 className="text-sm font-semibold text-blue-900">{INSTITUTION.name}</h3>
+            <p className="text-xs text-blue-700">{INSTITUTION.tagline}</p>
+            <p className="text-xs text-blue-600 mt-1">
+              Affiliated to {INSTITUTION.academic.affiliation.split(',')[0]}
+            </p>
           </div>
 
           {/* User Info */}
@@ -80,6 +94,11 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  {user.department && (
+                    <p className="text-xs text-gray-400 truncate">
+                      {getDepartmentName(user.department)}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -114,6 +133,11 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200">
+            <div className="mb-3">
+              <p className="text-xs text-gray-500">Contact Support:</p>
+              <p className="text-xs text-gray-600">{INSTITUTION.contact.emails[0]}</p>
+              <p className="text-xs text-gray-600">{INSTITUTION.contact.phones[0]}</p>
+            </div>
             <Button
               variant="outline"
               onClick={handleSignOut}

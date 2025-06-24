@@ -1,12 +1,12 @@
-
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, GraduationCap, User, Settings } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, GraduationCap, User, Settings, MapPin, Phone } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { createDirectAdminAccount } from '../../utils/initializeAdmin';
+import { INSTITUTION } from '../../constants/institutional';
 
 const SimplifiedAuthPage: React.FC = () => {
   const { signIn, signUp, getInvitationDetails } = useAuth();
@@ -48,8 +48,8 @@ const SimplifiedAuthPage: React.FC = () => {
       });
     } else {
       toast({
-        title: "Login Successful",
-        description: "Welcome back!"
+        title: "Welcome to RGCE Portal",
+        description: "Login successful!"
       });
     }
 
@@ -77,7 +77,7 @@ const SimplifiedAuthPage: React.FC = () => {
       if (invitationError || !invitation || !invitation.is_valid) {
         toast({
           title: "No Valid Invitation",
-          description: "You need a valid invitation to register. Contact your administrator or use the admin setup if you're setting up the system.",
+          description: "You need a valid invitation to register. Contact the administration office or use the admin setup if you're setting up the system.",
           variant: "destructive"
         });
         setLoading(false);
@@ -161,12 +161,15 @@ const SimplifiedAuthPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        {/* Institution Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">RGCE Finance Portal</h2>
-          <p className="text-gray-600">
+          <h1 className="text-xl font-bold text-gray-800 mb-1">{INSTITUTION.name}</h1>
+          <p className="text-sm text-blue-600 font-medium mb-2">{INSTITUTION.tagline}</p>
+          <h2 className="text-lg font-semibold text-gray-700">Student Portal</h2>
+          <p className="text-gray-600 text-sm">
             {isLogin ? 'Sign in to your account' : 'Create your account'}
           </p>
         </div>
@@ -186,6 +189,7 @@ const SimplifiedAuthPage: React.FC = () => {
                 required
               />
             </div>
+            <p className="text-xs text-gray-500">Use your official RGCE email address</p>
           </div>
 
           {!isLogin && (
@@ -249,7 +253,7 @@ const SimplifiedAuthPage: React.FC = () => {
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             disabled={loading}
           >
             {loading ? (
@@ -258,7 +262,7 @@ const SimplifiedAuthPage: React.FC = () => {
                 <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
               </div>
             ) : (
-              <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+              <span>{isLogin ? 'Sign In to Portal' : 'Create Account'}</span>
             )}
           </Button>
         </form>
@@ -282,7 +286,7 @@ const SimplifiedAuthPage: React.FC = () => {
             <p className="text-sm text-blue-700 font-medium">System Setup</p>
           </div>
           <p className="text-xs text-blue-600 mb-3">
-            First time setting up the system? Create the admin account to get started.
+            First time setting up the RGCE portal? Create the admin account to get started.
           </p>
           <Button
             onClick={handleCreateDirectAdmin}
@@ -302,6 +306,24 @@ const SimplifiedAuthPage: React.FC = () => {
           </Button>
           <p className="text-xs text-blue-600 mt-2">
             This will create an admin account with email: praveen@rgce.edu.in
+          </p>
+        </div>
+
+        {/* Institution Footer */}
+        <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+          <div className="flex items-center justify-center space-x-2 text-gray-500 mb-2">
+            <MapPin className="w-3 h-3" />
+            <p className="text-xs">{INSTITUTION.address.city}, {INSTITUTION.address.state}</p>
+          </div>
+          <div className="flex items-center justify-center space-x-2 text-gray-500 mb-2">
+            <Phone className="w-3 h-3" />
+            <p className="text-xs">{INSTITUTION.contact.phones[0]}</p>
+          </div>
+          <p className="text-xs text-gray-400">
+            Affiliated to {INSTITUTION.academic.affiliation}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            TNEA Code: {INSTITUTION.academic.tneaCode}
           </p>
         </div>
       </div>

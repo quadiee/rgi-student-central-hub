@@ -10,6 +10,7 @@ import ProtectedRoute from '../components/Auth/ProtectedRoute';
 import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
+import { INSTITUTION } from '../constants/institutional';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -88,7 +89,9 @@ const AppContent = () => {
           <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <p className="text-gray-600">Loading RGCE Portal...</p>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">{INSTITUTION.name}</h3>
+          <p className="text-gray-600">Loading Student Portal...</p>
+          <p className="text-sm text-gray-500 mt-2">{INSTITUTION.tagline}</p>
         </div>
       </div>
     );
@@ -131,7 +134,7 @@ const AppContent = () => {
               <div className="mb-4">
                 <nav className="text-sm breadcrumbs">
                   <div className="flex items-center space-x-2 text-gray-600">
-                    <span>RGCE Portal</span>
+                    <span>{INSTITUTION.shortName} Student Portal</span>
                     <span>/</span>
                     <span className="text-blue-600 font-medium capitalize">
                       {activeTab === 'fees' ? 'Fee Management' : activeTab}

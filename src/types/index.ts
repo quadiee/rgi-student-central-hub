@@ -161,7 +161,15 @@ export interface ExamRecord {
 
 // Enhanced User with department and RGCE-specific fields
 export type UserRole = 'student' | 'faculty' | 'hod' | 'principal' | 'admin';
-export type Department = 'CSE' | 'ECE' | 'MECH' | 'CIVIL' | 'EEE' | 'IT' | 'ADMIN';
+
+// Updated Department types to match RGCE structure
+export type Department = 
+  // Engineering Departments
+  | 'CSE' | 'ECE' | 'EEE' | 'MECH' | 'BME' | 'PE' | 'AIDS'
+  // Arts & Science Departments  
+  | 'CS' | 'CORP' | 'AF' | 'BCOM' | 'BBA'
+  // Administration
+  | 'ADMIN';
 
 export interface User {
   id: string;
