@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import StudentDashboard from './StudentDashboard';
 import FacultyDashboard from './FacultyDashboard';
 import HODDashboard from './HODDashboard';
@@ -18,6 +18,7 @@ const Dashboard: React.FC = () => {
       case 'hod':
         return <HODDashboard />;
       case 'principal':
+      case 'admin':
         return <PrincipalDashboard />;
       default:
         return <StudentDashboard />;
