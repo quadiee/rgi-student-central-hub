@@ -432,6 +432,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      create_direct_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       create_installments: {
         Args: {
           p_fee_record_id: string

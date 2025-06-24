@@ -37,32 +37,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile from profiles table with role and department
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profileError) {
-            console.error('Error fetching user profile:', profileError);
-          }
-          
-          if (profile) {
-            console.log('User profile loaded:', profile);
-            const appUser: AppUser = {
-              id: profile.id,
-              name: profile.name,
-              email: profile.email,
-              role: profile.role as UserRole,
-              department: profile.department,
-              rollNumber: profile.roll_number,
-              studentId: profile.role === 'student' ? profile.id : undefined,
-              facultyId: profile.role === 'faculty' ? profile.id : undefined,
-              avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
-            };
-            setUser(appUser);
-          }
+          // Defer profile fetch to avoid blocking auth state change
+          setTimeout(async () => {
+            try {
+              // Fetch user profile from profiles table with role and department
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              
+              if (profileError) {
+                console.error('Error fetching user profile:', profileError);
+                return;
+              }
+              
+              if (profile) {
+                console.log('User profile loaded:', profile);
+                const appUser: AppUser = {
+                  id: profile.id,
+                  name: profile.name,
+                  email: profile.email,
+                  role: profile.role as UserRole,
+                  department: profile.department,
+                  rollNumber: profile.roll_number,
+                  studentId: profile.role === 'student' ? profile.id : undefined,
+                  facultyId: profile.role === 'faculty' ? profile.id : undefined,
+                  avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
+                };
+                setUser(appUser);
+              }
+            } catch (error) {
+              console.error('Error in profile fetch:', error);
+            }
+          }, 0);
         } else {
           setUser(null);
         }
@@ -81,17 +89,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const signUp = async (email: string, password: string, userData: any) => {
-    // Use the correct Lovable project URL for email verification
-    const redirectUrl = 'https://c828c58b-ec78-4a9f-a0a8-de7b97d79438.lovableproject.com/';
-    
     console.log('Signing up user with data:', userData);
     
+    // No email verification needed - simplified flow
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userData,
-        emailRedirectTo: redirectUrl
+        data: userData
       }
     });
 
