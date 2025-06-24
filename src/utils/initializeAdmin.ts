@@ -43,9 +43,13 @@ export const initializeAdminInvitation = async () => {
     }
 
     console.log('Admin invitation process completed:', data);
+    
+    // Safely handle the JSON response
+    const result = data as { success?: boolean; message?: string } | null;
+    
     return { 
       success: true, 
-      message: data?.message || 'Admin invitation process completed',
+      message: result?.message || 'Admin invitation process completed',
       data 
     };
   } catch (error) {
