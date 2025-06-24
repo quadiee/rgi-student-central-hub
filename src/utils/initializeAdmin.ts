@@ -14,7 +14,7 @@ export const createDirectAdminAccount = async (password: string = 'admin123') =>
 
     console.log('Admin invitation created:', invitationResult);
 
-    // Now create the actual user account
+    // Now create the actual user account with proper metadata
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: 'praveen@rgce.edu.in',
       password: password,
@@ -44,9 +44,24 @@ export const createDirectAdminAccount = async (password: string = 'admin123') =>
       console.error('Error marking invitation as used:', markError);
     }
 
+    // If user was created successfully, automatically sign them in
+    if (signUpData.user && !signUpError) {
+      console.log('Auto-signing in the newly created admin user...');
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: 'praveen@rgce.edu.in',
+        password: password
+      });
+      
+      if (signInError) {
+        console.error('Error auto-signing in admin:', signInError);
+      } else {
+        console.log('Admin auto-signed in successfully');
+      }
+    }
+
     return { 
       success: true, 
-      message: 'Admin account created successfully. You can now login with praveen@rgce.edu.in',
+      message: 'Admin account created and logged in successfully!',
       user: signUpData.user
     };
   } catch (error) {
