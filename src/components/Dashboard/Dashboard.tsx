@@ -1,24 +1,24 @@
 
 import React from 'react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
-import StudentDashboard from './StudentDashboard';
-import HODDashboard from './HODDashboard';
-import PrincipalDashboard from './PrincipalDashboard';
+import { useEnhancedAuth } from '../../contexts/EnhancedAuthContext';
+import EnhancedStudentDashboard from './EnhancedStudentDashboard';
+import EnhancedHODDashboard from './EnhancedHODDashboard';
+import EnhancedPrincipalDashboard from './EnhancedPrincipalDashboard';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
 
   const renderDashboard = () => {
     switch (user?.role) {
       case 'student':
-        return <StudentDashboard />;
+        return <EnhancedStudentDashboard />;
       case 'hod':
-        return <HODDashboard />;
+        return <EnhancedHODDashboard />;
       case 'principal':
       case 'admin':
-        return <PrincipalDashboard />;
+        return <EnhancedPrincipalDashboard />;
       default:
-        return <StudentDashboard />;
+        return <EnhancedStudentDashboard />;
     }
   };
 
