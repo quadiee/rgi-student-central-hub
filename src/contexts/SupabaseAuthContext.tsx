@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
-import { User as AppUser, UserRole } from '../types';
+import { User as AppUser, UserRole, Department } from '../types';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -48,7 +47,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Get user metadata or use defaults
       const metadata = authUser.user_metadata || {};
       const role = metadata.role || 'admin'; // Default to admin for now
-      const department = metadata.department || 'ADMIN';
+      const departmentString = metadata.department || 'ADMIN';
+      
+      // Ensure department is a valid Department type
+      const validDepartments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN'];
+      const department: Department = validDepartments.includes(departmentString as Department) 
+        ? departmentString as Department 
+        : 'ADMIN';
 
       // Create the profile
       const { data: newProfile, error: profileError } = await supabase
@@ -74,7 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           name: authUser.email?.split('@')[0] || 'User',
           email: authUser.email,
           role: 'admin',
-          department: 'ADMIN',
+          department: 'ADMIN' as Department,
           employee_id: null,
           roll_number: null,
           is_active: true
@@ -91,7 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: authUser.email?.split('@')[0] || 'User',
         email: authUser.email,
         role: 'admin',
-        department: 'ADMIN',
+        department: 'ADMIN' as Department,
         employee_id: null,
         roll_number: null,
         is_active: true
@@ -117,7 +122,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 name: profile.name,
                 email: profile.email,
                 role: profile.role as UserRole,
-                department: profile.department,
+                department: profile.department as Department,
                 rollNumber: profile.roll_number,
                 studentId: profile.role === 'student' ? profile.id : undefined,
                 facultyId: profile.role === 'faculty' ? profile.id : undefined,
