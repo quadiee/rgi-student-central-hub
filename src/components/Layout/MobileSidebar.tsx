@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Home, CreditCard, Settings, X, LogOut } from 'lucide-react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useEnhancedAuth } from '../../contexts/EnhancedAuthContext';
 import { Button } from '../ui/button';
 import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
 
@@ -18,10 +18,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   isOpen,
   onClose
 }) => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useEnhancedAuth();
 
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
   };
 
   const menuItems = [
@@ -87,7 +87,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center space-x-3">
                 <img 
-                  src={user.avatar} 
+                  src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`} 
                   alt={user.name}
                   className="w-10 h-10 rounded-full"
                 />
