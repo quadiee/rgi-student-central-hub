@@ -1,5 +1,59 @@
-
 import { supabase } from '../integrations/supabase/client';
+
+export const createDirectAdminAccount = async (password: string = 'admin123') => {
+  try {
+    console.log('Creating direct admin account...');
+    
+    // First, create the admin invitation using the database function
+    const { data: invitationResult, error: invitationError } = await supabase.rpc('create_direct_admin');
+    
+    if (invitationError) {
+      console.error('Error creating admin invitation:', invitationError);
+      return { success: false, error: invitationError };
+    }
+
+    console.log('Admin invitation created:', invitationResult);
+
+    // Now create the actual user account
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: 'praveen@rgce.edu.in',
+      password: password,
+      options: {
+        data: {
+          name: 'Admin User',
+          role: 'admin',
+          department: 'ADMIN',
+          employee_id: 'ADMIN001'
+        }
+      }
+    });
+
+    if (signUpError) {
+      console.error('Error creating admin user:', signUpError);
+      return { success: false, error: signUpError };
+    }
+
+    console.log('Admin user created successfully:', signUpData);
+
+    // Mark invitation as used
+    const { error: markError } = await supabase.rpc('mark_invitation_used', { 
+      invitation_email: 'praveen@rgce.edu.in' 
+    });
+    
+    if (markError) {
+      console.error('Error marking invitation as used:', markError);
+    }
+
+    return { 
+      success: true, 
+      message: 'Admin account created successfully. You can now login with praveen@rgce.edu.in',
+      user: signUpData.user
+    };
+  } catch (error) {
+    console.error('Error in createDirectAdminAccount:', error);
+    return { success: false, error };
+  }
+};
 
 export const initializeAdminInvitation = async () => {
   try {

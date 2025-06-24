@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import MobileSidebar from '../components/Layout/MobileSidebar';
@@ -15,26 +16,28 @@ const AppContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  // Role-based redirect after login
+  // Reset to dashboard when user changes
   useEffect(() => {
-    if (user && activeTab === 'dashboard') {
-      // Keep user on dashboard initially, they can navigate as needed
-      return;
+    if (user) {
+      setActiveTab('dashboard');
     }
-  }, [user, activeTab]);
+  }, [user?.id]);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
+      
       case 'fees':
         return <EnhancedFeeManagement />;
+      
       case 'admin':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal']}>
             <AdminPanel />
           </ProtectedRoute>
         );
+      
       case 'students':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod', 'faculty']}>
@@ -44,6 +47,7 @@ const AppContent = () => {
             </div>
           </ProtectedRoute>
         );
+      
       case 'attendance':
         return (
           <div className="text-center py-8">
@@ -51,6 +55,7 @@ const AppContent = () => {
             <p className="text-gray-600">Attendance features coming soon...</p>
           </div>
         );
+      
       case 'exams':
         return (
           <div className="text-center py-8">
@@ -58,6 +63,7 @@ const AppContent = () => {
             <p className="text-gray-600">Exam management features coming soon...</p>
           </div>
         );
+      
       case 'reports':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
@@ -67,6 +73,7 @@ const AppContent = () => {
             </div>
           </ProtectedRoute>
         );
+      
       default:
         return <Dashboard />;
     }
@@ -122,6 +129,17 @@ const AppContent = () => {
           <div className="flex-1 ml-64">
             <Header />
             <main className="p-6 pt-8">
+              <div className="mb-4">
+                <nav className="text-sm breadcrumbs">
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <span>RGCE Portal</span>
+                    <span>/</span>
+                    <span className="text-blue-600 font-medium capitalize">
+                      {activeTab === 'fees' ? 'Fee Management' : activeTab}
+                    </span>
+                  </div>
+                </nav>
+              </div>
               {renderContent()}
             </main>
           </div>

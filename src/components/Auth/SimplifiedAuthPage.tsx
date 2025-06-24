@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, GraduationCap, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, GraduationCap, User, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
+import { createDirectAdminAccount } from '../../utils/initializeAdmin';
 
 const SimplifiedAuthPage: React.FC = () => {
   const { signIn, signUp, getInvitationDetails } = useAuth();
@@ -13,6 +14,7 @@ const SimplifiedAuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -28,9 +30,20 @@ const SimplifiedAuthPage: React.FC = () => {
     const { error } = await signIn(formData.email, formData.password);
 
     if (error) {
+      let errorMessage = error.message;
+      
+      // Provide more user-friendly error messages
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please check your credentials or create an account.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Please check your email and confirm your account before logging in.';
+      } else if (error.message.includes('User not found')) {
+        errorMessage = 'No account found with this email. Please sign up first.';
+      }
+
       toast({
         title: "Login Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive"
       });
     } else {
@@ -64,7 +77,7 @@ const SimplifiedAuthPage: React.FC = () => {
       if (invitationError || !invitation || !invitation.is_valid) {
         toast({
           title: "No Valid Invitation",
-          description: "You need a valid invitation to register. Contact your administrator.",
+          description: "You need a valid invitation to register. Contact your administrator or use the admin setup if you're setting up the system.",
           variant: "destructive"
         });
         setLoading(false);
@@ -107,14 +120,42 @@ const SimplifiedAuthPage: React.FC = () => {
     setLoading(false);
   };
 
-  const quickAdminSetup = () => {
-    setFormData({
-      email: 'praveen@rgce.edu.in',
-      password: '',
-      name: 'Admin User',
-      confirmPassword: ''
-    });
-    setIsLogin(false);
+  const handleCreateDirectAdmin = async () => {
+    setCreatingAdmin(true);
+    
+    try {
+      const result = await createDirectAdminAccount('admin123');
+      
+      if (result.success) {
+        toast({
+          title: "Admin Account Created",
+          description: "Admin account created successfully! You can now login with praveen@rgce.edu.in and password: admin123"
+        });
+        
+        // Pre-fill login form
+        setFormData({
+          email: 'praveen@rgce.edu.in',
+          password: 'admin123',
+          name: '',
+          confirmPassword: ''
+        });
+        setIsLogin(true);
+      } else {
+        toast({
+          title: "Admin Creation Failed",
+          description: result.error?.message || "Failed to create admin account",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+    
+    setCreatingAdmin(false);
   };
 
   return (
@@ -234,23 +275,35 @@ const SimplifiedAuthPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Admin Setup */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-700 font-medium mb-2">Quick Admin Setup:</p>
-            <Button
-              onClick={quickAdminSetup}
-              variant="outline"
-              size="sm"
-              className="w-full text-blue-700 border-blue-300 hover:bg-blue-100"
-            >
-              Set up Admin Account (praveen@rgce.edu.in)
-            </Button>
-            <p className="text-xs text-blue-600 mt-2">
-              This will pre-fill the admin email for quick registration
-            </p>
+        {/* Admin Setup Section */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center space-x-2 mb-3">
+            <Settings className="w-5 h-5 text-blue-600" />
+            <p className="text-sm text-blue-700 font-medium">System Setup</p>
           </div>
-        )}
+          <p className="text-xs text-blue-600 mb-3">
+            First time setting up the system? Create the admin account to get started.
+          </p>
+          <Button
+            onClick={handleCreateDirectAdmin}
+            disabled={creatingAdmin}
+            variant="outline"
+            size="sm"
+            className="w-full text-blue-700 border-blue-300 hover:bg-blue-100"
+          >
+            {creatingAdmin ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                <span>Creating Admin Account...</span>
+              </div>
+            ) : (
+              'Create Admin Account'
+            )}
+          </Button>
+          <p className="text-xs text-blue-600 mt-2">
+            This will create an admin account with email: praveen@rgce.edu.in
+          </p>
+        </div>
       </div>
     </div>
   );
