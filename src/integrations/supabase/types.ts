@@ -465,6 +465,14 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      get_user_department: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["department"]
+      }
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       mark_invitation_used: {
         Args: { invitation_email: string }
         Returns: undefined
