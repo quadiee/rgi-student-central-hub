@@ -50,36 +50,41 @@ export const EnhancedAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (profileError) throw profileError;
 
-      // Load user roles
+      // Load user roles with proper joins
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select(`
           *,
-          roles (name, description),
+          roles!inner (name, description),
           departments (name, code)
         `)
         .eq('user_id', userId)
         .eq('is_active', true);
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error('Error loading user roles:', rolesError);
+        // Continue without roles if there's an error
+      }
 
-      // Load user permissions through roles
-      const { data: userPermissions, error: permissionsError } = await supabase
-        .from('user_roles')
-        .select(`
-          role_permissions (
-            permissions (*)
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('is_active', true);
+      // Load permissions for this user
+      let flatPermissions: Permission[] = [];
+      if (roles && roles.length > 0) {
+        try {
+          const roleIds = roles.map(r => r.role_id);
+          const { data: rolePermissions, error: permissionsError } = await supabase
+            .from('role_permissions')
+            .select(`
+              permissions!inner (*)
+            `)
+            .in('role_id', roleIds);
 
-      if (permissionsError) throw permissionsError;
-
-      // Flatten permissions
-      const flatPermissions = userPermissions?.flatMap(ur => 
-        ur.role_permissions?.map(rp => rp.permissions) || []
-      ).filter(Boolean) || [];
+          if (!permissionsError && rolePermissions) {
+            flatPermissions = rolePermissions.map(rp => rp.permissions).filter(Boolean);
+          }
+        } catch (permError) {
+          console.error('Error loading permissions:', permError);
+        }
+      }
 
       setUser({
         id: profile.id,

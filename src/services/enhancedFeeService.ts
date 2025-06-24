@@ -1,7 +1,23 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { EnhancedUser, StudentFeeSummary, HODDepartmentSummary, PrincipalInstitutionSummary } from '../types/enhancedTypes';
-import { FeeRecord, PaymentTransaction } from '../types';
+import { FeeRecord } from '../types';
+
+// Define PaymentTransaction interface locally since it's not exported from types
+interface PaymentTransaction {
+  id: string;
+  studentId: string;
+  feeRecordId: string;
+  amount: number;
+  paymentMethod: 'Online' | 'Cash' | 'UPI' | 'Cheque';
+  transactionId: string;
+  status: 'Pending' | 'Success' | 'Failed';
+  processedAt: string;
+  processedBy: string;
+  receiptNumber?: string;
+  gateway?: string;
+  failureReason?: string;
+}
 
 export class EnhancedFeeService {
   // Get student fee summary using the optimized view
@@ -26,7 +42,12 @@ export class EnhancedFeeService {
       const { data, error } = await query.order('pending_amount', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      
+      // Type assertion to handle the payment_status type
+      return (data || []).map(item => ({
+        ...item,
+        payment_status: item.payment_status as 'No Fees' | 'Fully Paid' | 'Partially Paid' | 'Unpaid'
+      }));
     } catch (error) {
       console.error('Error fetching student fee summary:', error);
       return [];
@@ -92,7 +113,12 @@ export class EnhancedFeeService {
         .limit(10);
       
       if (error) throw error;
-      return data || [];
+      
+      // Type assertion to handle the payment_status type
+      return (data || []).map(item => ({
+        ...item,
+        payment_status: item.payment_status as 'No Fees' | 'Fully Paid' | 'Partially Paid' | 'Unpaid'
+      }));
     } catch (error) {
       console.error('Error fetching top 10 pending students:', error);
       return [];
