@@ -1,13 +1,15 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { User, FeeRecord } from '../types';
-import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions, FeeInstallment, FeeCategory } from '../types/feeTypes';
+import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions, FeeCategory } from '../types/feeTypes';
 import { Database } from '../integrations/supabase/types';
 
 type DbFeeRecord = Database['public']['Tables']['fee_records']['Row'];
 type DbFeeStructure = Database['public']['Tables']['fee_structures']['Row'];
 type DbPaymentTransaction = Database['public']['Tables']['payment_transactions']['Row'];
-type DbProfile = Database['public']['Tables']['profiles']['Row'];
+type Department = Database['public']['Enums']['department'];
+type PaymentMethod = Database['public']['Enums']['payment_method'];
+type PaymentStatus = Database['public']['Enums']['payment_status'];
 
 export class SupabaseFeeService {
   static getFeePermissions(user: User): FeePermissions {
@@ -170,9 +172,9 @@ export class SupabaseFeeService {
         fee_record_id: payment.feeRecordId!,
         student_id: payment.studentId!,
         amount: payment.amount!,
-        payment_method: payment.paymentMethod!,
+        payment_method: payment.paymentMethod! as PaymentMethod,
         transaction_id: `TXN${Date.now()}`,
-        status: Math.random() > 0.1 ? 'Success' : 'Failed' as const,
+        status: (Math.random() > 0.1 ? 'Success' : 'Failed') as PaymentStatus,
         receipt_number: receiptNumber,
         processed_by: user.id,
         gateway: payment.paymentMethod === 'Online' ? 'RGCE_Gateway' : undefined
@@ -257,7 +259,7 @@ export class SupabaseFeeService {
         .eq('is_active', true);
 
       if (department) {
-        query = query.eq('department', department);
+        query = query.eq('department', department as Department);
       }
 
       const { data, error } = await query;
@@ -287,8 +289,8 @@ export class SupabaseFeeService {
       const structureData = {
         academic_year: feeStructure.academicYear!,
         semester: feeStructure.semester!,
-        department: feeStructure.department!,
-        fee_categories: feeStructure.feeCategories!,
+        department: feeStructure.department! as Department,
+        fee_categories: feeStructure.feeCategories! as any,
         total_amount: feeStructure.totalAmount!,
         due_date: feeStructure.dueDate!,
         late_fee_percentage: 5.0,
@@ -338,7 +340,7 @@ export class SupabaseFeeService {
       academicYear: dbRecord.academic_year,
       semester: dbRecord.semester,
       department: dbRecord.department,
-      feeCategories: dbRecord.fee_categories as FeeCategory[],
+      feeCategories: (dbRecord.fee_categories as unknown) as FeeCategory[],
       totalAmount: Number(dbRecord.total_amount),
       dueDate: dbRecord.due_date,
       createdAt: dbRecord.created_at || '',

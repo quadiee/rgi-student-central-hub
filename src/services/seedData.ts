@@ -1,5 +1,10 @@
 
 import { supabase } from '../integrations/supabase/client';
+import { Database } from '../integrations/supabase/types';
+
+type Department = Database['public']['Enums']['department'];
+type PaymentMethod = Database['public']['Enums']['payment_method'];
+type PaymentStatus = Database['public']['Enums']['payment_status'];
 
 export class SeedDataService {
   static async seedFeeStructures() {
@@ -10,7 +15,7 @@ export class SeedDataService {
       {
         academic_year: '2024-25',
         semester: 1,
-        department: 'CSE',
+        department: 'CSE' as Department,
         fee_categories: [
           { id: '1', name: 'Tuition Fee', amount: 45000, mandatory: true },
           { id: '2', name: 'Lab Fee', amount: 8000, mandatory: true },
@@ -28,7 +33,7 @@ export class SeedDataService {
       {
         academic_year: '2024-25',
         semester: 2,
-        department: 'CSE',
+        department: 'CSE' as Department,
         fee_categories: [
           { id: '1', name: 'Tuition Fee', amount: 45000, mandatory: true },
           { id: '2', name: 'Lab Fee', amount: 8000, mandatory: true },
@@ -46,7 +51,7 @@ export class SeedDataService {
       {
         academic_year: '2024-25',
         semester: 1,
-        department: 'ECE',
+        department: 'ECE' as Department,
         fee_categories: [
           { id: '1', name: 'Tuition Fee', amount: 42000, mandatory: true },
           { id: '2', name: 'Lab Fee', amount: 12000, mandatory: true },
@@ -64,7 +69,7 @@ export class SeedDataService {
       {
         academic_year: '2024-25',
         semester: 1,
-        department: 'MECH',
+        department: 'MECH' as Department,
         fee_categories: [
           { id: '1', name: 'Tuition Fee', amount: 40000, mandatory: true },
           { id: '2', name: 'Workshop Fee', amount: 15000, mandatory: true },
