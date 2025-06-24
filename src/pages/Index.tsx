@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/SupabaseAuthContext';
+import { useEnhancedAuth } from '../contexts/EnhancedAuthContext';
 import MobileSidebar from '../components/Layout/MobileSidebar';
 import Header from '../components/Layout/Header';
 import Dashboard from '../components/Dashboard/Dashboard';
@@ -13,7 +13,7 @@ import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
 
 const AppContent = () => {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useEnhancedAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -82,7 +82,7 @@ const AppContent = () => {
   };
 
   // Show loading screen while checking authentication
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
