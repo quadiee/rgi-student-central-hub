@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import { User, FeeRecord } from '../types';
 import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions, FeeCategory } from '../types/feeTypes';
@@ -197,16 +198,41 @@ export class SupabaseFeeService {
         throw error;
       }
 
-      // Update fee record with new payment amount
+      // Update fee record with new payment amount manually
       if (data.status === 'Success') {
-        const { error: updateError } = await supabase.rpc('update_fee_record_on_payment', {
-          p_fee_record_id: payment.feeRecordId!,
-          p_payment_amount: payment.amount!
-        });
-        
-        if (updateError) {
-          console.error('Error updating fee record:', updateError);
-          // Don't throw here as payment was successful
+        // Get current fee record
+        const { data: feeRecord } = await supabase
+          .from('fee_records')
+          .select('paid_amount, final_amount')
+          .eq('id', payment.feeRecordId!)
+          .single();
+
+        if (feeRecord) {
+          const newPaidAmount = Number(feeRecord.paid_amount || 0) + Number(payment.amount!);
+          const finalAmount = Number(feeRecord.final_amount);
+          
+          // Determine new status
+          let newStatus: Database['public']['Enums']['fee_status'] = 'Pending';
+          if (newPaidAmount >= finalAmount) {
+            newStatus = 'Paid';
+          } else if (newPaidAmount > 0) {
+            newStatus = 'Partial';
+          }
+
+          // Update fee record
+          const { error: updateError } = await supabase
+            .from('fee_records')
+            .update({
+              paid_amount: newPaidAmount,
+              last_payment_date: new Date().toISOString(),
+              status: newStatus
+            })
+            .eq('id', payment.feeRecordId!);
+          
+          if (updateError) {
+            console.error('Error updating fee record:', updateError);
+            // Don't throw here as payment was successful
+          }
         }
       }
 

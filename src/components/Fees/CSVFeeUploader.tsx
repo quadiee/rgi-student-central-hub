@@ -7,6 +7,9 @@ import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Database } from '../../integrations/supabase/types';
+
+type Department = Database['public']['Enums']['department'];
 
 const CSVFeeUploader: React.FC = () => {
   const { user } = useAuth();
@@ -14,7 +17,7 @@ const CSVFeeUploader: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [academicYear, setAcademicYear] = useState('2024-25');
   const [semester, setSemester] = useState<number>(5);
-  const [department, setDepartment] = useState<string>('');
+  const [department, setDepartment] = useState<Department | ''>('');
 
   const downloadTemplate = () => {
     const template = `roll_number,student_name,fee_amount,due_date
@@ -63,16 +66,19 @@ const CSVFeeUploader: React.FC = () => {
       const { data, error } = await supabase.rpc('process_fee_csv_upload', {
         p_academic_year: academicYear,
         p_semester: semester,
-        p_department: department,
+        p_department: department as Department,
         p_csv_data: csvData,
         p_uploaded_by: user.id
       });
 
       if (error) throw error;
 
+      // Type the response properly
+      const result = data as { processed_count?: number; success?: boolean; message?: string };
+
       toast({
         title: "Success",
-        description: `CSV uploaded successfully! Processed ${data.processed_count} records.`,
+        description: `CSV uploaded successfully! Processed ${result.processed_count || 0} records.`,
       });
 
       // Reset form
@@ -160,7 +166,7 @@ const CSVFeeUploader: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Department
             </label>
-            <Select value={department} onValueChange={setDepartment}>
+            <Select value={department} onValueChange={(value) => setDepartment(value as Department)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Department" />
               </SelectTrigger>
