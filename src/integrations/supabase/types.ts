@@ -368,6 +368,56 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invitations: {
+        Row: {
+          department: Database["public"]["Enums"]["department"]
+          email: string
+          employee_id: string | null
+          expires_at: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean | null
+          role: Database["public"]["Enums"]["user_role"]
+          roll_number: string | null
+          used_at: string | null
+        }
+        Insert: {
+          department: Database["public"]["Enums"]["department"]
+          email: string
+          employee_id?: string | null
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          role: Database["public"]["Enums"]["user_role"]
+          roll_number?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          department?: Database["public"]["Enums"]["department"]
+          email?: string
+          employee_id?: string | null
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["user_role"]
+          roll_number?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -394,6 +444,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_invitation_details: {
+        Args: { invitation_email: string }
+        Returns: {
+          role: Database["public"]["Enums"]["user_role"]
+          department: Database["public"]["Enums"]["department"]
+          roll_number: string
+          employee_id: string
+          is_valid: boolean
+        }[]
+      }
       get_user_department: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["department"]
@@ -401,6 +461,10 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      mark_invitation_used: {
+        Args: { invitation_email: string }
+        Returns: undefined
       }
     }
     Enums: {
