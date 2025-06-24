@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -37,9 +38,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single();
+        .maybeSingle();
 
-      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+      if (profileCheckError) {
         console.error('Error checking existing profile:', profileCheckError);
       }
 
@@ -80,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           is_active: true
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('Error creating profile:', profileError);
@@ -181,16 +182,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for existing session and resolve loading immediately if no session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+      }
+      
       if (!session && isMounted) {
+        console.log('No existing session found, stopping loading');
         setLoading(false);
       }
     });
 
+    // Set a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.log('Loading timeout reached, forcing stop');
+        setLoading(false);
+      }
+    }, 3000);
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      clearTimeout(loadingTimeout);
     };
   }, []);
 
