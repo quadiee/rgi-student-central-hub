@@ -365,6 +365,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           phone: string | null
+          profile_photo_url: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           roll_number: string | null
           updated_at: string | null
@@ -382,6 +383,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           phone?: string | null
+          profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
           updated_at?: string | null
@@ -399,6 +401,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           phone?: string | null
+          profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
           updated_at?: string | null
@@ -539,7 +542,7 @@ export type Database = {
       installment_status: "Pending" | "Paid" | "Overdue"
       payment_method: "Online" | "Cash" | "Cheque" | "DD" | "UPI"
       payment_status: "Pending" | "Success" | "Failed" | "Cancelled"
-      user_role: "student" | "faculty" | "hod" | "principal" | "admin"
+      user_role: "student" | "hod" | "principal" | "admin"
       waiver_status: "Pending" | "Approved" | "Rejected"
     }
     CompositeTypes: {
@@ -661,7 +664,7 @@ export const Constants = {
       installment_status: ["Pending", "Paid", "Overdue"],
       payment_method: ["Online", "Cash", "Cheque", "DD", "UPI"],
       payment_status: ["Pending", "Success", "Failed", "Cancelled"],
-      user_role: ["student", "faculty", "hod", "principal", "admin"],
+      user_role: ["student", "hod", "principal", "admin"],
       waiver_status: ["Pending", "Approved", "Rejected"],
     },
   },

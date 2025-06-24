@@ -1,3 +1,4 @@
+
 export interface Student {
   id: string;
   name: string;
@@ -158,8 +159,8 @@ export interface ExamRecord {
   remarks?: string;
 }
 
-// Enhanced User with department and RGCE-specific fields
-export type UserRole = 'student' | 'faculty' | 'hod' | 'principal' | 'admin';
+// Enhanced User with department and RGCE-specific fields - FACULTY ROLE REMOVED
+export type UserRole = 'student' | 'hod' | 'principal' | 'admin';
 
 // Updated Department types to match current Supabase database schema
 export type Department = 

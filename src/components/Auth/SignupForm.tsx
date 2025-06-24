@@ -133,7 +133,9 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin, onSignupSucces
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="student">Student</option>
-              <option value="faculty">Faculty</option>
+              <option value="hod">HOD</option>
+              <option value="principal">Principal</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
 

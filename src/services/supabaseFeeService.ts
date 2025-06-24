@@ -24,16 +24,6 @@ export class SupabaseFeeService {
         canApproveWaivers: false,
         allowedDepartments: []
       },
-      faculty: {
-        canViewAllStudents: false,
-        canViewDepartmentStudents: true,
-        canViewOwnFees: false,
-        canProcessPayments: false,
-        canModifyFeeStructure: false,
-        canGenerateReports: true,
-        canApproveWaivers: false,
-        allowedDepartments: [user.department]
-      },
       hod: {
         canViewAllStudents: false,
         canViewDepartmentStudents: true,

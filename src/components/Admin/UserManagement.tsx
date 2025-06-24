@@ -26,7 +26,8 @@ const UserManagement: React.FC = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
   const { toast } = useToast();
 
-  const roles = ['student', 'faculty', 'hod', 'principal', 'admin'];
+  // Updated roles array without faculty
+  const roles = ['student', 'hod', 'principal', 'admin'];
 
   useEffect(() => {
     loadUsers();
@@ -130,8 +131,6 @@ const UserManagement: React.FC = () => {
         return 'bg-purple-100 text-purple-800';
       case 'hod':
         return 'bg-blue-100 text-blue-800';
-      case 'faculty':
-        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
