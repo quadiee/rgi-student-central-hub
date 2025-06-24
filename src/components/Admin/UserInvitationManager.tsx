@@ -39,7 +39,7 @@ const UserInvitationManager: React.FC = () => {
     employeeId: ''
   });
 
-  const roles: UserRole[] = ['student', 'faculty', 'hod', 'principal', 'admin'];
+  const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
   const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
   useEffect(() => {

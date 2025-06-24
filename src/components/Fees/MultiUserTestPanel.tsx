@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Users, Shield, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -61,7 +60,7 @@ const MultiUserTestPanel: React.FC = () => {
         
         accessibleStudents = allStudents?.length || 0;
         accessibleDepartments = ['All Departments'];
-      } else if (user.role === 'hod' || user.role === 'faculty') {
+      } else if (user.role === 'hod') {
         // Should see only their department students
         const { data: deptStudents } = await supabase
           .from('profiles')
@@ -222,7 +221,6 @@ const MultiUserTestPanel: React.FC = () => {
                     u.role === 'admin' ? 'bg-red-100 text-red-800' :
                     u.role === 'principal' ? 'bg-purple-100 text-purple-800' :
                     u.role === 'hod' ? 'bg-blue-100 text-blue-800' :
-                    u.role === 'faculty' ? 'bg-green-100 text-green-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     {u.role}

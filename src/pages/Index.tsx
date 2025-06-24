@@ -42,7 +42,7 @@ const AppContent = () => {
       
       case 'students':
         return (
-          <ProtectedRoute allowedRoles={['admin', 'principal', 'hod', 'faculty']}>
+          <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
             <div className="text-center py-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Student Management</h2>
               <p className="text-gray-600">Student management features coming soon...</p>

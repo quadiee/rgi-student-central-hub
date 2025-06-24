@@ -2,7 +2,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import StudentDashboard from './StudentDashboard';
-import FacultyDashboard from './FacultyDashboard';
 import HODDashboard from './HODDashboard';
 import PrincipalDashboard from './PrincipalDashboard';
 
@@ -13,8 +12,6 @@ const Dashboard: React.FC = () => {
     switch (user?.role) {
       case 'student':
         return <StudentDashboard />;
-      case 'faculty':
-        return <FacultyDashboard />;
       case 'hod':
         return <HODDashboard />;
       case 'principal':

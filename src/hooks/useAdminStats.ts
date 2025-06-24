@@ -44,11 +44,11 @@ export const useAdminStats = () => {
         .eq('role', 'student')
         .eq('is_active', true);
 
-      // Get faculty members (faculty + hod + principal)
+      // Get staff members (hod + principal + admin)
       const { count: facultyMembers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .in('role', ['faculty', 'hod', 'principal'])
+        .in('role', ['hod', 'principal', 'admin'])
         .eq('is_active', true);
 
       setStats({

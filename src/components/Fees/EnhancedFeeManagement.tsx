@@ -23,7 +23,6 @@ const EnhancedFeeManagement: React.FC = () => {
       case 'student':
         return <StudentPaymentPortal />;
       
-      case 'faculty':
       case 'hod':
         return (
           <div className="space-y-6">

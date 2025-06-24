@@ -1,4 +1,3 @@
-
 import {
   Student,
   Faculty,
@@ -584,11 +583,10 @@ export const mockUsers: User[] = [
   },
   {
     id: 'USR003',
-    name: 'Faculty Rajesh',
+    name: 'HOD Rajesh',
     email: 'rajesh.k@rgce.edu.in',
-    role: 'faculty',
+    role: 'hod',
     department: 'CSE',
-    facultyId: 'FAC001',
   },
 ];
 

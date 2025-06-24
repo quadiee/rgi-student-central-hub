@@ -1,4 +1,3 @@
-
 import { User, FeeRecord, Department } from '../types';
 import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions } from '../types/feeTypes';
 import { databaseService } from './database';
@@ -16,18 +15,6 @@ export class FeeService {
           canGenerateReports: false,
           canApproveWaivers: false,
           allowedDepartments: []
-        };
-      
-      case 'faculty':
-        return {
-          canViewAllStudents: false,
-          canViewDepartmentStudents: true,
-          canViewOwnFees: false,
-          canProcessPayments: false,
-          canModifyFeeStructure: false,
-          canGenerateReports: false,
-          canApproveWaivers: false,
-          allowedDepartments: [user.department]
         };
       
       case 'hod':

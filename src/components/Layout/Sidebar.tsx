@@ -45,14 +45,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         { id: 'exams', label: 'Exams', icon: FileText },
         { id: 'reports', label: 'Reports', icon: BookOpen }
       ];
-    } else if (user?.role === 'faculty') {
-      return [
-        ...baseItems,
-        { id: 'fees', label: 'Fee Management', icon: CreditCard },
-        { id: 'students', label: 'My Students', icon: Users },
-        { id: 'attendance', label: 'Attendance', icon: UserCheck },
-        { id: 'exams', label: 'Exams', icon: FileText }
-      ];
     } else {
       return [
         ...baseItems,

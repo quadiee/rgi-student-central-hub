@@ -22,7 +22,7 @@ const UserProfile: React.FC = () => {
 
   if (!user) return null;
 
-  const roles: UserRole[] = ['student', 'faculty', 'hod', 'principal'];
+  const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 max-w-md mx-auto">
