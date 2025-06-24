@@ -123,7 +123,6 @@ export type Database = {
         Row: {
           academic_year: string
           created_at: string | null
-          department: Database["public"]["Enums"]["department"]
           due_date: string
           fee_categories: Json
           id: string
@@ -138,7 +137,6 @@ export type Database = {
         Insert: {
           academic_year: string
           created_at?: string | null
-          department: Database["public"]["Enums"]["department"]
           due_date: string
           fee_categories: Json
           id?: string
@@ -153,7 +151,6 @@ export type Database = {
         Update: {
           academic_year?: string
           created_at?: string | null
-          department?: Database["public"]["Enums"]["department"]
           due_date?: string
           fee_categories?: Json
           id?: string
@@ -318,7 +315,6 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
-          department: Database["public"]["Enums"]["department"]
           email: string
           employee_id: string | null
           guardian_name: string | null
@@ -327,7 +323,6 @@ export type Database = {
           is_active: boolean | null
           name: string
           phone: string | null
-          role: Database["public"]["Enums"]["user_role"]
           roll_number: string | null
           updated_at: string | null
           year_section: string | null
@@ -335,7 +330,6 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string | null
-          department: Database["public"]["Enums"]["department"]
           email: string
           employee_id?: string | null
           guardian_name?: string | null
@@ -344,7 +338,6 @@ export type Database = {
           is_active?: boolean | null
           name: string
           phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
           roll_number?: string | null
           updated_at?: string | null
           year_section?: string | null
@@ -352,7 +345,6 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string | null
-          department?: Database["public"]["Enums"]["department"]
           email?: string
           employee_id?: string | null
           guardian_name?: string | null
@@ -361,7 +353,6 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
           roll_number?: string | null
           updated_at?: string | null
           year_section?: string | null
@@ -370,7 +361,6 @@ export type Database = {
       }
       user_invitations: {
         Row: {
-          department: Database["public"]["Enums"]["department"]
           email: string
           employee_id: string | null
           expires_at: string | null
@@ -378,12 +368,10 @@ export type Database = {
           invited_at: string | null
           invited_by: string | null
           is_active: boolean | null
-          role: Database["public"]["Enums"]["user_role"]
           roll_number: string | null
           used_at: string | null
         }
         Insert: {
-          department: Database["public"]["Enums"]["department"]
           email: string
           employee_id?: string | null
           expires_at?: string | null
@@ -391,12 +379,10 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           is_active?: boolean | null
-          role: Database["public"]["Enums"]["user_role"]
           roll_number?: string | null
           used_at?: string | null
         }
         Update: {
-          department?: Database["public"]["Enums"]["department"]
           email?: string
           employee_id?: string | null
           expires_at?: string | null
@@ -404,7 +390,6 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           is_active?: boolean | null
-          role?: Database["public"]["Enums"]["user_role"]
           roll_number?: string | null
           used_at?: string | null
         }
@@ -447,24 +432,6 @@ export type Database = {
       generate_receipt_number: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      get_invitation_details: {
-        Args: { invitation_email: string }
-        Returns: {
-          role: Database["public"]["Enums"]["user_role"]
-          department: Database["public"]["Enums"]["department"]
-          roll_number: string
-          employee_id: string
-          is_valid: boolean
-        }[]
-      }
-      get_user_department: {
-        Args: { user_id: string }
-        Returns: Database["public"]["Enums"]["department"]
-      }
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: Database["public"]["Enums"]["user_role"]
       }
       mark_invitation_used: {
         Args: { invitation_email: string }
