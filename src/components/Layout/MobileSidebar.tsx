@@ -25,8 +25,8 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'faculty', 'hod', 'principal', 'admin'] },
-    { id: 'fees', label: 'Fee Management', icon: CreditCard, roles: ['student', 'faculty', 'hod', 'principal', 'admin'] },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'hod', 'principal', 'admin'] },
+    { id: 'fees', label: 'Fee Management', icon: CreditCard, roles: ['student', 'hod', 'principal', 'admin'] },
     { id: 'admin', label: 'Admin Panel', icon: Settings, roles: ['principal', 'admin'] }
   ];
 
