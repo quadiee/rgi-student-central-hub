@@ -1,188 +1,167 @@
 
 import React, { useState } from 'react';
-import { Clock, CheckCircle, XCircle, User, Calendar, FileText } from 'lucide-react';
-import { mockLeaves, mockStudents } from '../../data/mockData';
-import { useAuth } from '../../contexts/AuthContext';
+import { Clock, Check, X, User, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
-import { LeaveRequest } from '../../types';
 
-interface LeaveApprovalQueueProps {
-  showHODApprovals?: boolean;
+interface LeaveRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Denied';
+  requestedOn: string;
 }
 
-const LeaveApprovalQueue: React.FC<LeaveApprovalQueueProps> = ({ showHODApprovals = false }) => {
-  const { user } = useAuth();
-  const [leaves, setLeaves] = useState<LeaveRequest[]>(mockLeaves);
-
-  // Filter leaves based on role and approval level
-  const getRelevantLeaves = () => {
-    if (showHODApprovals) {
-      // HOD sees leaves that need HOD approval (faculty already approved)
-      return leaves.filter(leave => 
-        leave.facultyApproval === 'Approved' && 
-        leave.hodApproval === 'Pending'
-      );
-    } else {
-      // Faculty sees leaves that need faculty approval
-      return leaves.filter(leave => 
-        leave.facultyApproval === 'Pending'
-      );
+const LeaveApprovalQueue: React.FC = () => {
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
+    {
+      id: '1',
+      studentId: '1',
+      studentName: 'Rajesh Kumar',
+      rollNumber: 'CSE2021001',
+      fromDate: '2024-06-25',
+      toDate: '2024-06-27',
+      reason: 'Family function',
+      status: 'Pending',
+      requestedOn: '2024-06-20'
+    },
+    {
+      id: '2',
+      studentId: '2',
+      studentName: 'Priya Sharma',
+      rollNumber: 'CSE2021002',
+      fromDate: '2024-06-30',
+      toDate: '2024-07-01',
+      reason: 'Medical appointment',
+      status: 'Pending',
+      requestedOn: '2024-06-22'
     }
-  };
+  ]);
 
-  const handleApproval = (leaveId: string, approved: boolean, isHOD: boolean = false) => {
-    setLeaves(prevLeaves => 
-      prevLeaves.map(leave => {
-        if (leave.id === leaveId) {
-          const updatedLeave = { ...leave };
-          
-          if (isHOD) {
-            updatedLeave.hodApproval = approved ? 'Approved' : 'Denied';
-            updatedLeave.finalStatus = approved ? 'Approved' : 'Denied';
-          } else {
-            updatedLeave.facultyApproval = approved ? 'Approved' : 'Denied';
-            if (!approved) {
-              updatedLeave.finalStatus = 'Denied';
-            }
-          }
-          
-          updatedLeave.approvedBy = user?.email || '';
-          
-          return updatedLeave;
-        }
-        return leave;
-      })
+  const handleApproval = (requestId: string, status: 'Approved' | 'Denied') => {
+    setLeaveRequests(prev => 
+      prev.map(request => 
+        request.id === requestId ? { ...request, status } : request
+      )
     );
   };
 
-  const relevantLeaves = getRelevantLeaves();
-
-  const getStudentName = (studentId: string) => {
-    const student = mockStudents.find(s => s.id === studentId);
-    return student ? student.name : 'Unknown Student';
-  };
-
-  const getStudentDetails = (studentId: string) => {
-    const student = mockStudents.find(s => s.id === studentId);
-    return student ? `${student.rollNumber} • ${student.yearSection}` : '';
-  };
-
-  const calculateLeaveDays = (fromDate: string, toDate: string) => {
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
-    const diffTime = Math.abs(to.getTime() - from.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
-  };
-
-  if (relevantLeaves.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-800 mb-2">No Pending Approvals</h3>
-        <p className="text-gray-600">
-          {showHODApprovals ? 'All leave requests have been processed.' : 'No leave requests require your approval at this time.'}
-        </p>
-      </div>
-    );
-  }
+  const pendingRequests = leaveRequests.filter(req => req.status === 'Pending');
+  const processedRequests = leaveRequests.filter(req => req.status !== 'Pending');
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800">
-          {showHODApprovals ? 'HOD Leave Approvals' : 'Faculty Leave Approvals'}
+    <div className="space-y-6">
+      {/* Pending Requests */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Pending Approvals ({pendingRequests.length})
         </h3>
-        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-          {relevantLeaves.length} pending
-        </span>
+        
+        {pendingRequests.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No pending leave requests</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {pendingRequests.map(request => (
+              <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">{request.studentName}</h4>
+                      <p className="text-sm text-gray-600">{request.rollNumber}</p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                    Pending
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                  <div>
+                    <span className="font-medium text-gray-700">From:</span>
+                    <p>{new Date(request.fromDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">To:</span>
+                    <p>{new Date(request.toDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <span className="font-medium text-gray-700">Reason:</span>
+                  <p className="text-gray-600">{request.reason}</p>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleApproval(request.id, 'Approved')}
+                    className="bg-green-600 hover:bg-green-700 flex items-center space-x-1"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Approve</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleApproval(request.id, 'Denied')}
+                    className="text-red-600 border-red-600 hover:bg-red-50 flex items-center space-x-1"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Deny</span>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="space-y-4">
-        {relevantLeaves.map((leave) => (
-          <div key={leave.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-800">{getStudentName(leave.studentId)}</h4>
-                  <p className="text-sm text-gray-600">{getStudentDetails(leave.studentId)}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">
-                  Requested: {new Date(leave.requestedOn).toLocaleDateString()}
-                </p>
-                {leave.courseCode && (
-                  <p className="text-xs text-gray-500">{leave.courseCode}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-3 mb-3">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>{leave.fromDate} to {leave.toDate}</span>
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                    {calculateLeaveDays(leave.fromDate, leave.toDate)} day{calculateLeaveDays(leave.fromDate, leave.toDate) > 1 ? 's' : ''}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <FileText className="w-4 h-4 text-gray-500 mt-0.5" />
-                <p className="text-sm text-gray-700">{leave.reason}</p>
-              </div>
-            </div>
-
-            {!showHODApprovals && leave.facultyApproval === 'Approved' && (
-              <div className="mb-3 p-2 bg-green-50 rounded text-sm text-green-700">
-                ✓ Faculty approved - Forwarding to HOD for final approval
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span className={`flex items-center gap-1 ${
-                  leave.facultyApproval === 'Approved' ? 'text-green-600' :
-                  leave.facultyApproval === 'Denied' ? 'text-red-600' : 'text-yellow-600'
-                }`}>
-                  Faculty: {leave.facultyApproval}
-                </span>
-                {showHODApprovals && (
-                  <span className={`flex items-center gap-1 ${
-                    leave.hodApproval === 'Approved' ? 'text-green-600' :
-                    leave.hodApproval === 'Denied' ? 'text-red-600' : 'text-yellow-600'
-                  }`}>
-                    HOD: {leave.hodApproval}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleApproval(leave.id, false, showHODApprovals)}
-                  className="text-red-600 border-red-300 hover:bg-red-50"
-                >
-                  <XCircle className="w-4 h-4 mr-1" />
-                  Deny
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleApproval(leave.id, true, showHODApprovals)}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Approve
-                </Button>
-              </div>
-            </div>
+      {/* Processed Requests */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Recent Decisions ({processedRequests.length})
+        </h3>
+        
+        {processedRequests.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No processed requests</p>
           </div>
-        ))}
+        ) : (
+          <div className="space-y-3">
+            {processedRequests.map(request => (
+              <div key={request.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{request.studentName}</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(request.fromDate).toLocaleDateString()} - {new Date(request.toDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  request.status === 'Approved' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {request.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

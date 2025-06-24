@@ -1,113 +1,75 @@
 
 import React from 'react';
-import { AlertTriangle, TrendingDown, Clock } from 'lucide-react';
-import { Button } from '../ui/button';
+import { AlertTriangle, Users } from 'lucide-react';
 import { mockStudents } from '../../data/mockData';
 
-interface AtRiskAlertProps {
-  department?: string;
-  onViewDetails?: (studentId: string) => void;
-}
-
-const AtRiskAlert: React.FC<AtRiskAlertProps> = ({ department, onViewDetails }) => {
-  const atRiskStudents = mockStudents.filter(student => {
-    const meetsThreshold = (student.attendancePercentage || 0) < 75;
-    const matchesDepartment = department ? student.department === department : true;
-    return meetsThreshold && matchesDepartment;
-  });
+const AtRiskAlert: React.FC = () => {
+  // Filter students with high due amounts (fee at risk)
+  const atRiskStudents = mockStudents.filter(student => 
+    student.dueAmount > 50000 // Students with more than 50k due
+  );
 
   if (atRiskStudents.length === 0) {
-    return null;
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Users className="w-5 h-5 text-green-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Fee Status</h3>
+        </div>
+        <div className="text-center py-8 text-green-600">
+          <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <p>All students have manageable fee dues!</p>
+        </div>
+      </div>
+    );
   }
 
-  const getCriticalityLevel = (percentage: number) => {
-    if (percentage < 60) return 'critical';
-    if (percentage < 70) return 'warning';
-    return 'attention';
-  };
-
-  const getCriticalityColor = (level: string) => {
-    switch (level) {
-      case 'critical': return 'bg-red-50 border-red-200 text-red-800';
-      case 'warning': return 'bg-orange-50 border-orange-200 text-orange-800';
-      default: return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-    }
-  };
-
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-l-red-500">
+    <div className="bg-white rounded-xl shadow-lg p-6">
       <div className="flex items-center space-x-2 mb-4">
         <AlertTriangle className="w-5 h-5 text-red-500" />
-        <h3 className="text-lg font-semibold text-gray-800">At-Risk Students Alert</h3>
-        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
-          {atRiskStudents.length} students
+        <h3 className="text-lg font-semibold text-gray-800">Students at Risk</h3>
+        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+          {atRiskStudents.length}
         </span>
       </div>
-
-      <div className="space-y-3 mb-4">
-        {atRiskStudents.slice(0, 5).map((student) => {
-          const level = getCriticalityLevel(student.attendancePercentage || 0);
-          return (
-            <div
-              key={student.id}
-              className={`p-3 rounded-lg border ${getCriticalityColor(level)}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-700">
-                      {student.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">{student.name}</h4>
-                    <p className="text-sm opacity-75">{student.rollNumber} • {student.yearSection}</p>
-                  </div>
+      
+      <div className="space-y-3">
+        {atRiskStudents.slice(0, 5).map(student => (
+          <div key={student.id} className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {student.name.split(' ').map(n => n[0]).join('')}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <div className="flex items-center space-x-1">
-                    <TrendingDown className="w-4 h-4" />
-                    <span className="font-bold">{student.attendancePercentage}%</span>
-                  </div>
-                  <p className="text-xs opacity-75">Attendance</p>
+                <div>
+                  <div className="font-medium text-red-800">{student.name}</div>
+                  <div className="text-sm text-red-600">{student.rollNumber}</div>
                 </div>
               </div>
-              
-              <div className="mt-2 flex items-center justify-between">
-                <div className="flex items-center space-x-1 text-xs opacity-75">
-                  <Clock className="w-3 h-3" />
-                  <span>Action needed within 48 hours</span>
-                </div>
-                {onViewDetails && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onViewDetails(student.id)}
-                    className="text-xs"
-                  >
-                    View Details
-                  </Button>
-                )}
-              </div>
+              <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm font-medium">
+                ₹{student.dueAmount.toLocaleString()} due
+              </span>
             </div>
-          );
-        })}
+            <div className="text-sm text-red-600">
+              Fee Status: {student.feeStatus} | Department: {student.department}
+            </div>
+            <div className="text-xs text-red-500 mt-1">
+              Contact: {student.phone} | Guardian: {student.guardianPhone}
+            </div>
+          </div>
+        ))}
       </div>
-
+      
       {atRiskStudents.length > 5 && (
-        <div className="text-center">
-          <Button variant="outline" size="sm">
-            View All {atRiskStudents.length} At-Risk Students
-          </Button>
+        <div className="mt-4 text-center">
+          <button className="text-red-600 hover:text-red-800 text-sm font-medium">
+            View all {atRiskStudents.length} at-risk students →
+          </button>
         </div>
       )}
-
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-800">
-          <strong>Recommended Actions:</strong> Send alerts to parents, schedule counseling sessions, 
-          or contact students directly to improve attendance.
-        </p>
-      </div>
     </div>
   );
 };

@@ -186,14 +186,14 @@ const StudentDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Payments</h3>
         <div className="space-y-3">
           {feeRecords
-            .filter(record => record.status === 'Paid' && record.lastPaymentDate)
+            .filter(record => record.status === 'Paid' && record.paidDate)
             .slice(0, 5)
             .map(record => (
               <div key={record.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">₹{record.amount.toLocaleString()}</p>
                   <p className="text-sm text-gray-600">
-                    {record.lastPaymentDate && new Date(record.lastPaymentDate).toLocaleDateString()}
+                    {record.paidDate && new Date(record.paidDate).toLocaleDateString()}
                   </p>
                 </div>
                 <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">

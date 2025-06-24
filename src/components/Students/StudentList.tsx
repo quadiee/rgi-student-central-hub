@@ -3,11 +3,30 @@ import React, { useState } from 'react';
 import { Search, Filter, Users, Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { mockStudents } from '../../data/mockData';
-import { Student } from '../../types';
 import { useIsMobile } from '../../hooks/use-mobile';
 
+interface StudentData {
+  id: string;
+  name: string;
+  rollNumber: string;
+  department: string;
+  year: number;
+  section: string;
+  yearSection: string;
+  email: string;
+  phone: string;
+  guardianName: string;
+  guardianPhone: string;
+  address: string;
+  profilePhoto?: string;
+  totalFees: number;
+  paidAmount: number;
+  dueAmount: number;
+  feeStatus: string;
+}
+
 interface StudentListProps {
-  onViewStudent: (student: Student) => void;
+  onViewStudent: (student: StudentData) => void;
 }
 
 const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
@@ -27,6 +46,12 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
 
   const departments = [...new Set(mockStudents.map(s => s.department))];
   const years = ['1', '2', '3', '4'];
+
+  const getStudentStatus = (student: StudentData) => {
+    if (student.dueAmount === 0) return { label: 'Paid', color: 'bg-green-100 text-green-800' };
+    if (student.paidAmount > 0) return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
+    return { label: 'Pending', color: 'bg-red-100 text-red-800' };
+  };
 
   return (
     <div className="space-y-6">
@@ -88,60 +113,55 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
         {isMobile ? (
           // Mobile Card View
           <div className="p-4 space-y-4">
-            {filteredStudents.map(student => (
-              <div key={student.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium">
-                        {student.name.split(' ').map(n => n[0]).join('')}
-                      </span>
+            {filteredStudents.map(student => {
+              const status = getStudentStatus(student);
+              return (
+                <div key={student.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white font-medium">
+                          {student.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">{student.name}</h3>
+                        <p className="text-sm text-gray-500">{student.rollNumber}</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => onViewStudent(student)}
+                      className="flex items-center space-x-1"
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>View</span>
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Department:</span>
+                      <p className="font-medium">{student.department}</p>
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">{student.name}</h3>
-                      <p className="text-sm text-gray-500">{student.rollNumber}</p>
+                      <span className="text-gray-500">Year & Section:</span>
+                      <p className="font-medium">{student.yearSection}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Fee Due:</span>
+                      <p className="font-medium text-red-600">₹{student.dueAmount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                        {status.label}
+                      </span>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => onViewStudent(student)}
-                    className="flex items-center space-x-1"
-                  >
-                    <Eye className="w-3 h-3" />
-                    <span>View</span>
-                  </Button>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Department:</span>
-                    <p className="font-medium">{student.department}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Year & Section:</span>
-                    <p className="font-medium">{student.yearSection}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Attendance:</span>
-                    <p className={`font-medium ${
-                      student.attendancePercentage >= 75 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {student.attendancePercentage}%
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Status:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      student.attendancePercentage >= 75 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {student.attendancePercentage >= 75 ? 'Good' : 'At Risk'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           // Desktop Table View
@@ -162,7 +182,7 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                     Year & Section
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Attendance
+                    Fee Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -170,68 +190,64 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStudents.map(student => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">
-                            {student.name.split(' ').map(n => n[0]).join('')}
+                {filteredStudents.map(student => {
+                  const status = getStudentStatus(student);
+                  return (
+                    <tr key={student.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-sm font-medium">
+                              {student.name.split(' ').map(n => n[0]).join('')}
+                            </span>
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                            <div className="text-sm text-gray-500">{student.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {student.rollNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {student.department}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {student.yearSection}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${status.color} mb-1`}>
+                            {status.label}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Due: ₹{student.dueAmount.toLocaleString()}
                           </span>
                         </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                          <div className="text-sm text-gray-500">{student.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => onViewStudent(student)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>View</span>
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {student.rollNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {student.department}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {student.yearSection}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              student.attendancePercentage >= 75 ? 'bg-green-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${student.attendancePercentage}%` }}
-                          />
-                        </div>
-                        <span className={`text-sm font-medium ${
-                          student.attendancePercentage >= 75 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {student.attendancePercentage}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => onViewStudent(student)}
-                          className="flex items-center space-x-1"
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span>View</span>
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
