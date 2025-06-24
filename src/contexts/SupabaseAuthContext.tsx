@@ -33,11 +33,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Creating profile for user:', authUser.email);
       
       // First check if profile exists
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileCheckError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
+
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        console.error('Error checking existing profile:', profileCheckError);
+      }
 
       if (existingProfile) {
         console.log('Profile already exists:', existingProfile);
@@ -46,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Get user metadata or use defaults
       const metadata = authUser.user_metadata || {};
-      const role = metadata.role || 'admin'; // Default to admin for now
+      const role = metadata.role || 'admin';
       const departmentString = metadata.department || 'ADMIN';
       
       // Ensure department is a valid Department type
@@ -54,6 +58,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const department: Department = validDepartments.includes(departmentString as Department) 
         ? departmentString as Department 
         : 'ADMIN';
+
+      console.log('Creating new profile with data:', {
+        role,
+        department,
+        name: metadata.name || authUser.email?.split('@')[0],
+        email: authUser.email
+      });
 
       // Create the profile
       const { data: newProfile, error: profileError } = await supabase
@@ -88,8 +99,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       console.log('Profile created successfully:', newProfile);
       return newProfile;
+
     } catch (error) {
       console.error('Error in createProfileIfMissing:', error);
+      
       // Return a basic profile so the user can still access the app
       return {
         id: authUser.id,
@@ -105,18 +118,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        if (!isMounted) return;
+        
         setSession(session);
         
         if (session?.user) {
           try {
+            console.log('Processing user session for:', session.user.email);
+            
             // Try to get existing profile or create one
             const profile = await createProfileIfMissing(session.user);
             
-            if (profile) {
+            if (profile && isMounted) {
               const appUser: AppUser = {
                 id: profile.id,
                 name: profile.name,
@@ -128,40 +148,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 facultyId: profile.role === 'faculty' ? profile.id : undefined,
                 avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
               };
-              console.log('User profile set:', appUser);
+              
+              console.log('User profile set successfully:', appUser);
               setUser(appUser);
             }
           } catch (error) {
             console.error('Error setting up user profile:', error);
-            // Set a basic user so they can still access the app
-            const basicUser: AppUser = {
-              id: session.user.id,
-              name: session.user.email?.split('@')[0] || 'User',
-              email: session.user.email || '',
-              role: 'admin',
-              department: 'ADMIN',
-              rollNumber: null,
-              studentId: undefined,
-              facultyId: undefined,
-              avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${session.user.email}`
-            };
-            setUser(basicUser);
+            
+            if (isMounted) {
+              // Set a basic user so they can still access the app
+              const basicUser: AppUser = {
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'User',
+                email: session.user.email || '',
+                role: 'admin',
+                department: 'ADMIN',
+                rollNumber: null,
+                studentId: undefined,
+                facultyId: undefined,
+                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${session.user.email}`
+              };
+              setUser(basicUser);
+            }
           }
         } else {
           setUser(null);
         }
-        setLoading(false);
+        
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+      if (!session && isMounted) {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, userData: any) => {
