@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      departments: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          hod_id: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          hod_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          hod_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_hod_id_fkey"
+            columns: ["hod_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "departments_hod_id_fkey"
+            columns: ["hod_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
       fee_configurations: {
         Row: {
           academic_year: string
@@ -47,6 +95,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_configurations_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
           },
         ]
       }
@@ -158,12 +213,20 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fee_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
         ]
       }
       fee_structures: {
         Row: {
           academic_year: string
           created_at: string | null
+          department_id: string | null
           due_date: string
           fee_categories: Json
           id: string
@@ -178,6 +241,7 @@ export type Database = {
         Insert: {
           academic_year: string
           created_at?: string | null
+          department_id?: string | null
           due_date: string
           fee_categories: Json
           id?: string
@@ -192,6 +256,7 @@ export type Database = {
         Update: {
           academic_year?: string
           created_at?: string | null
+          department_id?: string | null
           due_date?: string
           fee_categories?: Json
           id?: string
@@ -202,6 +267,48 @@ export type Database = {
           semester?: number
           total_amount?: number
           updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_structures_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_structures_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+        ]
+      }
+      fee_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_mandatory: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_mandatory?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_mandatory?: boolean | null
+          name?: string
         }
         Relationships: []
       }
@@ -260,11 +367,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fee_waivers_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
             foreignKeyName: "fee_waivers_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_waivers_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
           },
           {
             foreignKeyName: "fee_waivers_fee_record_id_fkey"
@@ -279,6 +400,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_waivers_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
           },
         ]
       }
@@ -344,19 +472,61 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payment_transactions_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
             foreignKeyName: "payment_transactions_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payment_transactions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
         ]
+      }
+      permissions: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          resource_type: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          resource_type: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          resource_type?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
           address: string | null
           created_at: string | null
           department: Database["public"]["Enums"]["department"] | null
+          department_id: string | null
           email: string
           employee_id: string | null
           guardian_name: string | null
@@ -375,6 +545,7 @@ export type Database = {
           address?: string | null
           created_at?: string | null
           department?: Database["public"]["Enums"]["department"] | null
+          department_id?: string | null
           email: string
           employee_id?: string | null
           guardian_name?: string | null
@@ -393,6 +564,7 @@ export type Database = {
           address?: string | null
           created_at?: string | null
           department?: Database["public"]["Enums"]["department"] | null
+          department_id?: string | null
           email?: string
           employee_id?: string | null
           guardian_name?: string | null
@@ -406,6 +578,81 @@ export type Database = {
           roll_number?: string | null
           updated_at?: string | null
           year_section?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          permission_id: string | null
+          role_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          permission_id?: string | null
+          role_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          permission_id?: string | null
+          role_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
         }
         Relationships: []
       }
@@ -457,11 +704,154 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          department_id: string | null
+          id: string
+          is_active: boolean | null
+          role_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          department_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          role_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          department_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          role_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "user_roles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      hod_department_summary: {
+        Row: {
+          collection_percentage: number | null
+          department_code: string | null
+          department_id: string | null
+          department_name: string | null
+          total_collected: number | null
+          total_department_fees: number | null
+          total_fee_records: number | null
+          total_pending: number | null
+          total_students: number | null
+        }
+        Relationships: []
+      }
+      principal_institution_summary: {
+        Row: {
+          overall_collection_percentage: number | null
+          overdue_records: number | null
+          total_collected: number | null
+          total_departments: number | null
+          total_fee_records: number | null
+          total_institution_fees: number | null
+          total_pending: number | null
+          total_students: number | null
+        }
+        Relationships: []
+      }
+      student_fee_summary: {
+        Row: {
+          department_id: string | null
+          department_name: string | null
+          name: string | null
+          payment_status: string | null
+          pending_amount: number | null
+          roll_number: string | null
+          student_id: string | null
+          total_fee_records: number | null
+          total_fees: number | null
+          total_paid: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_penalty_amount: {
@@ -517,6 +907,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["department"]
       }
+      get_user_department_id: {
+        Args: { user_id: string }
+        Returns: string
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -534,6 +928,14 @@ export type Database = {
           p_uploaded_by: string
         }
         Returns: Json
+      }
+      user_has_permission: {
+        Args: {
+          user_id: string
+          permission_name: string
+          department_id?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
