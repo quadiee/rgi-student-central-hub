@@ -3,37 +3,31 @@ import { supabase } from '../integrations/supabase/client';
 
 export const initializeAdminInvitation = async () => {
   try {
-    // Check if admin invitation already exists
-    const { data: existingInvitation } = await supabase
-      .from('user_invitations')
-      .select('*')
-      .eq('email', 'praveen@rgce.edu.in')
-      .eq('is_active', true)
-      .single();
+    console.log('Checking for existing admin invitation...');
+    
+    // Check if admin invitation already exists using the RPC function
+    const { data: invitationDetails } = await supabase.rpc('get_invitation_details', {
+      invitation_email: 'praveen@rgce.edu.in'
+    });
 
-    if (existingInvitation) {
-      console.log('Admin invitation already exists');
+    if (invitationDetails && invitationDetails.length > 0 && invitationDetails[0].is_valid) {
+      console.log('Admin invitation already exists and is valid');
       return { success: true, message: 'Admin invitation already exists' };
     }
 
-    // Create admin invitation
-    const { error: invitationError } = await supabase
-      .from('user_invitations')
-      .insert({
-        email: 'praveen@rgce.edu.in',
-        role: 'admin',
-        department: 'CSE',
-        employee_id: 'ADMIN001',
-        invited_by: null // System invitation
-      });
+    console.log('Creating new admin invitation...');
+    
+    // Use the service role key or ensure proper permissions
+    // Since we can't access service role key in frontend, we'll create a function
+    const { data, error } = await supabase.rpc('create_admin_invitation_if_not_exists');
 
-    if (invitationError) {
-      console.error('Error creating admin invitation:', invitationError);
-      return { success: false, error: invitationError };
+    if (error) {
+      console.error('Error creating admin invitation:', error);
+      return { success: false, error };
     }
 
-    console.log('Admin invitation created successfully');
-    return { success: true, message: 'Admin invitation created successfully' };
+    console.log('Admin invitation process completed:', data);
+    return { success: true, message: 'Admin invitation process completed' };
   } catch (error) {
     console.error('Error initializing admin invitation:', error);
     return { success: false, error };
