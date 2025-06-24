@@ -1,12 +1,9 @@
 
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import FeeSystemStatus from './FeeSystemStatus';
-import SampleDataGenerator from './SampleDataGenerator';
-import MultiUserTestPanel from './MultiUserTestPanel';
-import StudentFeeView from './StudentFeeView';
-import HODFeeView from './HODFeeView';
-import PrincipalFeeView from './PrincipalFeeView';
+import CSVFeeUploader from './CSVFeeUploader';
+import RealTimeFeeDashboard from './RealTimeFeeDashboard';
+import StudentPaymentPortal from './StudentPaymentPortal';
 import AdminDashboard from '../Admin/AdminDashboard';
 
 const EnhancedFeeManagement: React.FC = () => {
@@ -24,14 +21,23 @@ const EnhancedFeeManagement: React.FC = () => {
   const renderRoleSpecificView = () => {
     switch (user.role) {
       case 'student':
-        return <StudentFeeView />;
+        return <StudentPaymentPortal />;
       
       case 'faculty':
       case 'hod':
-        return <HODFeeView />;
+        return (
+          <div className="space-y-6">
+            <RealTimeFeeDashboard />
+          </div>
+        );
       
       case 'principal':
-        return <PrincipalFeeView />;
+        return (
+          <div className="space-y-6">
+            <RealTimeFeeDashboard />
+            <CSVFeeUploader />
+          </div>
+        );
       
       case 'admin':
         return <AdminDashboard />;
@@ -53,17 +59,6 @@ const EnhancedFeeManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* System Status - Visible to all authenticated users */}
-      <FeeSystemStatus />
-      
-      {/* Admin Tools - Only visible to admins and principals */}
-      {['admin', 'principal'].includes(user.role) && (
-        <>
-          <SampleDataGenerator />
-          <MultiUserTestPanel />
-        </>
-      )}
-      
       {/* Role-specific fee management views */}
       {renderRoleSpecificView()}
     </div>

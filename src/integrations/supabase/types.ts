@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      fee_configurations: {
+        Row: {
+          academic_year: string
+          csv_data: Json
+          department: Database["public"]["Enums"]["department"]
+          id: string
+          is_active: boolean | null
+          semester: number
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          academic_year: string
+          csv_data: Json
+          department: Database["public"]["Enums"]["department"]
+          id?: string
+          is_active?: boolean | null
+          semester: number
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          academic_year?: string
+          csv_data?: Json
+          department?: Database["public"]["Enums"]["department"]
+          id?: string
+          is_active?: boolean | null
+          semester?: number
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_configurations_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_installments: {
         Row: {
           amount: number
@@ -445,6 +486,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      generate_complete_fee_system: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_receipt_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -476,6 +521,16 @@ export type Database = {
       mark_invitation_used: {
         Args: { invitation_email: string }
         Returns: undefined
+      }
+      process_fee_csv_upload: {
+        Args: {
+          p_academic_year: string
+          p_semester: number
+          p_department: Database["public"]["Enums"]["department"]
+          p_csv_data: Json
+          p_uploaded_by: string
+        }
+        Returns: Json
       }
     }
     Enums: {

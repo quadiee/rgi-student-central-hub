@@ -40,16 +40,25 @@ export const useFeeManagement = () => {
 
     setLoading(true);
     try {
-      await SupabaseFeeService.processPayment(user, payment);
+      const result = await SupabaseFeeService.processPayment(user, payment);
       
-      toast({
-        title: "Payment Processed",
-        description: "Payment has been processed successfully",
-      });
+      if (result.status === 'Success') {
+        toast({
+          title: "Payment Processed",
+          description: `Payment of ₹${payment.amount} processed successfully`,
+        });
 
-      // Reload fee records to reflect the payment
-      await loadFeeRecords();
-      return true;
+        // Reload fee records to reflect the payment
+        await loadFeeRecords();
+        return true;
+      } else {
+        toast({
+          title: "Payment Failed",
+          description: result.failureReason || "Payment processing failed",
+          variant: "destructive"
+        });
+        return false;
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Payment processing failed';
       setError(errorMessage);
