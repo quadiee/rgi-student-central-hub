@@ -52,8 +52,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               role: profile.role as UserRole,
               department: profile.department,
               rollNumber: profile.roll_number,
-              employeeId: profile.employee_id,
               studentId: profile.role === 'student' ? profile.id : undefined,
+              facultyId: profile.role === 'faculty' ? profile.id : undefined,
               avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
             };
             setUser(appUser);
