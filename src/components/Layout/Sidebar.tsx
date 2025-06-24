@@ -3,11 +3,9 @@ import React from 'react';
 import { 
   LayoutDashboard, 
   Users, 
-  Calendar, 
   CreditCard, 
-  FileText, 
   Settings,
-  BookOpen,
+  FileText,
   UserCheck,
   GraduationCap
 } from 'lucide-react';
@@ -32,25 +30,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
         { id: 'admin', label: 'Admin Panel', icon: Settings },
         { id: 'students', label: 'Students', icon: Users },
-        { id: 'attendance', label: 'Attendance', icon: UserCheck },
-        { id: 'exams', label: 'Exams', icon: FileText },
-        { id: 'reports', label: 'Reports', icon: BookOpen }
+        { id: 'reports', label: 'Reports', icon: FileText }
       ];
     } else if (user?.role === 'hod') {
       return [
         ...baseItems,
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
         { id: 'students', label: 'Department Students', icon: Users },
-        { id: 'attendance', label: 'Attendance', icon: UserCheck },
-        { id: 'exams', label: 'Exams', icon: FileText },
-        { id: 'reports', label: 'Reports', icon: BookOpen }
+        { id: 'reports', label: 'Reports', icon: FileText }
       ];
     } else {
       return [
         ...baseItems,
-        { id: 'fees', label: 'Fee Status', icon: CreditCard },
-        { id: 'attendance', label: 'My Attendance', icon: UserCheck },
-        { id: 'exams', label: 'My Results', icon: FileText }
+        { id: 'fees', label: 'My Fees', icon: CreditCard }
       ];
     }
   };
@@ -66,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-800">RGCE Portal</h1>
-            <p className="text-sm text-gray-500">Finance Management</p>
+            <p className="text-sm text-gray-500">Fee Management</p>
           </div>
         </div>
       </div>
