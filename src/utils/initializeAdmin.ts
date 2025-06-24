@@ -17,8 +17,7 @@ export const initializeAdminInvitation = async () => {
 
     console.log('Creating new admin invitation...');
     
-    // Use the service role key or ensure proper permissions
-    // Since we can't access service role key in frontend, we'll create a function
+    // Create admin invitation using the new RPC function
     const { data, error } = await supabase.rpc('create_admin_invitation_if_not_exists');
 
     if (error) {

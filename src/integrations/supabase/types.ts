@@ -431,6 +431,10 @@ export type Database = {
         }
         Returns: number
       }
+      create_admin_invitation_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       create_installments: {
         Args: {
           p_fee_record_id: string
