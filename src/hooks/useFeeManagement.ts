@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { SupabaseFeeService } from '../services/supabaseFeeService';
-import { FeeRecord, PaymentTransaction } from '../types';
+import { FeeRecord } from '../types';
+import { PaymentTransaction } from '../types/feeTypes';
 import { useToast } from '../components/ui/use-toast';
 
 export const useFeeManagement = () => {
