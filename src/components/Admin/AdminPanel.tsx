@@ -1,43 +1,40 @@
 
 import React, { useState } from 'react';
-import { Users, Mail, Settings } from 'lucide-react';
+import { Users, Settings, Shield } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
-import UserInvitationManager from './UserInvitationManager';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import EnhancedUserManagement from './EnhancedUserManagement';
 
 const AdminPanel: React.FC = () => {
-  const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('users');
+  const { user, hasPermission } = useAuth();
+  const [activeSection, setActiveSection] = useState('super-admin');
 
-  if (!user || !['admin', 'principal'].includes(user.role)) {
+  if (!user || !hasPermission('access_admin_panel')) {
     return (
       <div className="text-center py-8">
+        <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Access denied. Administrator privileges required.</p>
       </div>
     );
   }
 
   const sections = [
-    { id: 'users', label: 'User Management', icon: Users },
-    { id: 'invitations', label: 'Send Invitations', icon: Mail },
-    { id: 'settings', label: 'System Settings', icon: Settings }
+    { id: 'super-admin', label: 'Super Admin', icon: Shield },
+    { id: 'user-management', label: 'User Management', icon: Users },
+    { id: 'enhanced-users', label: 'Enhanced Users', icon: Settings }
   ];
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'users':
+      case 'super-admin':
+        return <SuperAdminPanel onUserManagementClick={() => setActiveSection('user-management')} />;
+      case 'user-management':
         return <UserManagement />;
-      case 'invitations':
-        return <UserInvitationManager />;
-      case 'settings':
-        return (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">System Settings</h3>
-            <p className="text-gray-600">System configuration options will be available here.</p>
-          </div>
-        );
+      case 'enhanced-users':
+        return <EnhancedUserManagement />;
       default:
-        return <UserManagement />;
+        return <SuperAdminPanel onUserManagementClick={() => setActiveSection('user-management')} />;
     }
   };
 
@@ -45,6 +42,10 @@ const AdminPanel: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
+        <div className="flex items-center space-x-2 text-sm text-blue-600">
+          <Shield className="w-4 h-4" />
+          <span>Administrator Access</span>
+        </div>
       </div>
 
       {/* Section Tabs */}

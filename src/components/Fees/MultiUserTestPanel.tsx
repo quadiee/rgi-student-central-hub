@@ -3,7 +3,7 @@ import { Users, Shield, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface UserTestData {
   role: string;
@@ -16,7 +16,7 @@ interface UserTestData {
 }
 
 const MultiUserTestPanel: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<UserTestData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,13 +46,11 @@ const MultiUserTestPanel: React.FC = () => {
 
     setLoading(true);
     try {
-      // Test what the current user can access
       let accessibleStudents = 0;
       let accessibleDepartments: string[] = [];
 
-      // Test student access based on role
-      if (user.role === 'admin' || user.role === 'principal') {
-        // Should see all students
+      // Test student access based on permissions
+      if (hasPermission('view_all_students')) {
         const { data: allStudents } = await supabase
           .from('profiles')
           .select('id, department')
@@ -60,18 +58,16 @@ const MultiUserTestPanel: React.FC = () => {
         
         accessibleStudents = allStudents?.length || 0;
         accessibleDepartments = ['All Departments'];
-      } else if (user.role === 'hod') {
-        // Should see only their department students
+      } else if (hasPermission('view_department_students')) {
         const { data: deptStudents } = await supabase
           .from('profiles')
           .select('id, department')
           .eq('role', 'student')
-          .eq('department', user.department as any); // Cast to avoid type error
+          .eq('department', user.department as any);
         
         accessibleStudents = deptStudents?.length || 0;
         accessibleDepartments = [user.department];
-      } else if (user.role === 'student') {
-        // Should see only their own records
+      } else if (hasPermission('view_own_profile')) {
         accessibleStudents = 1;
         accessibleDepartments = [user.department];
       }
@@ -92,11 +88,11 @@ const MultiUserTestPanel: React.FC = () => {
         console.error('Fee records access error:', feeError);
       }
 
-      // Determine permissions based on role
+      // Check permissions
       const permissions = {
-        canProcessPayments: ['admin', 'principal', 'hod'].includes(user.role),
-        canModifyFeeStructure: ['admin', 'principal'].includes(user.role),
-        canGenerateReports: ['admin', 'principal', 'hod'].includes(user.role)
+        canProcessPayments: hasPermission('process_payments'),
+        canModifyFeeStructure: hasPermission('modify_fee_structure'),
+        canGenerateReports: hasPermission('generate_reports')
       };
 
       const testData: UserTestData = {
@@ -129,7 +125,6 @@ const MultiUserTestPanel: React.FC = () => {
   const simulateMultiUserScenario = async () => {
     setLoading(true);
     try {
-      // Simulate concurrent access patterns
       const scenarios = [
         'Student viewing own fees',
         'Faculty viewing department students',
@@ -139,7 +134,6 @@ const MultiUserTestPanel: React.FC = () => {
       ];
 
       for (const scenario of scenarios) {
-        // Simulate database operations
         await new Promise(resolve => setTimeout(resolve, 500));
         console.log(`Simulating: ${scenario}`);
       }
