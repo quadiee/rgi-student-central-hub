@@ -26,7 +26,6 @@ const UserManagement: React.FC = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
   const { toast } = useToast();
 
-  // Updated roles array without faculty
   const roles = ['student', 'hod', 'principal', 'admin'];
 
   useEffect(() => {
@@ -44,14 +43,16 @@ const UserManagement: React.FC = () => {
         .from('profiles')
         .select('id, name, email, role, department, roll_number, employee_id, is_active, created_at')
         .order('created_at', { ascending: false })
-        .limit(100); // Limit for performance
+        .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
       const usersData = data || [];
       setUsers(usersData);
       
-      // Calculate stats
       const total = usersData.length;
       const active = usersData.filter(u => u.is_active).length;
       setStats({ total, active, inactive: total - active });
@@ -60,7 +61,7 @@ const UserManagement: React.FC = () => {
       console.error('Error loading users:', error);
       toast({
         title: "Error",
-        description: "Failed to load users",
+        description: "Failed to load users. Please check your database connection.",
         variant: "destructive",
       });
     } finally {
