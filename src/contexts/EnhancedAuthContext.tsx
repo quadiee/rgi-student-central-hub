@@ -63,25 +63,30 @@ export const EnhancedAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (rolesError) throw rolesError;
 
-      // Load user permissions through roles - handle potential query errors
-      const { data: userPermissions, error: permissionsError } = await supabase
+      // Load user permissions through roles
+      const { data: userPermissionsData, error: permissionsError } = await supabase
         .from('user_roles')
         .select(`
           role_permissions (
             permissions (*)
-          )
+         )
         `)
         .eq('user_id', userId)
         .eq('is_active', true);
 
-      // Handle permissions query error gracefully
-      let flatPermissions: any[] = [];
-      if (!permissionsError && userPermissions) {
-        flatPermissions = userPermissions.flatMap(ur => 
-          ur.role_permissions?.map(rp => rp.permissions) || []
-        ).filter(Boolean);
+      // If there was an error fetching permissions, log and use empty array
+      if (permissionsError) {
+        console.warn('Could not load user permissions:', permissionsError.message);
+        setPermissions([]);
       } else {
-        console.warn('Could not load user permissions:', permissionsError);
+        // Now safe to flatten and extract Permission objects
+        const flatPermissions: Permission[] = (userPermissionsData ?? [])
+          .flatMap(ur =>
+            ur.role_permissions?.map(rp => rp.permissions) ?? []
+          )
+          .filter(Boolean);
+
+        setPermissions(flatPermissions);
       }
 
       setUser({

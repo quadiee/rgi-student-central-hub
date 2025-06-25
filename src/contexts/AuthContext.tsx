@@ -56,33 +56,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const loadUserPermissions = async (userId: string) => {
-    try {
-      const { data: userPermissions, error } = await supabase
-        .from('user_roles')
-        .select(`
-          role_permissions (
-            permissions (*)
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('is_active', true);
+  const loadUserPermissions = async (userId: string): Promise<Permission[]> => {
+   // 1. Run the query, destructuring both data and error
+   const { data: userRoles, error: rolesError } = await supabase
+     .from('user_roles')
+     .select(`
+       role_permissions (
+         permissions (*)
+       )
+     `)
+     .eq('user_id', userId)
+     .eq('is_active', true);
 
-      if (error) {
-        console.warn('Could not load user permissions:', error);
-        return [];
-      }
+   // 2. If there's an error (e.g. missing relation), log and return empty
+   if (rolesError) {
+     console.warn('Could not load user permissions:', rolesError.message);
+     return [];
+   }
 
-      const flatPermissions = userPermissions?.flatMap(ur => 
-        ur.role_permissions?.map(rp => rp.permissions) || []
-      ).filter(Boolean) || [];
+   // 3. Now safely flatten and extract permissions
+   const flatPermissions: Permission[] = (userRoles ?? [])
+     .flatMap(ur => ur.role_permissions?.map(rp => rp.permissions) ?? [])
+     .filter(Boolean);
 
-      return flatPermissions;
-    } catch (error) {
-      console.error('Error loading permissions:', error);
-      return [];
-    }
-  };
+   return flatPermissions;
+ };
 
   const loadAdminSession = async (userId: string) => {
     try {
