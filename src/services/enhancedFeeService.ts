@@ -26,7 +26,12 @@ export class EnhancedFeeService {
       const { data, error } = await query.order('pending_amount', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      
+      // Cast to proper type with payment_status conversion
+      return (data || []).map(record => ({
+        ...record,
+        payment_status: record.payment_status as 'No Fees' | 'Fully Paid' | 'Partially Paid' | 'Unpaid'
+      })) as StudentFeeSummary[];
     } catch (error) {
       console.error('Error fetching student fee summary:', error);
       return [];
@@ -92,7 +97,12 @@ export class EnhancedFeeService {
         .limit(10);
       
       if (error) throw error;
-      return data || [];
+      
+      // Cast to proper type with payment_status conversion
+      return (data || []).map(record => ({
+        ...record,
+        payment_status: record.payment_status as 'No Fees' | 'Fully Paid' | 'Partially Paid' | 'Unpaid'
+      })) as StudentFeeSummary[];
     } catch (error) {
       console.error('Error fetching top 10 pending students:', error);
       return [];
@@ -173,15 +183,15 @@ export class EnhancedFeeService {
   static async processPayment(user: EnhancedUser, payment: Partial<PaymentTransaction>): Promise<PaymentTransaction> {
     try {
       const transactionData = {
-        fee_record_id: payment.feeRecordId!,
-        student_id: payment.studentId!,
+        fee_record_id: payment.fee_record_id || payment.feeRecordId!,
+        student_id: payment.student_id || payment.studentId!,
         amount: payment.amount!,
-        payment_method: payment.paymentMethod! as any,
+        payment_method: (payment.payment_method || payment.paymentMethod!) as any,
         transaction_id: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
         status: (Math.random() > 0.05 ? 'Success' : 'Failed') as any,
         receipt_number: `RCP-${Date.now()}${Math.floor(Math.random() * 1000)}`,
         processed_by: user.id,
-        gateway: payment.paymentMethod === 'Online' ? 'RGCE_Gateway' : undefined,
+        gateway: (payment.payment_method || payment.paymentMethod) === 'Online' ? 'RGCE_Gateway' : undefined,
         processed_at: new Date().toISOString()
       };
 
@@ -196,17 +206,18 @@ export class EnhancedFeeService {
       // The trigger will automatically update the fee record
       return {
         id: data.id,
-        studentId: data.student_id!,
-        feeRecordId: data.fee_record_id!,
+        student_id: data.student_id!,
+        fee_record_id: data.fee_record_id!,
         amount: Number(data.amount),
-        paymentMethod: data.payment_method as any,
-        transactionId: data.transaction_id!,
+        payment_method: data.payment_method as any,
+        transaction_id: data.transaction_id!,
         status: data.status! as any,
-        processedAt: data.processed_at!,
-        processedBy: data.processed_by!,
-        receiptNumber: data.receipt_number,
+        processed_at: data.processed_at!,
+        processed_by: data.processed_by!,
+        receipt_number: data.receipt_number,
         gateway: data.gateway || undefined,
-        failureReason: data.failure_reason || undefined
+        failure_reason: data.failure_reason || undefined,
+        created_at: data.created_at || new Date().toISOString()
       };
     } catch (error) {
       console.error('Error processing payment:', error);
