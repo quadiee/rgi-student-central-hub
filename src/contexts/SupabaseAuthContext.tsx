@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -10,6 +9,8 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  switchRole: (newRole: string) => Promise<void>;
+  logout:    () => Promise<void>;
   signOut: () => Promise<{ error: any }>;
   getInvitationDetails: (email: string) => Promise<any>;
 }
@@ -28,7 +29,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const switchRole = async (newRole: string) => {
+  try {
+    // TODO: call your Supabase function to update the user's role
+  } catch (err) {
+    console.error('Failed switching role:', err);
+  }
+};
 
+const logout = async () => {
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
+};
+  
   const createProfileIfMissing = async (authUser: User) => {
     try {
       console.log('Creating profile for user:', authUser.email);
@@ -272,19 +288,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { data: data?.[0], error };
   };
 
-  const value = {
+ return (
+  <AuthContext.Provider value={{
     user,
     session,
     loading,
     signUp,
     signIn,
     signOut,
-    getInvitationDetails
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+    switchRole,     // ← newly added
+    logout,         // ← newly added
+    getInvitationDetails,
+  }}>
+    {children}
+  </AuthContext.Provider>
+);
 };
