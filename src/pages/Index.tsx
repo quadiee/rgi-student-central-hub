@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
+import { supabase } from '../integrations/supabase/client';
 import MobileSidebar from '../components/Layout/MobileSidebar';
 import Header from '../components/Layout/Header';
 import Dashboard from '../components/Dashboard/Dashboard';
@@ -11,11 +12,15 @@ import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
+import StudentList from '../components/StudentList';             // ← add
+import type { Student } from '../types';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [students, setStudents] = useState<Student[]>([]);        // ← add
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
 
   // Reset to dashboard when user changes
@@ -24,7 +29,23 @@ const AppContent = () => {
       setActiveTab('dashboard');
     }
   }, [user?.id]);
+// Fetch all students once
+  useEffect(() => {
+    const fetchStudents = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, email, department, role')
+       .eq('role', 'student');
 
+      if (error) {
+        console.error('Error fetching students:', error);
+      } else {
+        setStudents(data as Student[]);
+      }
+    };
+
+    fetchStudents();
+  }, []);
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -43,9 +64,29 @@ const AppContent = () => {
       case 'students':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
-            <div className="text-center py-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Student Management</h2>
-              <p className="text-gray-600">Student management features coming soon...</p>
+            <div className="px-4">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                Student Management
+              </h2>
+
+              {!selectedStudent ? (
+                <StudentList
+                  students={students}                      // ← now passing real data
+                  onViewStudent={(s) => setSelectedStudent(s)}
+                />
+              ) : (
+                <div>
+                  <button
+                    onClick={() => setSelectedStudent(null)}
+                    className="mb-4 text-blue-600"
+                  >
+                    ← Back to list
+                  </button>
+                  <pre className="bg-gray-100 p-4 rounded">
+                    {JSON.stringify(selectedStudent, null, 2)}
+                  </pre>
+               </div>
+             )}
             </div>
           </ProtectedRoute>
         );
