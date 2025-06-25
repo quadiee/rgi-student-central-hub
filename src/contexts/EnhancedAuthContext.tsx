@@ -63,7 +63,7 @@ export const EnhancedAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (rolesError) throw rolesError;
 
-      // Load user permissions through roles
+      // Load user permissions through roles - handle potential query errors
       const { data: userPermissions, error: permissionsError } = await supabase
         .from('user_roles')
         .select(`
@@ -74,12 +74,15 @@ export const EnhancedAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
         .eq('user_id', userId)
         .eq('is_active', true);
 
-      if (permissionsError) throw permissionsError;
-
-      // Flatten permissions
-      const flatPermissions = userPermissions?.flatMap(ur => 
-        ur.role_permissions?.map(rp => rp.permissions) || []
-      ).filter(Boolean) || [];
+      // Handle permissions query error gracefully
+      let flatPermissions: any[] = [];
+      if (!permissionsError && userPermissions) {
+        flatPermissions = userPermissions.flatMap(ur => 
+          ur.role_permissions?.map(rp => rp.permissions) || []
+        ).filter(Boolean);
+      } else {
+        console.warn('Could not load user permissions:', permissionsError);
+      }
 
       setUser({
         id: profile.id,
@@ -91,7 +94,7 @@ export const EnhancedAuthProvider: React.FC<{ children: ReactNode }> = ({ childr
         rollNumber: profile.roll_number,
         employeeId: profile.employee_id,
         profileImage: profile.profile_photo_url,
-        permissions: flatPermissions.map(p => p.name),
+        permissions: flatPermissions.map(p => p?.name).filter(Boolean),
         userRoles: roles || [],
         departmentDetails: profile.departments
       });

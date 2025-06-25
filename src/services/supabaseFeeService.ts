@@ -90,7 +90,7 @@ export class SupabaseFeeService {
         const { data: departmentStudents } = await supabase
           .from('profiles')
           .select('id')
-          .eq('department', user.department)
+          .eq('department', user.department as any) // Cast to avoid strict type checking
           .eq('role', 'student')
           .limit(50);
         

@@ -66,7 +66,7 @@ const MultiUserTestPanel: React.FC = () => {
           .from('profiles')
           .select('id, department')
           .eq('role', 'student')
-          .eq('department', user.department);
+          .eq('department', user.department as any); // Cast to avoid type error
         
         accessibleStudents = deptStudents?.length || 0;
         accessibleDepartments = [user.department];

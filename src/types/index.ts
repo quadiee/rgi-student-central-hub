@@ -1,5 +1,3 @@
-
-
 export interface User {
   id: string;
   name: string;
@@ -11,6 +9,7 @@ export interface User {
   employeeId?: string;
   yearSection?: string;
   studentId?: string;
+  facultyId?: string;
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
@@ -94,4 +93,3 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
-
