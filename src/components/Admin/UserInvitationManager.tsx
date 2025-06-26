@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Send } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -12,25 +11,20 @@ import type { Database } from '../../integrations/supabase/types';
 type UserRole = Database['public']['Enums']['user_role'];
 type Department = Database['public']['Enums']['department'];
 
-interface Invitation {
+interface PendingInvite {
   id: string;
   email: string;
-  role: UserRole;
-  department: Department;
-  roll_number?: string;
-  employee_id?: string;
-  invited_at: string;
-  expires_at: string;
-  used_at?: string;
-  is_active: boolean;
+  created_at: string;
+  role?: string;
+  department?: string;
 }
 
 const UserInvitationManager: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [formData, setFormData] = useState({
     email: '',
     role: 'student' as UserRole,
@@ -42,104 +36,75 @@ const UserInvitationManager: React.FC = () => {
   const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
   const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
-  useEffect(() => {
-    loadInvitations();
-  }, []);
-
-  const loadInvitations = async () => {
+  // Load pending invites from Supabase Auth
+  const loadPendingAuthInvites = async () => {
+    // WARNING: Requires service key in supabase client!
     try {
-      const { data, error } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .order('invited_at', { ascending: false })
-        .limit(50); // Limit for performance
-
-      if (error) throw error;
-      setInvitations(data || []);
+      const { data, error } = await supabase.auth.admin.listUsers();
+      if (error) {
+        toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
+        return;
+      }
+      const invites = data.users
+        .filter(u => !u.confirmed_at) // Pending invite: not yet confirmed
+        .map(u => ({
+          id: u.id,
+          email: u.email ?? "",
+          created_at: u.created_at,
+          role: u.user_metadata?.role || "",
+          department: u.user_metadata?.department || ""
+        }));
+      setPendingInvites(invites);
     } catch (error) {
-      console.error('Error loading invitations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load invitations",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
     }
   };
+
+  useEffect(() => {
+    loadPendingAuthInvites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
     setLoading(true);
+
     try {
-      // Check if user already exists
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', formData.email)
-        .maybeSingle();
+      const { data, error } = await supabase.auth.admin.inviteUserByEmail(
+        formData.email.trim().toLowerCase(),
+        {
+          data: {
+            role: formData.role,
+            department: formData.department,
+            roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
+            employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
+          }
+        }
+      );
 
-      if (existingProfile) {
+      if (error) {
         toast({
-          title: "User Already Exists",
-          description: "A user with this email already exists in the system",
+          title: "Invite Failed",
+          description: error.message,
           variant: "destructive"
         });
-        return;
-      }
-
-      // Check if invitation already exists
-      const { data: existingInvitation } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('email', formData.email)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (existingInvitation) {
+      } else {
         toast({
-          title: "Invitation Already Sent",
-          description: "An active invitation already exists for this email",
-          variant: "destructive"
+          title: "Invitation Sent",
+          description: `Invitation email sent to ${formData.email}`,
         });
-        return;
+        setFormData({
+          email: '',
+          role: 'student',
+          department: 'CSE',
+          rollNumber: '',
+          employeeId: ''
+        });
+        setShowForm(false);
+        loadPendingAuthInvites();
       }
-
-      // Create invitation without invited_by to avoid foreign key issues
-      const invitationData = {
-        email: formData.email.toLowerCase().trim(),
-        role: formData.role,
-        department: formData.department,
-        roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
-        employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-        // Don't set invited_by to avoid foreign key constraint issues
-        is_active: true,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      };
-
-      const { error: insertError } = await supabase
-        .from('user_invitations')
-        .insert(invitationData);
-
-      if (insertError) throw insertError;
-
-      toast({
-        title: "Invitation Sent",
-        description: `Invitation sent successfully to ${formData.email}`
-      });
-
-      // Reset form
-      setFormData({
-        email: '',
-        role: 'student' as UserRole,
-        department: 'CSE' as Department,
-        rollNumber: '',
-        employeeId: ''
-      });
-      setShowForm(false);
-      loadInvitations();
     } catch (error) {
-      console.error('Error sending invitation:', error);
       toast({
         title: "Error",
         description: "Failed to send invitation. Please try again.",
@@ -148,41 +113,6 @@ const UserInvitationManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDeactivateInvitation = async (invitationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_invitations')
-        .update({ is_active: false })
-        .eq('id', invitationId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Invitation Deactivated",
-        description: "Invitation has been deactivated successfully"
-      });
-
-      loadInvitations();
-    } catch (error) {
-      console.error('Error deactivating invitation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to deactivate invitation",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getInvitationStatus = (invitation: Invitation) => {
-    if (invitation.used_at) {
-      return { status: 'Used', color: 'bg-green-100 text-green-800', icon: CheckCircle };
-    }
-    if (!invitation.is_active || new Date(invitation.expires_at) < new Date()) {
-      return { status: 'Expired', color: 'bg-red-100 text-red-800', icon: XCircle };
-    }
-    return { status: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock };
   };
 
   return (
@@ -299,8 +229,9 @@ const UserInvitationManager: React.FC = () => {
         </div>
       )}
 
-      {/* Invitations List */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      {/* Pending Auth Invites List */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-6">
+        <h4 className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pending Auth Invitations</h4>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -308,58 +239,29 @@ const UserInvitationManager: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sent</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invited On</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {invitations.map((invitation) => {
-                const { status, color, icon: StatusIcon } = getInvitationStatus(invitation);
-                return (
-                  <tr key={invitation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {invitation.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {invitation.role}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {invitation.department}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>
-                        <StatusIcon className="w-3 h-3 mr-1" />
-                        {status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(invitation.invited_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {invitation.is_active && !invitation.used_at && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeactivateInvitation(invitation.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Deactivate
-                        </Button>
-                      )}
-                    </td>
+              {pendingInvites.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                    No pending invitations.
+                  </td>
+                </tr>
+              ) : (
+                pendingInvites.map(invite => (
+                  <tr key={invite.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.created_at).toLocaleDateString()}</td>
                   </tr>
-                );
-              })}
+                ))
+              )}
             </tbody>
           </table>
         </div>
-
-        {invitations.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No invitations sent yet</p>
-          </div>
-        )}
       </div>
     </div>
   );
