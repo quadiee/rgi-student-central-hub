@@ -32,24 +32,32 @@ const SupabaseAuthPage = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
-    if (!loginEmail.endsWith('@rgce.edu.in')) {
+    try {
+      if (!loginEmail.endsWith('@rgce.edu.in')) {
+        toast({
+          title: "Invalid Email",
+          description: "Please use your RGCE email address (@rgce.edu.in)",
+          variant: "destructive"
+        });
+        return;
+      }
+      const { error } = await signIn(loginEmail, loginPassword);
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    } catch (err: any) {
       toast({
-        title: "Invalid Email",
-        description: "Please use your RGCE email address (@rgce.edu.in)",
+        title: "Login Error",
+        description: err?.message || "An unexpected error occurred during login.",
         variant: "destructive"
       });
+    } finally {
       setLoginLoading(false);
-      return;
     }
-    const { error } = await signIn(loginEmail, loginPassword);
-    if (error) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-    setLoginLoading(false);
   };
 
   return (
