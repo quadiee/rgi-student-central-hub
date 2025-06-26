@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import { User, FeeRecord } from '../types';
 import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions, FeeCategory } from '../types/feeTypes';
@@ -6,6 +7,7 @@ import { Database } from '../integrations/supabase/types';
 type DbFeeRecord = Database['public']['Tables']['fee_records']['Row'];
 type DbFeeStructure = Database['public']['Tables']['fee_structures']['Row'];
 type DbPaymentTransaction = Database['public']['Tables']['payment_transactions']['Row'];
+type Department = Database['public']['Enums']['department'];
 type PaymentMethod = Database['public']['Enums']['payment_method'];
 type PaymentStatus = Database['public']['Enums']['payment_status'];
 
@@ -30,7 +32,7 @@ export class SupabaseFeeService {
         canModifyFeeStructure: false,
         canGenerateReports: true,
         canApproveWaivers: true,
-        allowedDepartments: [user.department_id] // department_id is UUID
+        allowedDepartments: [user.department]
       },
       principal: {
         canViewAllStudents: true,
@@ -40,7 +42,7 @@ export class SupabaseFeeService {
         canModifyFeeStructure: true,
         canGenerateReports: true,
         canApproveWaivers: true,
-        allowedDepartments: [] // Principals can see all departments
+        allowedDepartments: ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT']
       },
       admin: {
         canViewAllStudents: true,
@@ -50,15 +52,16 @@ export class SupabaseFeeService {
         canModifyFeeStructure: true,
         canGenerateReports: true,
         canApproveWaivers: true,
-        allowedDepartments: []
+        allowedDepartments: ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN']
       }
     };
+
     return permissions[user.role] || permissions.student;
   }
 
   static async getFeeRecords(user: User, filters?: any): Promise<FeeRecord[]> {
     console.log('Fetching fee records for user:', user.id, 'filters:', filters);
-
+    
     try {
       let query = supabase
         .from('fee_records')
@@ -68,7 +71,7 @@ export class SupabaseFeeService {
             name,
             email,
             roll_number,
-            department_id
+            department
           ),
           fee_structures (
             academic_year,
@@ -76,10 +79,10 @@ export class SupabaseFeeService {
             fee_categories
           )
         `)
-        .limit(100);
+        .limit(100); // Add limit for performance
 
       const permissions = this.getFeePermissions(user);
-
+      
       if (permissions.canViewOwnFees && user.role === 'student') {
         query = query.eq('student_id', user.id);
       } else if (permissions.canViewDepartmentStudents && !permissions.canViewAllStudents) {
@@ -87,10 +90,10 @@ export class SupabaseFeeService {
         const { data: departmentStudents } = await supabase
           .from('profiles')
           .select('id')
-          .eq('department_id', user.department_id as any)
+          .eq('department', user.department as any) // Cast to avoid strict type checking
           .eq('role', 'student')
           .limit(50);
-
+        
         if (departmentStudents && departmentStudents.length > 0) {
           const studentIds = departmentStudents.map(s => s.id);
           query = query.in('student_id', studentIds);
@@ -99,6 +102,7 @@ export class SupabaseFeeService {
         }
       }
 
+      // Apply filters
       if (filters?.semester) query = query.eq('semester', filters.semester);
       if (filters?.status) query = query.eq('status', filters.status);
       if (filters?.academicYear) query = query.eq('academic_year', filters.academicYear);
@@ -119,14 +123,15 @@ export class SupabaseFeeService {
 
   static async processPayment(user: User, payment: Partial<PaymentTransaction>): Promise<PaymentTransaction> {
     console.log('Processing payment:', payment);
-
+    
     const permissions = this.getFeePermissions(user);
-
+    
     if (!permissions.canProcessPayments && user.role !== 'student') {
       throw new Error('Insufficient permissions to process payments');
     }
 
     try {
+      // Generate receipt number
       const receiptNumber = `RCP-${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
       const transactionData = {
@@ -150,6 +155,7 @@ export class SupabaseFeeService {
 
       if (error) throw error;
 
+      // Update fee record if payment successful
       if (data.status === 'Success') {
         const { data: feeRecord } = await supabase
           .from('fee_records')
@@ -160,7 +166,7 @@ export class SupabaseFeeService {
         if (feeRecord) {
           const newPaidAmount = Number(feeRecord.paid_amount || 0) + Number(payment.amount!);
           const finalAmount = Number(feeRecord.final_amount);
-
+          
           let newStatus: Database['public']['Enums']['fee_status'] = 'Pending';
           if (newPaidAmount >= finalAmount) {
             newStatus = 'Paid';
@@ -188,16 +194,17 @@ export class SupabaseFeeService {
 
   static async generateReport(user: User, reportConfig: Partial<FeeReport>): Promise<FeeReport> {
     console.log('Generating report:', reportConfig);
-
+    
     const permissions = this.getFeePermissions(user);
-
+    
     if (!permissions.canGenerateReports) {
       throw new Error('Insufficient permissions to generate reports');
     }
 
     try {
       const feeRecords = await this.getFeeRecords(user, reportConfig.filters);
-
+      
+      // Optimized revenue calculation
       const { data: revenueData, error: revenueError } = await supabase
         .from('payment_transactions')
         .select('amount')
@@ -206,6 +213,7 @@ export class SupabaseFeeService {
 
       if (revenueError) throw revenueError;
 
+      // Optimized outstanding calculation
       const { data: outstandingData, error: outstandingError } = await supabase
         .from('fee_records')
         .select('final_amount, paid_amount')
@@ -215,7 +223,7 @@ export class SupabaseFeeService {
       if (outstandingError) throw outstandingError;
 
       const totalRevenue = revenueData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
-      const totalOutstanding = outstandingData?.reduce((sum, record) =>
+      const totalOutstanding = outstandingData?.reduce((sum, record) => 
         sum + (Number(record.final_amount) - Number(record.paid_amount || 0)), 0) || 0;
 
       return {
@@ -261,7 +269,7 @@ export class SupabaseFeeService {
       id: dbRecord.id,
       academicYear: dbRecord.academic_year,
       semester: dbRecord.semester,
-      department_id: dbRecord.department_id, // Use department_id (UUID)
+      department: 'CSE',
       feeCategories: (dbRecord.fee_categories as unknown) as FeeCategory[],
       totalAmount: Number(dbRecord.total_amount),
       dueDate: dbRecord.due_date,
@@ -287,19 +295,15 @@ export class SupabaseFeeService {
     };
   }
 
-  static async getFeeStructures(department_id?: string): Promise<FeeStructure[]> {
-    console.log('Fetching fee structures for department_id:', department_id);
-
+  static async getFeeStructures(department?: string): Promise<FeeStructure[]> {
+    console.log('Fetching fee structures for department:', department);
+    
     try {
       let query = supabase
         .from('fee_structures')
         .select('*')
         .eq('is_active', true)
         .limit(50);
-
-      if (department_id) {
-        query = query.eq('department_id', department_id);
-      }
 
       const { data, error } = await query;
 
@@ -314,9 +318,9 @@ export class SupabaseFeeService {
 
   static async createFeeStructure(user: User, feeStructure: Partial<FeeStructure>): Promise<FeeStructure> {
     console.log('Creating fee structure:', feeStructure);
-
+    
     const permissions = this.getFeePermissions(user);
-
+    
     if (!permissions.canModifyFeeStructure) {
       throw new Error('Insufficient permissions to create fee structures');
     }
@@ -325,7 +329,6 @@ export class SupabaseFeeService {
       const structureData = {
         academic_year: feeStructure.academicYear!,
         semester: feeStructure.semester!,
-        department_id: feeStructure.department_id!,
         fee_categories: feeStructure.feeCategories! as any,
         total_amount: feeStructure.totalAmount!,
         due_date: feeStructure.dueDate!,

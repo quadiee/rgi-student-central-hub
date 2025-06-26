@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, Clock, FileText, Edit, DollarSign } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -65,7 +66,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-gray-500">Department:</span>
-                <span className="font-medium">{student.department_id}</span>
+                <span className="font-medium">{student.department}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-gray-500">Year & Section:</span>

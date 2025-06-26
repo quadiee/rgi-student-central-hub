@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Users, DollarSign, AlertCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,18 +24,6 @@ interface StudentFeeSummary {
   payment_status: string;
 }
 
-const DEPARTMENT_NAMES: { [uuid: string]: string } = {
-  // Map department_id to department name if possible, e.g.:
-  // "uuid-cse": "Computer Science Engineering",
-  // "uuid-ece": "Electronics and Communication Engineering",
-};
-
-const DEPARTMENT_CODES: { [uuid: string]: string } = {
-  // Map department_id to department code if possible, e.g.:
-  // "uuid-cse": "CSE",
-  // "uuid-ece": "ECE",
-};
-
 const EnhancedHODDashboard: React.FC = () => {
   const { user } = useAuth();
   const [departmentSummary, setDepartmentSummary] = useState<HODDepartmentSummary | null>(null);
@@ -48,15 +37,10 @@ const EnhancedHODDashboard: React.FC = () => {
       try {
         setLoading(true);
         // Mock data since we don't have the enhanced fee service
-        const departmentName =
-          (user.department_id && DEPARTMENT_NAMES[user.department_id]) || user.department_id || "Unknown";
-        const departmentCode =
-          (user.department_id && DEPARTMENT_CODES[user.department_id]) || user.department_id || "Unknown";
-
         const mockDepartmentSummary: HODDepartmentSummary = {
-          department_id: user.department_id || user.id,
-          department_name: departmentName,
-          department_code: departmentCode,
+          department_id: user.id,
+          department_name: user.department === 'CSE' ? 'Computer Science Engineering' : user.department,
+          department_code: user.department,
           total_students: 120,
           total_department_fees: 6000000,
           total_collected: 4500000,

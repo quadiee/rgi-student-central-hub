@@ -3,7 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: 'student' | 'hod' | 'principal' | 'admin';
-  department_id: string | null; // <-- Use department_id as UUID, nullable if not set
+  department: string;
   avatar: string;
   rollNumber?: string;
   employeeId?: string;
@@ -31,7 +31,7 @@ export interface Student {
   address: string;
   bloodGroup?: string;
   emergencyContact: string;
-  department_id: string; // <-- Use department_id here as well
+  department: string;
   yearSection: string;
 }
 
@@ -85,7 +85,6 @@ export interface PaymentTransaction {
 
 export type UserRole = 'student' | 'hod' | 'principal' | 'admin';
 
-// If you want to keep a department name enum for UI, you can keep this, but DB logic uses department_id
 export type Department = 'CSE' | 'ECE' | 'EEE' | 'MECH' | 'CIVIL' | 'IT' | 'ADMIN';
 
 export interface AuthContextType {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Users, TrendingUp, AlertTriangle, FileText, Filter } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -43,7 +44,7 @@ const HODFeeDashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
-          {user?.department_id} Department Fee Management
+          {user?.department} Department Fee Management
         </h2>
         <Button variant="outline" size={isMobile ? 'sm' : 'default'}>
           <FileText className="w-4 h-4 mr-2" />

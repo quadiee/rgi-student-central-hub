@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Users, Database, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -26,7 +27,7 @@ const SampleDataGenerator: React.FC = () => {
       // Get all active users who are students
       const { data: students, error: studentsError } = await supabase
         .from('profiles')
-        .select('id, name, email, department_id, roll_number')
+        .select('id, name, email, department, roll_number')
         .eq('role', 'student')
         .eq('is_active', true);
 
@@ -68,12 +69,9 @@ const SampleDataGenerator: React.FC = () => {
 
       for (const student of students) {
         // Find matching fee structure for student's department
-        // You may want to match by department_id if your fee_structures are department-specific
         const feeStructure = feeStructures.find(fs => {
-          // If you have department_id on fee_structures, match here:
-          // return fs.department_id === student.department_id;
-          // For now, fallback to any available structure
-          return fs.total_amount > 0;
+          // Match based on department-specific fees or use default
+          return fs.total_amount > 0; // For now, use any available structure
         });
 
         if (!feeStructure) continue;

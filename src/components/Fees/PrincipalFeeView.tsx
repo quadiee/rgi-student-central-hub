@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, AlertTriangle, Users, Building2, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -45,11 +46,11 @@ const PrincipalFeeView: React.FC = () => {
 
       // Group by departments (mock data for now)
       const departmentData = [
-        { department_id: 'CSE', students: 120, revenue: 2400000, outstanding: 360000, collections: 87 },
-        { department_id: 'ECE', students: 100, revenue: 2000000, outstanding: 300000, collections: 85 },
-        { department_id: 'MECH', students: 80, revenue: 1600000, outstanding: 240000, collections: 87 },
-        { department_id: 'CIVIL', students: 60, revenue: 1200000, outstanding: 180000, collections: 87 },
-        { department_id: 'EEE', students: 70, revenue: 1400000, outstanding: 210000, collections: 87 }
+        { name: 'CSE', students: 120, revenue: 2400000, outstanding: 360000, collections: 87 },
+        { name: 'ECE', students: 100, revenue: 2000000, outstanding: 300000, collections: 85 },
+        { name: 'MECH', students: 80, revenue: 1600000, outstanding: 240000, collections: 87 },
+        { name: 'CIVIL', students: 60, revenue: 1200000, outstanding: 180000, collections: 87 },
+        { name: 'EEE', students: 70, revenue: 1400000, outstanding: 210000, collections: 87 }
       ];
 
       setFeeData({
@@ -75,7 +76,7 @@ const PrincipalFeeView: React.FC = () => {
       const report = await SupabaseFeeService.generateReport(user!, {
         title: 'Institution Fee Report',
         type: 'Revenue',
-        filters: { department_id: selectedDepartment !== 'ALL' ? selectedDepartment : undefined }
+        filters: { department: selectedDepartment !== 'ALL' ? selectedDepartment : undefined }
       });
       
       toast({
@@ -196,14 +197,14 @@ const PrincipalFeeView: React.FC = () => {
 
         <div className="space-y-4">
           {feeData.departments.map((dept: any) => (
-            <div key={dept.department_id} className="border border-gray-200 rounded-lg p-4">
+            <div key={dept.name} className="border border-gray-200 rounded-lg p-4">
               <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-5'} gap-4 items-center`}>
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Building2 className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">{dept.department_id}</h4>
+                    <h4 className="font-medium text-gray-900">{dept.name}</h4>
                     <p className="text-sm text-gray-600">{dept.students} students</p>
                   </div>
                 </div>

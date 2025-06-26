@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Send } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -15,12 +14,9 @@ type Department = Database['public']['Enums']['department'];
 interface PendingInvite {
   id: string;
   email: string;
-  invited_at: string;
-  role: string;
-  department: string;
-  expires_at: string;
-  used_at: string | null;
-  is_active: boolean;
+  created_at: string;
+  role?: string;
+  department?: string;
 }
 
 const UserInvitationManager: React.FC = () => {
@@ -40,41 +36,33 @@ const UserInvitationManager: React.FC = () => {
   const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
   const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
-  // Load pending invites from user_invitations table
-  const loadPendingInvites = async () => {
+  // Load pending invites from Supabase Auth
+  const loadPendingAuthInvites = async () => {
+    // WARNING: Requires service key in supabase client!
     try {
-      const { data, error } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('is_active', true)
-        .order('invited_at', { ascending: false });
-
+      const { data, error } = await supabase.auth.admin.listUsers();
       if (error) {
-        console.error('Error loading invites:', error);
         toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
         return;
       }
-
-      const invites = data?.map(invite => ({
-        id: invite.id,
-        email: invite.email,
-        invited_at: invite.invited_at,
-        role: invite.role || 'student',
-        department: invite.department || 'CSE',
-        expires_at: invite.expires_at || '',
-        used_at: invite.used_at,
-        is_active: invite.is_active
-      })) || [];
-
+      const invites = data.users
+        .filter(u => !u.confirmed_at) // Pending invite: not yet confirmed
+        .map(u => ({
+          id: u.id,
+          email: u.email ?? "",
+          created_at: u.created_at,
+          role: u.user_metadata?.role || "",
+          department: u.user_metadata?.department || ""
+        }));
       setPendingInvites(invites);
     } catch (error) {
-      console.error('Error loading invites:', error);
       toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
     }
   };
 
   useEffect(() => {
-    loadPendingInvites();
+    loadPendingAuthInvites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSendInvitation = async (e: React.FormEvent) => {
@@ -83,54 +71,22 @@ const UserInvitationManager: React.FC = () => {
     setLoading(true);
 
     try {
-      // Create invitation record in user_invitations table
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('user_invitations')
-        .insert({
-          email: formData.email.trim().toLowerCase(),
-          role: formData.role,
-          department: formData.department,
-          roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
-          employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-          invited_by: user.id,
-          is_active: true,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        })
-        .select()
-        .single();
-
-      if (inviteError) {
-        toast({
-          title: "Invite Failed",
-          description: inviteError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Send signup invitation using standard Supabase Auth
-      const { error: signupError } = await supabase.auth.signUp({
-        email: formData.email.trim().toLowerCase(),
-        password: 'temp_password_' + Math.random().toString(36).slice(-8), // Temporary password
-        options: {
+      const { data, error } = await supabase.auth.admin.inviteUserByEmail(
+        formData.email.trim().toLowerCase(),
+        {
           data: {
             role: formData.role,
             department: formData.department,
             roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
             employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-            invitation_id: inviteData.id
-          },
-          emailRedirectTo: `${window.location.origin}/invite/${inviteData.id}`
+          }
         }
-      });
+      );
 
-      if (signupError) {
-        // Delete the invitation record if signup fails
-        await supabase.from('user_invitations').delete().eq('id', inviteData.id);
-        
+      if (error) {
         toast({
           title: "Invite Failed",
-          description: signupError.message,
+          description: error.message,
           variant: "destructive"
         });
       } else {
@@ -146,10 +102,9 @@ const UserInvitationManager: React.FC = () => {
           employeeId: ''
         });
         setShowForm(false);
-        loadPendingInvites();
+        loadPendingAuthInvites();
       }
     } catch (error) {
-      console.error('Error sending invitation:', error);
       toast({
         title: "Error",
         description: "Failed to send invitation. Please try again.",
@@ -274,9 +229,9 @@ const UserInvitationManager: React.FC = () => {
         </div>
       )}
 
-      {/* Pending Invites List */}
+      {/* Pending Auth Invites List */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-6">
-        <h4 className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pending Invitations</h4>
+        <h4 className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pending Auth Invitations</h4>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -284,14 +239,13 @@ const UserInvitationManager: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invited On</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {pendingInvites.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     No pending invitations.
                   </td>
                 </tr>
@@ -299,16 +253,9 @@ const UserInvitationManager: React.FC = () => {
                 pendingInvites.map(invite => (
                   <tr key={invite.id}>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap capitalize">{invite.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.role}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.department}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        invite.used_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {invite.used_at ? 'Completed' : 'Pending'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.invited_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))
               )}

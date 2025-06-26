@@ -1,15 +1,9 @@
+
 import React, { useState } from 'react';
 import { User, Settings, Shield, Clock, LogOut } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
-
-// Optional: If you want to map department_id to the department name for display
-const DEPARTMENT_NAMES: { [uuid: string]: string } = {
-  // 'uuid-1': 'CSE',
-  // 'uuid-2': 'ECE',
-  // Add all department_id: name mappings here
-};
 
 const UserProfile: React.FC = () => {
   const { user, switchRole, logout } = useAuth();
@@ -29,10 +23,6 @@ const UserProfile: React.FC = () => {
   if (!user) return null;
 
   const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
-
-  // Get department name from id (optional)
-  const departmentDisplay =
-    (user.department_id && DEPARTMENT_NAMES[user.department_id]) || user.department_id || 'Unknown';
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 max-w-md mx-auto">
@@ -55,7 +45,7 @@ const UserProfile: React.FC = () => {
             <User className="w-5 h-5 text-gray-500" />
             <span className="text-gray-700">Department</span>
           </div>
-          <span className="text-gray-900 font-medium">{departmentDisplay}</span>
+          <span className="text-gray-900 font-medium">{user.department}</span>
         </div>
 
         {user.rollNumber && (

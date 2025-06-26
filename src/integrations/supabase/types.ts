@@ -584,6 +584,7 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          department: Database["public"]["Enums"]["department"] | null
           department_id: string | null
           email: string
           employee_id: string | null
@@ -602,6 +603,7 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string | null
+          department?: Database["public"]["Enums"]["department"] | null
           department_id?: string | null
           email: string
           employee_id?: string | null
@@ -620,6 +622,7 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string | null
+          department?: Database["public"]["Enums"]["department"] | null
           department_id?: string | null
           email?: string
           employee_id?: string | null
