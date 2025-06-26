@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface UserTestData {
   role: string;
-  department: string;
+  department_id: string;
   accessibleStudents: number;
   accessibleDepartments: string[];
   canProcessPayments: boolean;
@@ -30,7 +30,7 @@ const MultiUserTestPanel: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('user_invitations')
-        .select('email, role, department')
+        .select('email, role, department_id')
         .eq('is_active', true)
         .order('role');
 
@@ -53,7 +53,7 @@ const MultiUserTestPanel: React.FC = () => {
       if (hasPermission('view_all_students')) {
         const { data: allStudents } = await supabase
           .from('profiles')
-          .select('id, department')
+          .select('id, department_id')
           .eq('role', 'student');
         
         accessibleStudents = allStudents?.length || 0;
@@ -61,15 +61,15 @@ const MultiUserTestPanel: React.FC = () => {
       } else if (hasPermission('view_department_students')) {
         const { data: deptStudents } = await supabase
           .from('profiles')
-          .select('id, department')
+          .select('id, department_id')
           .eq('role', 'student')
-          .eq('department', user.department as any);
+          .eq('department_id', user.department_id as any);
         
         accessibleStudents = deptStudents?.length || 0;
-        accessibleDepartments = [user.department];
+        accessibleDepartments = [user.department_id];
       } else if (hasPermission('view_own_profile')) {
         accessibleStudents = 1;
-        accessibleDepartments = [user.department];
+        accessibleDepartments = [user.department_id];
       }
 
       // Test fee record access
@@ -80,7 +80,7 @@ const MultiUserTestPanel: React.FC = () => {
           profiles!student_id (
             name,
             email,
-            department
+            department_id
           )
         `);
 
@@ -97,7 +97,7 @@ const MultiUserTestPanel: React.FC = () => {
 
       const testData: UserTestData = {
         role: user.role,
-        department: user.department,
+        department_id: user.department_id,
         accessibleStudents,
         accessibleDepartments,
         ...permissions
@@ -181,7 +181,7 @@ const MultiUserTestPanel: React.FC = () => {
           </div>
           <div className="text-sm text-blue-700 space-y-1">
             <p>• Role: {user?.role || 'Not logged in'}</p>
-            <p>• Department: {user?.department || 'N/A'}</p>
+            <p>• Department: {user?.department_id || 'N/A'}</p>
             <p>• Email: {user?.email || 'N/A'}</p>
           </div>
         </div>
@@ -220,7 +220,7 @@ const MultiUserTestPanel: React.FC = () => {
                     {u.role}
                   </span>
                   <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
-                    {u.department}
+                    {u.department_id}
                   </span>
                 </div>
               </div>
