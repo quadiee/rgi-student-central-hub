@@ -1,43 +1,50 @@
-
-import React, { useState, useEffect } from 'react';
-import { CreditCard, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
-interface StudentFeeSummary {
-  student_id: string;
-  name: string;
-  roll_number: string;
-  total_fees: number;
-  total_paid: number;
-  pending_amount: number;
-  payment_status: string;
-  total_fee_records: number;
+interface FeeSummary {
+  totalFees: number;
+  totalPaid: number;
+  totalPending: number;
+  pendingInstallments: number;
+}
+
+interface FeeRecord {
+  id: string;
+  amount: number;
+  status: 'Paid' | 'Pending' | 'Overdue';
+  dueDate: string;
+  paidDate?: string;
 }
 
 const EnhancedStudentDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [feeSummary, setFeeSummary] = useState<StudentFeeSummary | null>(null);
+  const [feeSummary, setFeeSummary] = useState<FeeSummary | null>(null);
+  const [recentFees, setRecentFees] = useState<FeeRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
-        // Mock fee summary data since we don't have the enhanced fee service
-        const mockSummary: StudentFeeSummary = {
-          student_id: user.id,
-          name: user.name,
-          roll_number: user.rollNumber || 'N/A',
-          total_fees: 50000,
-          total_paid: 30000,
-          pending_amount: 20000,
-          payment_status: 'Partially Paid',
-          total_fee_records: 2
+        // Mock data
+        const mockFeeSummary: FeeSummary = {
+          totalFees: 120000,
+          totalPaid: 90000,
+          totalPending: 30000,
+          pendingInstallments: 2
         };
-        setFeeSummary(mockSummary);
+
+        const mockRecentFees: FeeRecord[] = [
+          { id: '1', amount: 10000, status: 'Paid', dueDate: '2025-05-01', paidDate: '2025-05-02' },
+          { id: '2', amount: 15000, status: 'Pending', dueDate: '2025-06-15' },
+          { id: '3', amount: 15000, status: 'Overdue', dueDate: '2025-04-01' }
+        ];
+
+        setFeeSummary(mockFeeSummary);
+        setRecentFees(mockRecentFees);
       } catch (error) {
         console.error('Error loading student dashboard:', error);
       } finally {
@@ -56,99 +63,101 @@ const EnhancedStudentDashboard: React.FC = () => {
     );
   }
 
-  if (!feeSummary) {
+  if (!user) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No fee records found</p>
+        <p className="text-gray-500">No user data found</p>
       </div>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Fully Paid': return 'text-green-600';
-      case 'Partially Paid': return 'text-yellow-600';
-      case 'Unpaid': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Fully Paid': return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'Partially Paid': return <Clock className="w-5 h-5 text-yellow-600" />;
-      case 'Unpaid': return <AlertTriangle className="w-5 h-5 text-red-600" />;
-      default: return <CreditCard className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Fee Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Student Dashboard</h2>
         <div className="text-sm text-gray-600">
-          {user?.department} - {user?.rollNumber}
+          {user.name} ({user.rollNumber}) - {user.department_id}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Fees</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{feeSummary.total_fees.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Amount Paid</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">₹{feeSummary.total_paid.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Amount</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">₹{feeSummary.pending_amount.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Payment Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`flex items-center space-x-2 ${getStatusColor(feeSummary.payment_status)}`}>
-              {getStatusIcon(feeSummary.payment_status)}
-              <span className="font-medium">{feeSummary.payment_status}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {feeSummary && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Fees</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹{feeSummary.totalFees.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">₹{feeSummary.totalPaid.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Pending</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">₹{feeSummary.totalPending.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Pending Installments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{feeSummary.pendingInstallments}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Fee Records</CardTitle>
+          <CardTitle>Recent Fee Records</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4">
-            <p className="text-gray-600">
-              You have {feeSummary.total_fee_records} fee record(s) on file.
-            </p>
-            {feeSummary.pending_amount > 0 && (
-              <div className="mt-4">
-                <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                  Pay Now
-                </button>
-              </div>
-            )}
-          </div>
+          {recentFees.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">
+              No recent fee records
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2">Amount</th>
+                    <th className="text-left py-2">Status</th>
+                    <th className="text-left py-2">Due Date</th>
+                    <th className="text-left py-2">Paid Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentFees.map(fee => (
+                    <tr key={fee.id} className="border-b">
+                      <td className="py-2 font-medium">₹{fee.amount.toLocaleString()}</td>
+                      <td className="py-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          fee.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                          fee.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {fee.status}
+                        </span>
+                      </td>
+                      <td className="py-2">{fee.dueDate}</td>
+                      <td className="py-2">{fee.paidDate || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
