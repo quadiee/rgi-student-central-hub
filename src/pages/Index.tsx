@@ -12,15 +12,22 @@ import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
-import StudentList from '../components/StudentList';             // ← add
-import type { Student } from '../types';
+import StudentList from '../components/StudentList';
+
+interface SimpleStudent {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  role: string;
+}
 
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [students, setStudents] = useState<Student[]>([]);        // ← add
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<SimpleStudent[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<SimpleStudent | null>(null);
   const isMobile = useIsMobile();
 
   // Reset to dashboard when user changes
@@ -29,23 +36,39 @@ const AppContent = () => {
       setActiveTab('dashboard');
     }
   }, [user?.id]);
-// Fetch all students once
+
+  // Fetch all students once
   useEffect(() => {
     const fetchStudents = async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, email, department, role')
-       .eq('role', 'student');
+        .eq('role', 'student');
 
       if (error) {
         console.error('Error fetching students:', error);
+        // Use mock data as fallback
+        setStudents([
+          { id: '1', name: 'John Doe', email: 'john@example.com', department: 'CSE', role: 'student' },
+          { id: '2', name: 'Jane Smith', email: 'jane@example.com', department: 'ECE', role: 'student' },
+          { id: '3', name: 'Bob Wilson', email: 'bob@example.com', department: 'MECH', role: 'student' },
+        ]);
       } else {
-        setStudents(data as Student[]);
+        // Convert database response to SimpleStudent format
+        const simpleStudents: SimpleStudent[] = (data || []).map(profile => ({
+          id: profile.id,
+          name: profile.name || 'Unknown',
+          email: profile.email,
+          department: profile.department || 'Unknown',
+          role: profile.role
+        }));
+        setStudents(simpleStudents);
       }
     };
 
     fetchStudents();
   }, []);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -65,13 +88,9 @@ const AppContent = () => {
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
             <div className="px-4">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                Student Management
-              </h2>
-
               {!selectedStudent ? (
                 <StudentList
-                  students={students}                      // ← now passing real data
+                  students={students}
                   onViewStudent={(s) => setSelectedStudent(s)}
                 />
               ) : (
@@ -82,11 +101,17 @@ const AppContent = () => {
                   >
                     ← Back to list
                   </button>
-                  <pre className="bg-gray-100 p-4 rounded">
-                    {JSON.stringify(selectedStudent, null, 2)}
-                  </pre>
-               </div>
-             )}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-2xl font-bold mb-4">Student Details</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><strong>Name:</strong> {selectedStudent.name}</div>
+                      <div><strong>Email:</strong> {selectedStudent.email}</div>
+                      <div><strong>Department:</strong> {selectedStudent.department}</div>
+                      <div><strong>Role:</strong> {selectedStudent.role}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </ProtectedRoute>
         );

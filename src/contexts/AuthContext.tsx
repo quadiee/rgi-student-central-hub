@@ -35,6 +35,8 @@ interface AuthContextType {
   isImpersonating: boolean;
   refreshUserData: () => Promise<void>;
   getInvitationDetails: (email: string) => Promise<any>;
+  switchRole: (newRole: UserRole) => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,22 +56,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
 
   const loadUserPermissions = async (userId: string): Promise<Permission[]> => {
-    const { data: userRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select(`role_permissions ( permissions (*) )`)
-      .eq('user_id', userId)
-      .eq('is_active', true);
+    try {
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select(`role_permissions ( permissions (*) )`)
+        .eq('user_id', userId)
+        .eq('is_active', true);
 
-    if (rolesError) {
-      console.warn('Could not load user permissions:', rolesError.message);
+      if (rolesError) {
+        console.warn('Could not load user permissions:', rolesError.message);
+        return [];
+      }
+
+      if (!userRoles || !Array.isArray(userRoles)) {
+        console.warn('No user roles found');
+        return [];
+      }
+
+      const flatPermissions: Permission[] = userRoles
+        .flatMap(ur => ur.role_permissions?.map(rp => rp.permissions) ?? [])
+        .filter(Boolean);
+
+      return flatPermissions;
+    } catch (error) {
+      console.error('Error loading permissions:', error);
       return [];
     }
-
-    const flatPermissions: Permission[] = (userRoles ?? [])
-      .flatMap(ur => ur.role_permissions?.map(rp => rp.permissions) ?? [])
-      .filter(Boolean);
-
-    return flatPermissions;
   };
 
   const loadAdminSession = async (userId: string) => {
@@ -217,6 +229,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { error };
   };
 
+  const logout = async () => {
+    await signOut();
+  };
+
+  const switchRole = (newRole: UserRole) => {
+    if (user) {
+      setUser({ ...user, role: newRole });
+      toast({
+        title: "Role Switched",
+        description: `Now viewing as ${newRole}`,
+      });
+    }
+  };
+
   const hasPermission = (permissionName: string, departmentId?: string): boolean => {
     if (!user) return false;
     if (user.role === 'admin') return true;
@@ -285,7 +311,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     exitImpersonation,
     isImpersonating: !!adminSession?.impersonated_user_id,
     refreshUserData,
-    getInvitationDetails
+    getInvitationDetails,
+    switchRole,
+    logout
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
