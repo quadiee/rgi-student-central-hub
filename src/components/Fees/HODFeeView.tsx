@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Users, AlertTriangle, CheckCircle, Calendar, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -36,7 +35,7 @@ const HODFeeView: React.FC = () => {
       
       // Fetch department fee records
       const records = await SupabaseFeeService.getFeeRecords(user, {
-        department: user.department
+        department_id: user.department_id
       });
       
       // Calculate department totals
@@ -50,18 +49,18 @@ const HODFeeView: React.FC = () => {
 
       // Mock class-wise data based on department
       const classData = [
-        { name: `${user.department} 1st Year`, students: 30, revenue: 600000, outstanding: 90000, dueToday: 5 },
-        { name: `${user.department} 2nd Year`, students: 28, revenue: 560000, outstanding: 84000, dueToday: 3 },
-        { name: `${user.department} 3rd Year`, students: 32, revenue: 640000, outstanding: 96000, dueToday: 7 },
-        { name: `${user.department} 4th Year`, students: 30, revenue: 600000, outstanding: 90000, dueToday: 4 }
+        { name: `${user.department_id} 1st Year`, students: 30, revenue: 600000, outstanding: 90000, dueToday: 5 },
+        { name: `${user.department_id} 2nd Year`, students: 28, revenue: 560000, outstanding: 84000, dueToday: 3 },
+        { name: `${user.department_id} 3rd Year`, students: 32, revenue: 640000, outstanding: 96000, dueToday: 7 },
+        { name: `${user.department_id} 4th Year`, students: 30, revenue: 600000, outstanding: 90000, dueToday: 4 }
       ];
 
       // Mock student data
       const studentData = [
-        { id: '1', name: 'Arjun Kumar', rollNumber: `${user.department}21001`, class: '3rd Year', totalFees: 20000, paidAmount: 15000, dueAmount: 5000, dueDate: '2024-07-15', status: 'Pending' },
-        { id: '2', name: 'Priya Sharma', rollNumber: `${user.department}21002`, class: '3rd Year', totalFees: 20000, paidAmount: 20000, dueAmount: 0, dueDate: '2024-07-15', status: 'Paid' },
-        { id: '3', name: 'Rahul Reddy', rollNumber: `${user.department}21003`, class: '3rd Year', totalFees: 20000, paidAmount: 10000, dueAmount: 10000, dueDate: '2024-06-15', status: 'Overdue' },
-        { id: '4', name: 'Anjali Patel', rollNumber: `${user.department}21004`, class: '3rd Year', totalFees: 20000, paidAmount: 20000, dueAmount: 0, dueDate: '2024-07-15', status: 'Paid' },
+        { id: '1', name: 'Arjun Kumar', rollNumber: `${user.department_id}21001`, class: '3rd Year', totalFees: 20000, paidAmount: 15000, dueAmount: 5000, dueDate: '2024-07-15', status: 'Pending' },
+        { id: '2', name: 'Priya Sharma', rollNumber: `${user.department_id}21002`, class: '3rd Year', totalFees: 20000, paidAmount: 20000, dueAmount: 0, dueDate: '2024-07-15', status: 'Paid' },
+        { id: '3', name: 'Rahul Reddy', rollNumber: `${user.department_id}21003`, class: '3rd Year', totalFees: 20000, paidAmount: 10000, dueAmount: 10000, dueDate: '2024-06-15', status: 'Overdue' },
+        { id: '4', name: 'Anjali Patel', rollNumber: `${user.department_id}21004`, class: '3rd Year', totalFees: 20000, paidAmount: 20000, dueAmount: 0, dueDate: '2024-07-15', status: 'Paid' },
       ];
 
       setDepartmentData({
@@ -86,9 +85,9 @@ const HODFeeView: React.FC = () => {
   const generateDepartmentReport = async () => {
     try {
       const report = await SupabaseFeeService.generateReport(user!, {
-        title: `${user?.department} Department Fee Report`,
+        title: `${user?.department_id} Department Fee Report`,
         type: 'Department',
-        filters: { department: user?.department }
+        filters: { department_id: user?.department_id }
       });
       
       toast({
@@ -120,7 +119,7 @@ const HODFeeView: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
-          {user?.department} Department Fee Management
+          {user?.department_id} Department Fee Management
         </h2>
         <Button onClick={generateDepartmentReport} className="flex items-center space-x-2">
           <FileText className="w-4 h-4" />
