@@ -1,4 +1,3 @@
-
 import { User, FeeRecord } from '../types';
 
 // Mock Users
@@ -8,7 +7,7 @@ export const mockUsers: User[] = [
     name: 'Rajesh Kumar',
     email: 'rajesh.kumar@rgce.edu.in',
     role: 'student',
-    department: 'CSE',
+    department_id: 'CSE',
     rollNumber: 'CSE2021001',
     yearSection: '4A',
     studentId: '1',
@@ -20,7 +19,7 @@ export const mockUsers: User[] = [
     name: 'Dr. Priya Sharma',
     email: 'priya.sharma@rgce.edu.in',
     role: 'hod',
-    department: 'CSE',
+    department_id: 'CSE',
     employeeId: 'HOD001',
     avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
     isActive: true
@@ -30,7 +29,7 @@ export const mockUsers: User[] = [
     name: 'Dr. Suresh Reddy',
     email: 'suresh.reddy@rgce.edu.in',
     role: 'principal',
-    department: 'ADMIN',
+    department_id: 'ADMIN',
     employeeId: 'PRIN001',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
     isActive: true
@@ -40,7 +39,7 @@ export const mockUsers: User[] = [
     name: 'Praveen Kumar',
     email: 'praveen@rgce.edu.in',
     role: 'admin',
-    department: 'ADMIN',
+    department_id: 'ADMIN',
     employeeId: 'ADMIN001',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
     isActive: true
@@ -53,7 +52,7 @@ export const mockStudents = [
     id: '1',
     name: 'Rajesh Kumar',
     rollNumber: 'CSE2021001',
-    department: 'CSE',
+    department_id: 'CSE',
     year: 4,
     section: 'A',
     yearSection: '4A',
@@ -72,7 +71,7 @@ export const mockStudents = [
     id: '2',
     name: 'Priya Sharma',
     rollNumber: 'CSE2021002',
-    department: 'CSE',
+    department_id: 'CSE',
     year: 4,
     section: 'A',
     yearSection: '4A',
@@ -91,7 +90,7 @@ export const mockStudents = [
     id: '3',
     name: 'Amit Patel',
     rollNumber: 'CSE2021003',
-    department: 'CSE',
+    department_id: 'CSE',
     year: 4,
     section: 'B',
     yearSection: '4B',
@@ -198,8 +197,8 @@ export const getStudentFeeSummary = (studentId: string) => {
 };
 
 // Helper function to get department fee statistics
-export const getDepartmentFeeStats = (department: string) => {
-  const departmentStudents = mockStudents.filter(student => student.department === department);
+export const getDepartmentFeeStats = (department_id: string) => {
+  const departmentStudents = mockStudents.filter(student => student.department_id === department_id);
   const totalStudents = departmentStudents.length;
   const totalCollected = departmentStudents.reduce((sum, student) => sum + student.paidAmount, 0);
   const totalOutstanding = departmentStudents.reduce((sum, student) => sum + student.dueAmount, 0);
@@ -214,10 +213,12 @@ export const getDepartmentFeeStats = (department: string) => {
   };
 };
 
-export default {
+const mockData = {
   mockUsers,
   mockStudents,
   mockFeeRecords,
   getStudentFeeSummary,
   getDepartmentFeeStats
 };
+
+export default mockData;
