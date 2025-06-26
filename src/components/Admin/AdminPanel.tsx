@@ -1,10 +1,11 @@
-
 import React, { useState } from 'react';
-import { Users, Settings, Shield } from 'lucide-react';
+import { Users, Settings, Shield, MailPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
+import UserInvitationManager from './UserInvitationManager'; // <-- Add this import
+// import EnhancedUserInvitationManager from './EnhancedUserInvitationManager'; // Optionally use the enhanced version
 
 const AdminPanel: React.FC = () => {
   const { user, hasPermission } = useAuth();
@@ -22,7 +23,8 @@ const AdminPanel: React.FC = () => {
   const sections = [
     { id: 'super-admin', label: 'Super Admin', icon: Shield },
     { id: 'user-management', label: 'User Management', icon: Users },
-    { id: 'enhanced-users', label: 'Enhanced Users', icon: Settings }
+    { id: 'enhanced-users', label: 'Enhanced Users', icon: Settings },
+    { id: 'invite-users', label: 'Invite Users', icon: MailPlus }, // <-- Add Invite Users tab
   ];
 
   const renderContent = () => {
@@ -33,6 +35,17 @@ const AdminPanel: React.FC = () => {
         return <UserManagement />;
       case 'enhanced-users':
         return <EnhancedUserManagement />;
+      case 'invite-users':
+        return (
+          <div>
+            <h3 className="text-xl font-semibold mb-4 flex items-center">
+              <MailPlus className="w-5 h-5 mr-2" />
+              User Invitations
+            </h3>
+            <UserInvitationManager />
+            {/* Or use <EnhancedUserInvitationManager /> for bulk invites */}
+          </div>
+        );
       default:
         return <SuperAdminPanel onUserManagementClick={() => setActiveSection('user-management')} />;
     }
