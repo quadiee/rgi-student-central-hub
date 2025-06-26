@@ -40,7 +40,6 @@ const UserInvitationManager: React.FC = () => {
   const loadPendingAuthInvites = async () => {
     // WARNING: Requires service key in supabase client!
     try {
-      const { data, error } = await supabase.auth.admin.listUsers();
       if (error) {
         toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
         return;
