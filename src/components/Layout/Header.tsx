@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Bell, Menu, User, Search, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -91,8 +90,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     {user?.role && (
                       <span className="capitalize">{user.role}</span>
                     )}
-                    {user?.department && (
-                      <span className="text-gray-400"> • {user.department}</span>
+                    {user?.department_id && (
+                      <span className="text-gray-400"> • {getDepartmentName(user.department_id)}</span>
                     )}
                   </p>
                 </div>
@@ -104,9 +103,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-800">{user?.name}</p>
                   <p className="text-xs text-gray-600">{user?.email}</p>
-                  {user?.department && (
+                  {user?.department_id && (
                     <p className="text-xs text-gray-500 mt-1">
-                      {getDepartmentName(user.department)}
+                      {getDepartmentName(user.department_id)}
                     </p>
                   )}
                   {user?.rollNumber && (
