@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -68,15 +69,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return [];
       }
 
+      // Check if data exists and is properly structured
       if (!userRoles || !Array.isArray(userRoles) || userRoles.length === 0) {
         console.warn('No user roles found or invalid data format');
         return [];
       }
 
-      const flatPermissions: Permission[] = userRoles
-        .filter(ur => ur.role_permissions && Array.isArray(ur.role_permissions))
-        .flatMap(ur => ur.role_permissions.map(rp => rp.permissions))
-        .filter(Boolean);
+      // Safely extract permissions with proper error handling
+      const flatPermissions: Permission[] = [];
+      
+      for (const userRole of userRoles) {
+        if (userRole && userRole.role_permissions && Array.isArray(userRole.role_permissions)) {
+          for (const rolePermission of userRole.role_permissions) {
+            if (rolePermission && rolePermission.permissions) {
+              flatPermissions.push(rolePermission.permissions);
+            }
+          }
+        }
+      }
 
       return flatPermissions;
     } catch (error) {

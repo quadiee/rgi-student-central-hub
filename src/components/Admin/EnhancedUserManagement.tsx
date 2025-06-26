@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, User, Users, Building } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
-import { Department } from '../../types';
 
 interface UserProfile {
   id: string;
@@ -17,7 +17,14 @@ interface UserProfile {
   employee_id?: string;
   is_active: boolean;
   created_at: string;
-  departmentDetails?: Department;
+}
+
+interface DepartmentData {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  is_active: boolean;
 }
 
 const EnhancedUserManagement: React.FC = () => {
@@ -29,7 +36,7 @@ const EnhancedUserManagement: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<DepartmentData[]>([]);
   const { toast } = useToast();
 
   const roles = ['student', 'hod', 'principal', 'admin'];
@@ -50,7 +57,19 @@ const EnhancedUserManagement: React.FC = () => {
         .select('*')
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading departments:', error);
+        // Use fallback departments if query fails
+        setDepartments([
+          { id: 'cse', name: 'Computer Science Engineering', code: 'CSE', is_active: true },
+          { id: 'ece', name: 'Electronics & Communication', code: 'ECE', is_active: true },
+          { id: 'mech', name: 'Mechanical Engineering', code: 'MECH', is_active: true },
+          { id: 'civil', name: 'Civil Engineering', code: 'CIVIL', is_active: true },
+          { id: 'eee', name: 'Electrical Engineering', code: 'EEE', is_active: true },
+          { id: 'admin', name: 'Administration', code: 'ADMIN', is_active: true }
+        ]);
+        return;
+      }
       setDepartments(data || []);
     } catch (error) {
       console.error('Error loading departments:', error);
@@ -62,20 +81,17 @@ const EnhancedUserManagement: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          departments:department_id (*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
       const usersData = data || [];
-      setUsers(usersData.map(u => ({
-        ...u,
-        departmentDetails: u.departments
-      })));
+      setUsers(usersData);
       
       const total = usersData.length;
       const active = usersData.filter(u => u.is_active).length;
@@ -85,7 +101,7 @@ const EnhancedUserManagement: React.FC = () => {
       console.error('Error loading users:', error);
       toast({
         title: "Error",
-        description: "Failed to load users",
+        description: "Failed to load users. Please check your database connection.",
         variant: "destructive",
       });
     } finally {
@@ -110,7 +126,7 @@ const EnhancedUserManagement: React.FC = () => {
     }
 
     if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(user => user.department_id === selectedDepartment);
+      filtered = filtered.filter(user => user.department === selectedDepartment);
     }
     
     setFilteredUsers(filtered);
@@ -167,6 +183,11 @@ const EnhancedUserManagement: React.FC = () => {
     }
   };
 
+  const getDepartmentName = (deptCode: string) => {
+    const dept = departments.find(d => d.code === deptCode);
+    return dept ? dept.name : deptCode;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -219,7 +240,7 @@ const EnhancedUserManagement: React.FC = () => {
         >
           <option value="all">All Departments</option>
           {departments.map(dept => (
-            <option key={dept.id} value={dept.id}>
+            <option key={dept.id} value={dept.code}>
               {dept.name} ({dept.code})
             </option>
           ))}
@@ -281,8 +302,8 @@ const EnhancedUserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>
-                      <div className="font-medium">{user.departmentDetails?.name || user.department}</div>
-                      <div className="text-xs text-gray-500">{user.departmentDetails?.code}</div>
+                      <div className="font-medium">{getDepartmentName(user.department)}</div>
+                      <div className="text-xs text-gray-500">{user.department}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
