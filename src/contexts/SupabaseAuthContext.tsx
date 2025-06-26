@@ -1,306 +1,327 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
-import { User as AppUser, UserRole, Department } from '../types';
+import { User as AppUser, UserRole } from '../types';
+import { useToast } from '../components/ui/use-toast';
+
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  resource_type: string;
+  action_type: string;
+}
+
+interface AdminSession {
+  id: string;
+  admin_user_id: string;
+  impersonated_user_id?: string;
+  impersonated_role?: string;
+  is_active: boolean;
+}
 
 interface AuthContextType {
   user: AppUser | null;
   session: Session | null;
+  permissions: Permission[];
+  adminSession: AdminSession | null;
   loading: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  switchRole: (newRole: string) => Promise<void>;
-  logout:    () => Promise<void>;
   signOut: () => Promise<{ error: any }>;
+  hasPermission: (permissionName: string, departmentId?: string) => boolean;
+  switchToUserView: (userId: string, role?: string) => Promise<boolean>;
+  exitImpersonation: () => Promise<boolean>;
+  isImpersonating: boolean;
+  refreshUserData: () => Promise<void>;
   getInvitationDetails: (email: string) => Promise<any>;
+  switchRole: (newRole: UserRole) => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [adminSession, setAdminSession] = useState<AdminSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const switchRole = async (newRole: string) => {
-  try {
-    // TODO: call your Supabase function to update the user's role
-  } catch (err) {
-    console.error('Failed switching role:', err);
-  }
-};
+  const { toast } = useToast();
 
-const logout = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (err) {
-    console.error('Logout error:', err);
-  }
-};
-  
-  const createProfileIfMissing = async (authUser: User) => {
+  const loadUserPermissions = async (userId: string): Promise<Permission[]> => {
     try {
-      console.log('Creating profile for user:', authUser.email);
-      
-      // First check if profile exists
-      const { data: existingProfile, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select(`role_permissions ( permissions (*) )`)
+        .eq('user_id', userId)
+        .eq('is_active', true);
 
-      if (profileCheckError) {
-        console.error('Error checking existing profile:', profileCheckError);
+      if (rolesError) {
+        console.warn('Could not load user permissions:', rolesError.message);
+        return [];
       }
 
-      if (existingProfile) {
-        console.log('Profile already exists:', existingProfile);
-        return existingProfile;
+      if (!userRoles || !Array.isArray(userRoles) || userRoles.length === 0) {
+        console.warn('No user roles found or invalid data format');
+        return [];
       }
 
-      // Get user metadata or use defaults
-      const metadata = authUser.user_metadata || {};
-      const role = metadata.role || 'admin';
-      const departmentString = metadata.department || 'ADMIN';
-      
-      // Ensure department matches current database schema
-      const validDepartments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN'];
-      const department: Department = validDepartments.includes(departmentString as Department) 
-        ? departmentString as Department 
-        : 'ADMIN';
-
-      console.log('Creating new profile with data:', {
-        role,
-        department,
-        name: metadata.name || authUser.email?.split('@')[0],
-        email: authUser.email
-      });
-
-      // Create the profile
-      const { data: newProfile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authUser.id,
-          name: metadata.name || authUser.email?.split('@')[0] || 'User',
-          email: authUser.email,
-          role: role,
-          department: department,
-          employee_id: metadata.employee_id || null,
-          roll_number: metadata.roll_number || null,
-          is_active: true
-        })
-        .select()
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        // Return a basic profile object so user can still access the app
-        return {
-          id: authUser.id,
-          name: authUser.email?.split('@')[0] || 'User',
-          email: authUser.email,
-          role: 'admin',
-          department: 'ADMIN' as Department,
-          employee_id: null,
-          roll_number: null,
-          is_active: true
-        };
+      const flatPermissions: Permission[] = [];
+      for (const userRole of userRoles) {
+        if (userRole && userRole.role_permissions && Array.isArray(userRole.role_permissions)) {
+          for (const rolePermission of userRole.role_permissions) {
+            if (rolePermission && rolePermission.permissions) {
+              flatPermissions.push(rolePermission.permissions);
+            }
+          }
+        }
       }
-
-      console.log('Profile created successfully:', newProfile);
-      return newProfile;
-
+      return flatPermissions;
     } catch (error) {
-      console.error('Error in createProfileIfMissing:', error);
-      
-      // Return a basic profile so the user can still access the app
+      console.error('Error loading permissions:', error);
+      return [];
+    }
+  };
+
+  const loadAdminSession = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_sessions')
+        .select('*')
+        .eq('admin_user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Could not load admin session:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error loading admin session:', error);
+      return null;
+    }
+  };
+
+  // --- CHANGED: only department_id, not department ---
+  const createProfileIfMissing = async (authUser: User) => {
+    const { data: existingProfile, error: profileCheckError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (profileCheckError) console.error('Error checking existing profile:', profileCheckError);
+    if (existingProfile) return existingProfile;
+
+    const metadata = authUser.user_metadata || {};
+    const role = metadata.role || 'admin';
+    // Now expect metadata.department_id to be the department UUID.
+    const department_id = metadata.department_id || null;
+
+    const { data: newProfile, error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.id,
+        name: metadata.name || authUser.email?.split('@')[0] || 'User',
+        email: authUser.email,
+        role,
+        department_id,
+        employee_id: metadata.employee_id || null,
+        roll_number: metadata.roll_number || null,
+        is_active: true
+      })
+      .select()
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError);
       return {
         id: authUser.id,
         name: authUser.email?.split('@')[0] || 'User',
         email: authUser.email,
         role: 'admin',
-        department: 'ADMIN' as Department,
+        department_id: null,
         employee_id: null,
         roll_number: null,
         is_active: true
       };
     }
+
+    return newProfile;
+  };
+
+  // --- CHANGED: only department_id, not department ---
+  const loadUserData = async (authUser: User) => {
+    const profile = await createProfileIfMissing(authUser);
+    const userPermissions = await loadUserPermissions(authUser.id);
+    const adminSessionData = await loadAdminSession(authUser.id);
+
+    if (profile) {
+      const appUser: AppUser = {
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role as UserRole,
+        department_id: profile.department_id, // UUID!
+        rollNumber: profile.roll_number,
+        studentId: profile.role === 'student' ? profile.id : undefined,
+        facultyId: profile.role === 'faculty' ? profile.id : undefined,
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
+      };
+
+      setUser(appUser);
+      setPermissions(userPermissions);
+      setAdminSession(adminSessionData);
+    }
   };
 
   useEffect(() => {
     let isMounted = true;
-
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
+      async (_event, session) => {
         if (!isMounted) return;
-        
         setSession(session);
-        
         if (session?.user) {
-          try {
-            console.log('Processing user session for:', session.user.email);
-            
-            // Try to get existing profile or create one
-            const profile = await createProfileIfMissing(session.user);
-            
-            if (profile && isMounted) {
-              const appUser: AppUser = {
-                id: profile.id,
-                name: profile.name,
-                email: profile.email,
-                role: profile.role as UserRole,
-                department: profile.department as Department,
-                rollNumber: profile.roll_number,
-                studentId: profile.role === 'student' ? profile.id : undefined,
-                facultyId: profile.role === 'faculty' ? profile.id : undefined,
-                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
-              };
-              
-              console.log('User profile set successfully:', appUser);
-              setUser(appUser);
-            }
-          } catch (error) {
-            console.error('Error setting up user profile:', error);
-            
-            if (isMounted) {
-              // Set a basic user so they can still access the app
-              const basicUser: AppUser = {
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'User',
-                email: session.user.email || '',
-                role: 'admin',
-                department: 'ADMIN',
-                rollNumber: null,
-                studentId: undefined,
-                facultyId: undefined,
-                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${session.user.email}`
-              };
-              setUser(basicUser);
-            }
-          }
+          await loadUserData(session.user);
         } else {
           setUser(null);
+          setPermissions([]);
+          setAdminSession(null);
         }
-        
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     );
 
-    // Check for existing session and resolve loading immediately if no session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Error getting session:', error);
-      }
-      
-      if (!session && isMounted) {
-        console.log('No existing session found, stopping loading');
-        setLoading(false);
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session && isMounted) setLoading(false);
     });
 
-    // Set a timeout to prevent infinite loading
-    const loadingTimeout = setTimeout(() => {
-      if (isMounted) {
-        console.log('Loading timeout reached, forcing stop');
-        setLoading(false);
-      }
-    }, 3000);
+    const timeout = setTimeout(() => { if (isMounted) setLoading(false); }, 3000);
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
-      clearTimeout(loadingTimeout);
+      clearTimeout(timeout);
     };
   }, []);
 
   const signUp = async (email: string, password: string, userData: any) => {
-    console.log('Signing up user with data:', userData);
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
-      }
-    });
-
+    const { error } = await supabase.auth.signUp({ email, password, options: { data: userData } });
     if (!error) {
-      console.log('Signup successful, marking invitation as used for:', email);
-      // Mark invitation as used
-      const { error: markError } = await supabase.rpc('mark_invitation_used', { 
-        invitation_email: email 
-      });
-      
-      if (markError) {
-        console.error('Error marking invitation as used:', markError);
-      }
+      const { error: markError } = await supabase.rpc('mark_invitation_used', { invitation_email: email });
+      if (markError) console.error('Error marking invitation as used:', markError);
     }
-
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting to sign in with email:', email);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      console.error('Sign in error:', error);
-    } else {
-      console.log('Sign in successful for:', email);
-    }
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
   const signOut = async () => {
-    console.log('Signing out user');
+    if (adminSession) await supabase.from('admin_sessions').update({ is_active: false }).eq('id', adminSession.id);
     const { error } = await supabase.auth.signOut();
     return { error };
   };
 
-  const getInvitationDetails = async (email: string) => {
-    console.log('Getting invitation details for:', email);
-    const { data, error } = await supabase.rpc('get_invitation_details', {
-      invitation_email: email
-    });
-    
-    if (error) {
-      console.error('Error getting invitation details:', error);
-    } else {
-      console.log('Invitation details retrieved:', data);
+  const logout = async () => {
+    await signOut();
+  };
+
+  const switchRole = (newRole: UserRole) => {
+    if (user) {
+      setUser({ ...user, role: newRole });
+      toast({
+        title: "Role Switched",
+        description: `Now viewing as ${newRole}`,
+      });
     }
-    
+  };
+
+  const hasPermission = (permissionName: string, departmentId?: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    const hasDirect = permissions.some(p => p.name === permissionName);
+    if (!hasDirect) return false;
+    if (!departmentId) return true;
+    return true;
+  };
+
+  const switchToUserView = async (userId: string, role?: string): Promise<boolean> => {
+    if (!user || !hasPermission('impersonate_users')) {
+      toast({ title: 'Access Denied', description: "You don't have permission to switch user views", variant: 'destructive' });
+      return false;
+    }
+    try {
+      if (adminSession) await supabase.from('admin_sessions').update({ is_active: false }).eq('id', adminSession.id);
+      const { data, error } = await supabase.from('admin_sessions').insert({ admin_user_id: user.id, impersonated_user_id: userId, impersonated_role: role, is_active: true }).select().single();
+      if (error) {
+        console.error('Error creating admin session:', error);
+        return false;
+      }
+      setAdminSession(data);
+      toast({ title: 'View Switched', description: `Now viewing as ${role || 'user'}` });
+      await refreshUserData();
+      return true;
+    } catch (error) {
+      console.error('Error switching user view:', error);
+      return false;
+    }
+  };
+
+  const exitImpersonation = async (): Promise<boolean> => {
+    if (!adminSession) return true;
+    try {
+      await supabase.from('admin_sessions').update({ is_active: false }).eq('id', adminSession.id);
+      setAdminSession(null);
+      toast({ title: 'Impersonation Ended', description: 'Returned to admin view' });
+      await refreshUserData();
+      return true;
+    } catch (error) {
+      console.error('Error ending impersonation:', error);
+      return false;
+    }
+  };
+
+  const refreshUserData = async () => {
+    if (session?.user) await loadUserData(session.user);
+  };
+
+  const getInvitationDetails = async (email: string) => {
+    const { data, error } = await supabase.rpc('get_invitation_details', { invitation_email: email });
     return { data: data?.[0], error };
   };
 
- return (
-  <AuthContext.Provider value={{
+  const value: AuthContextType = {
     user,
     session,
+    permissions,
+    adminSession,
     loading,
     signUp,
     signIn,
     signOut,
-    switchRole,     // ← newly added
-    logout,         // ← newly added
+    hasPermission,
+    switchToUserView,
+    exitImpersonation,
+    isImpersonating: !!adminSession?.impersonated_user_id,
+    refreshUserData,
     getInvitationDetails,
-  }}>
-    {children}
-  </AuthContext.Provider>
-);
+    switchRole,
+    logout
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
