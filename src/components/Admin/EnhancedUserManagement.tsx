@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, User, Users, Building } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
-import { useEnhancedAuth } from '../../contexts/EnhancedAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
-import { Department } from '../../types/enhancedTypes';
+import { Department } from '../../types';
 
 interface UserProfile {
   id: string;
@@ -22,7 +21,7 @@ interface UserProfile {
 }
 
 const EnhancedUserManagement: React.FC = () => {
-  const { user, departments } = useEnhancedAuth();
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,17 +29,33 @@ const EnhancedUserManagement: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
+  const [departments, setDepartments] = useState<Department[]>([]);
   const { toast } = useToast();
 
   const roles = ['student', 'hod', 'principal', 'admin'];
 
   useEffect(() => {
     loadUsers();
+    loadDepartments();
   }, []);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, selectedRole, selectedDepartment]);
+
+  const loadDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error loading departments:', error);
+    }
+  };
 
   const loadUsers = async () => {
     try {

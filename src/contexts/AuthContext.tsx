@@ -68,13 +68,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return [];
       }
 
-      if (!userRoles || !Array.isArray(userRoles)) {
-        console.warn('No user roles found');
+      if (!userRoles || !Array.isArray(userRoles) || userRoles.length === 0) {
+        console.warn('No user roles found or invalid data format');
         return [];
       }
 
       const flatPermissions: Permission[] = userRoles
-        .flatMap(ur => ur.role_permissions?.map(rp => rp.permissions) ?? [])
+        .filter(ur => ur.role_permissions && Array.isArray(ur.role_permissions))
+        .flatMap(ur => ur.role_permissions.map(rp => rp.permissions))
         .filter(Boolean);
 
       return flatPermissions;
