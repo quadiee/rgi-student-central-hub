@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar, Download, Filter, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -17,7 +16,7 @@ const AdminReportGenerator: React.FC = () => {
     to: new Date().toISOString().split('T')[0]
   });
   const [filters, setFilters] = useState({
-    department: 'all',
+    department_id: 'all',
     semester: 'all',
     paymentStatus: 'all'
   });
@@ -31,9 +30,9 @@ const AdminReportGenerator: React.FC = () => {
         type: reportType as any,
         title: `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`,
         dateRange,
-        filters: filters.department !== 'all' ? { department: filters.department } : {}
+        filters: filters.department_id !== 'all' ? { department_id: filters.department_id } : {}
       });
-      
+
       setGeneratedReport({
         ...report,
         // Mock detailed data
@@ -132,8 +131,8 @@ const AdminReportGenerator: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
             <select
-              value={filters.department}
-              onChange={(e) => setFilters({...filters, department: e.target.value})}
+              value={filters.department_id}
+              onChange={(e) => setFilters({...filters, department_id: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Departments</option>
