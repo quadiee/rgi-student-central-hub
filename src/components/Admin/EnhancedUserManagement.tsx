@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, User, Users, Building } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -11,8 +10,8 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
-  department: string;
-  department_id?: string;
+  department_id: string; // Changed: required, now the main reference
+  department?: string;   // Optional: legacy support if needed
   roll_number?: string;
   employee_id?: string;
   is_active: boolean;
@@ -61,12 +60,12 @@ const EnhancedUserManagement: React.FC = () => {
         console.error('Error loading departments:', error);
         // Use fallback departments if query fails
         setDepartments([
-          { id: 'cse', name: 'Computer Science Engineering', code: 'CSE', is_active: true },
-          { id: 'ece', name: 'Electronics & Communication', code: 'ECE', is_active: true },
-          { id: 'mech', name: 'Mechanical Engineering', code: 'MECH', is_active: true },
-          { id: 'civil', name: 'Civil Engineering', code: 'CIVIL', is_active: true },
-          { id: 'eee', name: 'Electrical Engineering', code: 'EEE', is_active: true },
-          { id: 'admin', name: 'Administration', code: 'ADMIN', is_active: true }
+          { id: 'cse-uuid', name: 'Computer Science Engineering', code: 'CSE', is_active: true },
+          { id: 'ece-uuid', name: 'Electronics & Communication', code: 'ECE', is_active: true },
+          { id: 'mech-uuid', name: 'Mechanical Engineering', code: 'MECH', is_active: true },
+          { id: 'civil-uuid', name: 'Civil Engineering', code: 'CIVIL', is_active: true },
+          { id: 'eee-uuid', name: 'Electrical Engineering', code: 'EEE', is_active: true },
+          { id: 'admin-uuid', name: 'Administration', code: 'ADMIN', is_active: true }
         ]);
         return;
       }
@@ -126,7 +125,8 @@ const EnhancedUserManagement: React.FC = () => {
     }
 
     if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(user => user.department === selectedDepartment);
+      // Changed: filter by department_id (UUID) instead of code
+      filtered = filtered.filter(user => user.department_id === selectedDepartment);
     }
     
     setFilteredUsers(filtered);
@@ -183,9 +183,10 @@ const EnhancedUserManagement: React.FC = () => {
     }
   };
 
-  const getDepartmentName = (deptCode: string) => {
-    const dept = departments.find(d => d.code === deptCode);
-    return dept ? dept.name : deptCode;
+  // Changed: lookup department name by department_id (UUID)
+  const getDepartmentName = (deptId: string) => {
+    const dept = departments.find(d => d.id === deptId);
+    return dept ? dept.name : deptId;
   };
 
   if (loading) {
@@ -239,8 +240,9 @@ const EnhancedUserManagement: React.FC = () => {
           className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">All Departments</option>
+          {/* Changed: options use dept.id (UUID) */}
           {departments.map(dept => (
-            <option key={dept.id} value={dept.code}>
+            <option key={dept.id} value={dept.id}>
               {dept.name} ({dept.code})
             </option>
           ))}
@@ -302,8 +304,9 @@ const EnhancedUserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>
-                      <div className="font-medium">{getDepartmentName(user.department)}</div>
-                      <div className="text-xs text-gray-500">{user.department}</div>
+                      {/* Changed: use department_id lookup */}
+                      <div className="font-medium">{getDepartmentName(user.department_id)}</div>
+                      <div className="text-xs text-gray-500">{user.department_id}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
