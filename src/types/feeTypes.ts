@@ -1,9 +1,8 @@
-
 export interface FeeStructure {
   id: string;
   academicYear: string;
   semester: number;
-  department: string;
+  department_id: string; // ← Use department_id (UUID)
   feeCategories: FeeCategory[];
   totalAmount: number;
   dueDate: string;
@@ -55,7 +54,7 @@ export interface FeeReport {
     to: string;
   };
   filters: {
-    department?: string;
+    department_id?: string; // ← Use department_id here
     semester?: number;
     paymentStatus?: string;
   };
@@ -72,5 +71,5 @@ export interface FeePermissions {
   canModifyFeeStructure: boolean;
   canGenerateReports: boolean;
   canApproveWaivers: boolean;
-  allowedDepartments: string[];
+  allowedDepartments: string[]; // array of department_id (UUIDs)
 }
