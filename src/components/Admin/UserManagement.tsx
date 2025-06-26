@@ -1,16 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, User, Users } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 
+// Department UUID to Name map (replace with your actual UUIDs and names)
+const DEPARTMENTS: Record<string, string> = {
+  // "uuid-1": "CSE",
+  // "uuid-2": "ECE",
+  // Add all department UUIDs and their names here
+};
+
 interface UserProfile {
   id: string;
   name: string;
   email: string;
   role: string;
-  department: string;
+  department_id: string; // use department_id instead of department
   roll_number?: string;
   employee_id?: string;
   is_active: boolean;
@@ -41,7 +47,7 @@ const UserManagement: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email, role, department, roll_number, employee_id, is_active, created_at')
+        .select('id, name, email, role, department_id, roll_number, employee_id, is_active, created_at')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -135,6 +141,11 @@ const UserManagement: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Helper to get department name from id
+  const getDepartmentName = (department_id: string) => {
+    return DEPARTMENTS[department_id] || department_id || 'Unknown';
   };
 
   if (loading) {
@@ -238,7 +249,7 @@ const UserManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.department}
+                    {getDepartmentName(user.department_id)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
