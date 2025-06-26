@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Toaster } from "./components/ui/toaster";
 import { AuthProvider } from './contexts/AuthContext';
@@ -12,10 +11,12 @@ import AdminPanel from './components/Admin/AdminPanel';
 import StudentList from './components/StudentList';
 import ReportGenerator from './components/Reports/ReportGenerator';
 import { useAuth } from './contexts/AuthContext';
+import InvitationSignup from './components/Auth/InvitationSignup'; // <-- Add this import
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // <-- For routing
 
 const queryClient = new QueryClient();
 
-function AppContent() {
+function MainAppContent() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -43,6 +44,7 @@ function AppContent() {
   }
 
   if (!user) {
+    // Render login page by default for non-invite routes
     return <SupabaseAuthPage />;
   }
 
@@ -108,7 +110,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppContent />
+        <Router>
+          <Routes>
+            {/* Invitation-based signup route */}
+            <Route path="/invite/:token" element={<InvitationSignup />} />
+            {/* Main app fallback */}
+            <Route path="/*" element={<MainAppContent />} />
+            {/* Optionally: catch-all route */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Router>
         <Toaster />
       </AuthProvider>
     </QueryClientProvider>
