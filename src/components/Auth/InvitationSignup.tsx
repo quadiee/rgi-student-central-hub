@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, GraduationCap } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -7,15 +7,12 @@ import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 
-interface InvitationSignupProps {
-  email: string;
-  onSuccess: () => void;
-  onBack: () => void;
-}
-
-const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, onBack }) => {
+const InvitationSignup: React.FC = () => {
+  const { token } = useParams();
+  const navigate = useNavigate();
   const { signUp, getInvitationDetails } = useAuth();
   const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     name: '',
     password: '',
@@ -33,11 +30,22 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
   const [invitationData, setInvitationData] = useState<any>(null);
 
   useEffect(() => {
+    if (!token) {
+      toast({
+        title: "Invalid Invitation",
+        description: "Missing invitation token.",
+        variant: "destructive"
+      });
+      navigate("/login");
+      return;
+    }
     loadInvitationDetails();
-  }, [email]);
+    // eslint-disable-next-line
+  }, [token]);
 
   const loadInvitationDetails = async () => {
-    const { data, error } = await getInvitationDetails(email);
+    // getInvitationDetails should accept token and return invitation data (including email, role, department, etc.)
+    const { data, error } = await getInvitationDetails(token);
     if (data && data.is_valid) {
       setInvitationData(data);
     } else {
@@ -46,7 +54,7 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
         description: "This invitation is invalid or has expired.",
         variant: "destructive"
       });
-      onBack();
+      navigate("/login");
     }
   };
 
@@ -93,7 +101,7 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
       address: formData.address
     };
 
-    const { error } = await signUp(email, formData.password, userData);
+    const { error } = await signUp(invitationData.email, formData.password, userData);
 
     if (error) {
       toast({
@@ -106,7 +114,7 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
         title: "Account Created",
         description: "Your account has been created successfully. Please check your email for verification.",
       });
-      onSuccess();
+      navigate("/login");
     }
 
     setLoading(false);
@@ -236,6 +244,7 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              tabIndex={-1}
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -260,6 +269,7 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              tabIndex={-1}
             >
               {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -291,7 +301,7 @@ const InvitationSignup: React.FC<InvitationSignupProps> = ({ email, onSuccess, o
             type="button"
             variant="outline"
             className="w-full"
-            onClick={onBack}
+            onClick={() => navigate("/login")}
             disabled={loading}
           >
             Back to Login
