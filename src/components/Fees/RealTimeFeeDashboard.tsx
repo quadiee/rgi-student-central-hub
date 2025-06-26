@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw } from 'lucide-react';
@@ -9,6 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { formatCurrency } from '../../utils/feeValidation';
 
+// Department UUID-to-name mapping (replace with your actual department UUIDs/names)
+const DEPARTMENTS: Record<string, string> = {
+  // "uuid-1": "CSE",
+  // "uuid-2": "ECE",
+  // "uuid-3": "MECH",
+  // ...
+};
+
 interface DashboardStats {
   totalStudents: number;
   totalRevenue: number;
@@ -17,7 +24,7 @@ interface DashboardStats {
   partialStudents: number;
   overdueStudents: number;
   departmentStats: Array<{
-    department: string;
+    department_id: string;
     total_students: number;
     collected: number;
     outstanding: number;
@@ -49,7 +56,7 @@ const RealTimeFeeDashboard: React.FC = () => {
           *,
           profiles!student_id (
             name,
-            department,
+            department_id,
             roll_number
           )
         `);
@@ -67,26 +74,26 @@ const RealTimeFeeDashboard: React.FC = () => {
       // Calculate statistics
       const totalStudents = feeRecords?.length || 0;
       const totalRevenue = payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
-      const totalOutstanding = feeRecords?.reduce((sum, record) => 
+      const totalOutstanding = feeRecords?.reduce((sum, record) =>
         sum + (Number(record.final_amount) - Number(record.paid_amount || 0)), 0) || 0;
 
       const paidStudents = feeRecords?.filter(r => r.status === 'Paid').length || 0;
       const partialStudents = feeRecords?.filter(r => r.status === 'Partial').length || 0;
       const overdueStudents = feeRecords?.filter(r => r.status === 'Overdue').length || 0;
 
-      // Department-wise statistics
+      // Department-wise statistics (using department_id)
       const deptMap = new Map();
       feeRecords?.forEach(record => {
-        const dept = record.profiles?.department || 'Unknown';
-        if (!deptMap.has(dept)) {
-          deptMap.set(dept, {
-            department: dept,
+        const dept_id = record.profiles?.department_id || 'Unknown';
+        if (!deptMap.has(dept_id)) {
+          deptMap.set(dept_id, {
+            department_id: dept_id,
             total_students: 0,
             collected: 0,
             outstanding: 0
           });
         }
-        const deptStat = deptMap.get(dept);
+        const deptStat = deptMap.get(dept_id);
         deptStat.total_students += 1;
         deptStat.collected += Number(record.paid_amount || 0);
         deptStat.outstanding += Number(record.final_amount) - Number(record.paid_amount || 0);
@@ -130,7 +137,7 @@ const RealTimeFeeDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardStats();
-    
+
     // Set up real-time updates
     const channel = supabase
       .channel('dashboard-updates')
@@ -173,6 +180,10 @@ const RealTimeFeeDashboard: React.FC = () => {
     { name: 'Overdue', value: stats.overdueStudents, color: '#EF4444' },
     { name: 'Pending', value: stats.totalStudents - stats.paidStudents - stats.partialStudents - stats.overdueStudents, color: '#6B7280' }
   ];
+
+  // Helper for department name
+  const getDepartmentName = (department_id: string) =>
+    DEPARTMENTS[department_id] || department_id || 'Unknown';
 
   return (
     <div className="space-y-6">
@@ -256,9 +267,12 @@ const RealTimeFeeDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats.departmentStats}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="department" />
+                <XAxis
+                  dataKey="department_id"
+                  tickFormatter={getDepartmentName}
+                />
                 <YAxis />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value))} labelFormatter={getDepartmentName} />
                 <Bar dataKey="collected" fill="#10B981" name="Collected" />
                 <Bar dataKey="outstanding" fill="#F59E0B" name="Outstanding" />
               </BarChart>
