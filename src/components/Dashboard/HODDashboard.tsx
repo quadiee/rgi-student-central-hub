@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, AlertTriangle, DollarSign, Search, Filter } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -14,7 +13,7 @@ interface StudentFeeInfo {
   id: string;
   name: string;
   rollNumber: string;
-  department: string;
+  department_id: string;
   totalFee: number;
   paidAmount: number;
   dueAmount: number;
@@ -57,7 +56,7 @@ const HODDashboard: React.FC = () => {
           id: '1',
           name: 'Rajesh Kumar',
           rollNumber: 'CSE2021001',
-          department: user.department || 'CSE',
+          department_id: user.department_id || 'CSE_UUID',
           totalFee: 120000,
           paidAmount: 120000,
           dueAmount: 0,
@@ -69,7 +68,7 @@ const HODDashboard: React.FC = () => {
           id: '2',
           name: 'Priya Sharma',
           rollNumber: 'CSE2021002',
-          department: user.department || 'CSE',
+          department_id: user.department_id || 'CSE_UUID',
           totalFee: 120000,
           paidAmount: 80000,
           dueAmount: 40000,
@@ -81,7 +80,7 @@ const HODDashboard: React.FC = () => {
           id: '3',
           name: 'Amit Patel',
           rollNumber: 'CSE2021003',
-          department: user.department || 'CSE',
+          department_id: user.department_id || 'CSE_UUID',
           totalFee: 120000,
           paidAmount: 0,
           dueAmount: 120000,
@@ -93,7 +92,7 @@ const HODDashboard: React.FC = () => {
           id: '4',
           name: 'Sneha Reddy',
           rollNumber: 'CSE2021004',
-          department: user.department || 'CSE',
+          department_id: user.department_id || 'CSE_UUID',
           totalFee: 120000,
           paidAmount: 60000,
           dueAmount: 60000,
@@ -105,7 +104,7 @@ const HODDashboard: React.FC = () => {
           id: '5',
           name: 'Vikram Singh',
           rollNumber: 'CSE2021005',
-          department: user.department || 'CSE',
+          department_id: user.department_id || 'CSE_UUID',
           totalFee: 120000,
           paidAmount: 0,
           dueAmount: 120000,
@@ -160,7 +159,7 @@ const HODDashboard: React.FC = () => {
       value: departmentStats.totalStudents,
       icon: Users,
       color: 'blue' as const,
-      trend: `${user?.department || 'CSE'} Department`
+      trend: `${user?.department_id || 'Department'}`
     },
     {
       title: 'Total Collected',
@@ -200,7 +199,7 @@ const HODDashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
-          HOD Dashboard - {user?.department || 'Department'}
+          HOD Dashboard - {user?.department_id || 'Department'}
         </h1>
         <Button size={isMobile ? 'sm' : 'default'}>
           Generate Report
