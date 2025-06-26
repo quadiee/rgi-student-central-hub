@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '../integrations/supabase/client';
 import MobileSidebar from '../components/Layout/MobileSidebar';
@@ -29,6 +29,14 @@ const AppContent = () => {
   const [students, setStudents] = useState<SimpleStudent[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<SimpleStudent | null>(null);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  // Redirect to dashboard route after login if on root path
+  useEffect(() => {
+    if (!loading && user && window.location.pathname === '/') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   // Reset to dashboard when user changes
   useEffect(() => {
@@ -55,7 +63,7 @@ const AppContent = () => {
         ]);
       } else {
         // Convert database response to SimpleStudent format
-        const simpleStudents: SimpleStudent[] = (data || []).map(profile => ({
+        const simpleStudents: SimpleStudent[] = (data || []).map((profile: any) => ({
           id: profile.id,
           name: profile.name || 'Unknown',
           email: profile.email,
