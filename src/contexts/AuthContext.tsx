@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
@@ -129,10 +130,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const metadata = authUser.user_metadata || {};
     const role = metadata.role || 'admin';
-    // CHANGED: department -> department_id
-    const departmentIdString = metadata.department_id || metadata.department || 'ADMIN';
+    const departmentString = metadata.department || 'ADMIN';
     const validDepartments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN'];
-    const department_id: Department = validDepartments.includes(departmentIdString as Department) ? (departmentIdString as Department) : 'ADMIN';
+    const department: Department = validDepartments.includes(departmentString as Department) ? (departmentString as Department) : 'ADMIN';
 
     const { data: newProfile, error: profileError } = await supabase
       .from('profiles')
@@ -141,7 +141,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: metadata.name || authUser.email?.split('@')[0] || 'User',
         email: authUser.email,
         role,
-        department_id,
+        department,
         employee_id: metadata.employee_id || null,
         roll_number: metadata.roll_number || null,
         is_active: true
@@ -156,7 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: authUser.email?.split('@')[0] || 'User',
         email: authUser.email,
         role: 'admin',
-        department_id: 'ADMIN' as Department,
+        department: 'ADMIN' as Department,
         employee_id: null,
         roll_number: null,
         is_active: true
@@ -177,7 +177,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: profile.name,
         email: profile.email,
         role: profile.role as UserRole,
-        department_id: profile.department_id as Department,
+        department: profile.department as Department,
         rollNumber: profile.roll_number,
         studentId: profile.role === 'student' ? profile.id : undefined,
         facultyId: profile.role === 'faculty' ? profile.id : undefined,
