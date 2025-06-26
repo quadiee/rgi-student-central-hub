@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Search, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -6,12 +5,19 @@ import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 
+// You must have a departments map or fetch for display. Example static map:
+const DEPARTMENTS: Record<string, string> = {
+  // "uuid-1": "CSE",
+  // "uuid-2": "ECE",
+  // Populate with your department UUIDs and names from your departments table!
+};
+
 interface UserProfile {
   id: string;
   name: string;
   email: string;
   role: string;
-  department: string;
+  department_id: string; // use department_id instead of department
   is_active: boolean;
 }
 
@@ -37,13 +43,13 @@ const AdminImpersonationPanel: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email, role, department, is_active')
+        .select('id, name, email, role, department_id, is_active')
         .eq('is_active', true)
         .neq('id', user?.id) // Exclude current admin user
         .order('name');
 
       if (error) throw error;
-      
+
       setUsers(data || []);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -59,18 +65,18 @@ const AdminImpersonationPanel: React.FC = () => {
 
   const filterUsers = () => {
     let filtered = users;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (selectedRole !== 'all') {
       filtered = filtered.filter(user => user.role === selectedRole);
     }
-    
+
     setFilteredUsers(filtered);
   };
 
@@ -102,6 +108,11 @@ const AdminImpersonationPanel: React.FC = () => {
       </div>
     );
   }
+
+  // Helper to get department name from id
+  const getDepartmentName = (department_id: string) => {
+    return DEPARTMENTS[department_id] || department_id || 'Unknown';
+  };
 
   return (
     <div className="space-y-6">
@@ -216,7 +227,7 @@ const AdminImpersonationPanel: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {targetUser.department}
+                      {getDepartmentName(targetUser.department_id)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Button
