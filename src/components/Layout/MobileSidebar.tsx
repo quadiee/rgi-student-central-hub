@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Home, CreditCard, Settings, X, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -94,9 +93,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-                  {user.department && (
+                  {user.department_id && (
                     <p className="text-xs text-gray-400 truncate">
-                      {getDepartmentName(user.department)}
+                      {getDepartmentName(user.department_id)}
                     </p>
                   )}
                 </div>
