@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Send } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -36,31 +37,47 @@ const UserInvitationManager: React.FC = () => {
   const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
   const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
-  // Load pending invites from Supabase Auth
-  const loadPendingAuthInvites = async () => {
-    // WARNING: Requires service key in supabase client!
+  // Load pending invites from user_invitations table
+  const loadPendingInvites = async () => {
     try {
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('used_at', null)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
+
       if (error) {
-        toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
+        console.error('Error loading pending invites:', error);
+        toast({ 
+          title: "Error", 
+          description: "Failed to load pending invites", 
+          variant: "destructive" 
+        });
         return;
       }
-      const invites = data.users
-        .filter(u => !u.confirmed_at) // Pending invite: not yet confirmed
-        .map(u => ({
-          id: u.id,
-          email: u.email ?? "",
-          created_at: u.created_at,
-          role: u.user_metadata?.role || "",
-          department: u.user_metadata?.department || ""
-        }));
+
+      const invites = (data || []).map(invite => ({
+        id: invite.id,
+        email: invite.email,
+        created_at: invite.invited_at || invite.created_at,
+        role: invite.role || "",
+        department: invite.department || ""
+      }));
+      
       setPendingInvites(invites);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load pending invites", variant: "destructive" });
+      console.error('Error in loadPendingInvites:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to load pending invites", 
+        variant: "destructive" 
+      });
     }
   };
 
   useEffect(() => {
-    loadPendingAuthInvites();
+    loadPendingInvites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -70,22 +87,53 @@ const UserInvitationManager: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.admin.inviteUserByEmail(
-        formData.email.trim().toLowerCase(),
-        {
+      // First create the invitation record
+      const { data: inviteData, error: inviteError } = await supabase
+        .from('user_invitations')
+        .insert({
+          email: formData.email.trim().toLowerCase(),
+          role: formData.role,
+          department: formData.department,
+          roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
+          employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
+          invited_by: user.id,
+          is_active: true,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+        })
+        .select()
+        .single();
+
+      if (inviteError) {
+        toast({
+          title: "Invite Failed",
+          description: inviteError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Then create the user in auth.users with a temporary password
+      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email.trim().toLowerCase(),
+        password: tempPassword,
+        options: {
           data: {
             role: formData.role,
             department: formData.department,
             roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
             employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-          }
+            invitation_id: inviteData.id
+          },
+          emailRedirectTo: `${window.location.origin}/invitation-signup`
         }
-      );
+      });
 
-      if (error) {
+      if (signUpError) {
         toast({
           title: "Invite Failed",
-          description: error.message,
+          description: signUpError.message,
           variant: "destructive"
         });
       } else {
@@ -101,9 +149,10 @@ const UserInvitationManager: React.FC = () => {
           employeeId: ''
         });
         setShowForm(false);
-        loadPendingAuthInvites();
+        loadPendingInvites();
       }
     } catch (error) {
+      console.error('Error sending invitation:', error);
       toast({
         title: "Error",
         description: "Failed to send invitation. Please try again.",
@@ -228,9 +277,9 @@ const UserInvitationManager: React.FC = () => {
         </div>
       )}
 
-      {/* Pending Auth Invites List */}
+      {/* Pending Invites List */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-6">
-        <h4 className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pending Auth Invitations</h4>
+        <h4 className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pending Invitations</h4>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
