@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
@@ -15,6 +15,10 @@ interface UserProfile {
   profile_photo_url?: string;
   is_active: boolean;
   created_at: string;
+  // Add aliases for backward compatibility
+  avatar?: string;
+  rollNumber?: string;
+  department?: string;
 }
 
 interface SupabaseAuthContextType {
@@ -73,7 +77,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       return {
         ...data,
-        department_name: data.departments?.name || 'Unknown'
+        department_name: data.departments?.name || 'Unknown',
+        // Add aliases for backward compatibility
+        avatar: data.profile_photo_url || '',
+        rollNumber: data.roll_number,
+        department: data.departments?.code || 'Unknown'
       };
     } catch (error) {
       console.error('Error in loadUserProfile:', error);

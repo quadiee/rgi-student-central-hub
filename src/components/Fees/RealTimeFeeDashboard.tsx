@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw } from 'lucide-react';
@@ -42,15 +41,18 @@ const RealTimeFeeDashboard: React.FC = () => {
     try {
       setLoading(true);
 
-      // Get basic fee statistics
+      // Get basic fee statistics with proper join
       const { data: feeRecords, error: feeError } = await supabase
         .from('fee_records')
         .select(`
           *,
           profiles!student_id (
             name,
-            department,
-            roll_number
+            roll_number,
+            departments:department_id (
+              name,
+              code
+            )
           )
         `);
 
@@ -77,7 +79,7 @@ const RealTimeFeeDashboard: React.FC = () => {
       // Department-wise statistics
       const deptMap = new Map();
       feeRecords?.forEach(record => {
-        const dept = record.profiles?.department || 'Unknown';
+        const dept = record.profiles?.departments?.name || 'Unknown';
         if (!deptMap.has(dept)) {
           deptMap.set(dept, {
             department: dept,
