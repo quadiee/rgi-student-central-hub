@@ -216,7 +216,7 @@ export class EnhancedFeeService {
         processed_by: data.processed_by!,
         receipt_number: data.receipt_number,
         gateway: data.gateway || undefined,
-        failure_reason: data.failure_reason || undefined,
+        failure_reason: data.failureReason || undefined,
         created_at: data.created_at || new Date().toISOString()
       };
     } catch (error) {
