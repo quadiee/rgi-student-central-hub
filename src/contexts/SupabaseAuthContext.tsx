@@ -1,233 +1,149 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
-import { User as AppUser, UserRole, Department } from '../types';
 
-interface AuthContextType {
-  user: AppUser | null;
-  session: Session | null;
-  loading: boolean;
-  signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  switchRole: (newRole: string) => Promise<void>;
-  logout:    () => Promise<void>;
-  signOut: () => Promise<{ error: any }>;
-  getInvitationDetails: (email: string) => Promise<any>;
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department_id: string;
+  department_name?: string;
+  roll_number?: string;
+  employee_id?: string;
+  profile_photo_url?: string;
+  is_active: boolean;
+  created_at: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface SupabaseAuthContextType {
+  user: UserProfile | null;
+  session: Session | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  signUp: (email: string, password: string, userData?: any) => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
+  user: null,
+  session: null,
+  loading: true,
+  signIn: async () => {},
+  signOut: async () => {},
+  signUp: async () => {},
+  refreshUser: async () => {},
+});
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(SupabaseAuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within a SupabaseAuthProvider');
   }
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
+export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const switchRole = async (newRole: string) => {
-  try {
-    // TODO: call your Supabase function to update the user's role
-  } catch (err) {
-    console.error('Failed switching role:', err);
-  }
-};
 
-const logout = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (err) {
-    console.error('Logout error:', err);
-  }
-};
-  
-  const createProfileIfMissing = async (authUser: User) => {
+  const loadUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
-      console.log('Creating profile for user:', authUser.email);
-      
-      // First check if profile exists
-      const { data: existingProfile, error: profileCheckError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
+        .select(`
+          *,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
+        .eq('id', userId)
+        .single();
 
-      if (profileCheckError) {
-        console.error('Error checking existing profile:', profileCheckError);
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return null;
       }
 
-      if (existingProfile) {
-        console.log('Profile already exists:', existingProfile);
-        return existingProfile;
-      }
-
-      // Get user metadata or use defaults
-      const metadata = authUser.user_metadata || {};
-      const role = metadata.role || 'admin';
-      const departmentString = metadata.department || 'ADMIN';
-      
-      // Ensure department matches current database schema
-      const validDepartments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT', 'ADMIN'];
-      const department: Department = validDepartments.includes(departmentString as Department) 
-        ? departmentString as Department 
-        : 'ADMIN';
-
-      console.log('Creating new profile with data:', {
-        role,
-        department,
-        name: metadata.name || authUser.email?.split('@')[0],
-        email: authUser.email
-      });
-
-      // Create the profile
-      const { data: newProfile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authUser.id,
-          name: metadata.name || authUser.email?.split('@')[0] || 'User',
-          email: authUser.email,
-          role: role,
-          department: department,
-          employee_id: metadata.employee_id || null,
-          roll_number: metadata.roll_number || null,
-          is_active: true
-        })
-        .select()
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        // Return a basic profile object so user can still access the app
-        return {
-          id: authUser.id,
-          name: authUser.email?.split('@')[0] || 'User',
-          email: authUser.email,
-          role: 'admin',
-          department: 'ADMIN' as Department,
-          employee_id: null,
-          roll_number: null,
-          is_active: true
-        };
-      }
-
-      console.log('Profile created successfully:', newProfile);
-      return newProfile;
-
-    } catch (error) {
-      console.error('Error in createProfileIfMissing:', error);
-      
-      // Return a basic profile so the user can still access the app
       return {
-        id: authUser.id,
-        name: authUser.email?.split('@')[0] || 'User',
-        email: authUser.email,
-        role: 'admin',
-        department: 'ADMIN' as Department,
-        employee_id: null,
-        roll_number: null,
-        is_active: true
+        ...data,
+        department_name: data.departments?.name || 'Unknown'
       };
+    } catch (error) {
+      console.error('Error in loadUserProfile:', error);
+      return null;
+    }
+  };
+
+  const refreshUser = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) {
+      const profile = await loadUserProfile(currentSession.user.id);
+      setUser(profile);
+      setSession(currentSession);
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+    // Get initial session
+    const getInitialSession = async () => {
+      setLoading(true);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
         
-        if (!isMounted) return;
-        
-        setSession(session);
-        
-        if (session?.user) {
-          try {
-            console.log('Processing user session for:', session.user.email);
-            
-            // Try to get existing profile or create one
-            const profile = await createProfileIfMissing(session.user);
-            
-            if (profile && isMounted) {
-              const appUser: AppUser = {
-                id: profile.id,
-                name: profile.name,
-                email: profile.email,
-                role: profile.role as UserRole,
-                department: profile.department as Department,
-                rollNumber: profile.roll_number,
-                studentId: profile.role === 'student' ? profile.id : undefined,
-                facultyId: profile.role === 'faculty' ? profile.id : undefined,
-                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
-              };
-              
-              console.log('User profile set successfully:', appUser);
-              setUser(appUser);
-            }
-          } catch (error) {
-            console.error('Error setting up user profile:', error);
-            
-            if (isMounted) {
-              // Set a basic user so they can still access the app
-              const basicUser: AppUser = {
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'User',
-                email: session.user.email || '',
-                role: 'admin',
-                department: 'ADMIN',
-                rollNumber: null,
-                studentId: undefined,
-                facultyId: undefined,
-                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${session.user.email}`
-              };
-              setUser(basicUser);
-            }
-          }
-        } else {
-          setUser(null);
+        if (initialSession?.user) {
+          const profile = await loadUserProfile(initialSession.user.id);
+          setUser(profile);
         }
-        
-        if (isMounted) {
-          setLoading(false);
-        }
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+      } finally {
+        setLoading(false);
       }
-    );
+    };
 
-    // Check for existing session and resolve loading immediately if no session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Error getting session:', error);
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('Auth state changed:', event, currentSession?.user?.email);
+      
+      setSession(currentSession);
+      
+      if (currentSession?.user) {
+        const profile = await loadUserProfile(currentSession.user.id);
+        setUser(profile);
+      } else {
+        setUser(null);
       }
       
-      if (!session && isMounted) {
-        console.log('No existing session found, stopping loading');
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
-    // Set a timeout to prevent infinite loading
-    const loadingTimeout = setTimeout(() => {
-      if (isMounted) {
-        console.log('Loading timeout reached, forcing stop');
-        setLoading(false);
-      }
-    }, 3000);
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-      clearTimeout(loadingTimeout);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, userData: any) => {
-    console.log('Signing up user with data:', userData);
-    
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    setUser(null);
+    setSession(null);
+  };
+
+  const signUp = async (email: string, password: string, userData?: any) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -235,72 +151,22 @@ const logout = async () => {
         data: userData
       }
     });
-
-    if (!error) {
-      console.log('Signup successful, marking invitation as used for:', email);
-      // Mark invitation as used
-      const { error: markError } = await supabase.rpc('mark_invitation_used', { 
-        invitation_email: email 
-      });
-      
-      if (markError) {
-        console.error('Error marking invitation as used:', markError);
-      }
-    }
-
-    return { error };
+    if (error) throw error;
   };
 
-  const signIn = async (email: string, password: string) => {
-    console.log('Attempting to sign in with email:', email);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      console.error('Sign in error:', error);
-    } else {
-      console.log('Sign in successful for:', email);
-    }
-    
-    return { error };
-  };
-
-  const signOut = async () => {
-    console.log('Signing out user');
-    const { error } = await supabase.auth.signOut();
-    return { error };
-  };
-
-  const getInvitationDetails = async (email: string) => {
-    console.log('Getting invitation details for:', email);
-    const { data, error } = await supabase.rpc('get_invitation_details', {
-      invitation_email: email
-    });
-    
-    if (error) {
-      console.error('Error getting invitation details:', error);
-    } else {
-      console.log('Invitation details retrieved:', data);
-    }
-    
-    return { data: data?.[0], error };
-  };
-
- return (
-  <AuthContext.Provider value={{
+  const value: SupabaseAuthContextType = {
     user,
     session,
     loading,
-    signUp,
     signIn,
     signOut,
-    switchRole,     // ← newly added
-    logout,         // ← newly added
-    getInvitationDetails,
-  }}>
-    {children}
-  </AuthContext.Provider>
-);
+    signUp,
+    refreshUser,
+  };
+
+  return (
+    <SupabaseAuthContext.Provider value={value}>
+      {children}
+    </SupabaseAuthContext.Provider>
+  );
 };

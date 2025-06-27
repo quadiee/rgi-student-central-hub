@@ -15,7 +15,7 @@ type Department = Database['public']['Enums']['department'];
 interface PendingInvite {
   id: string;
   email: string;
-  created_at: string;
+  invited_at: string;
   role?: string;
   department?: string;
 }
@@ -60,7 +60,7 @@ const UserInvitationManager: React.FC = () => {
       const invites = (data || []).map(invite => ({
         id: invite.id,
         email: invite.email,
-        created_at: invite.invited_at || invite.created_at,
+        invited_at: invite.invited_at || new Date().toISOString(),
         role: invite.role || "",
         department: invite.department || ""
       }));
@@ -78,7 +78,6 @@ const UserInvitationManager: React.FC = () => {
 
   useEffect(() => {
     loadPendingInvites();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSendInvitation = async (e: React.FormEvent) => {
@@ -98,7 +97,7 @@ const UserInvitationManager: React.FC = () => {
           employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
           invited_by: user.id,
           is_active: true,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         })
         .select()
         .single();
@@ -303,7 +302,7 @@ const UserInvitationManager: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">{invite.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.role}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.department}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.created_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.invited_at).toLocaleDateString()}</td>
                   </tr>
                 ))
               )}

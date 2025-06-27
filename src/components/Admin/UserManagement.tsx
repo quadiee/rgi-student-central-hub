@@ -10,7 +10,8 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
-  department: string;
+  department_id: string;
+  department_name?: string;
   roll_number?: string;
   employee_id?: string;
   is_active: boolean;
@@ -41,7 +42,21 @@ const UserManagement: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email, role, department, roll_number, employee_id, is_active, created_at')
+        .select(`
+          id, 
+          name, 
+          email, 
+          role, 
+          department_id, 
+          roll_number, 
+          employee_id, 
+          is_active, 
+          created_at,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -50,7 +65,11 @@ const UserManagement: React.FC = () => {
         throw error;
       }
       
-      const usersData = data || [];
+      const usersData = (data || []).map(user => ({
+        ...user,
+        department_name: user.departments?.name || 'Unknown'
+      }));
+      
       setUsers(usersData);
       
       const total = usersData.length;
@@ -238,7 +257,7 @@ const UserManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.department}
+                    {user.department_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

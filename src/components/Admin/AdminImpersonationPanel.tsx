@@ -11,7 +11,8 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
-  department: string;
+  department_id: string;
+  department_name?: string;
   is_active: boolean;
 }
 
@@ -37,14 +38,30 @@ const AdminImpersonationPanel: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email, role, department, is_active')
+        .select(`
+          id, 
+          name, 
+          email, 
+          role, 
+          department_id, 
+          is_active,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
         .eq('is_active', true)
         .neq('id', user?.id) // Exclude current admin user
         .order('name');
 
       if (error) throw error;
       
-      setUsers(data || []);
+      const usersData = (data || []).map(user => ({
+        ...user,
+        department_name: user.departments?.name || 'Unknown'
+      }));
+      
+      setUsers(usersData);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -75,26 +92,30 @@ const AdminImpersonationPanel: React.FC = () => {
   };
 
   const handleImpersonate = async (targetUser: UserProfile) => {
-    const success = await switchToUserView(targetUser.id, targetUser.role);
-    if (success) {
-      toast({
-        title: "Impersonation Started",
-        description: `Now viewing as ${targetUser.name} (${targetUser.role})`,
-      });
+    if (switchToUserView) {
+      const success = await switchToUserView(targetUser.id, targetUser.role);
+      if (success) {
+        toast({
+          title: "Impersonation Started",
+          description: `Now viewing as ${targetUser.name} (${targetUser.role})`,
+        });
+      }
     }
   };
 
   const handleExitImpersonation = async () => {
-    const success = await exitImpersonation();
-    if (success) {
-      toast({
-        title: "Impersonation Ended",
-        description: "Returned to admin view",
-      });
+    if (exitImpersonation) {
+      const success = await exitImpersonation();
+      if (success) {
+        toast({
+          title: "Impersonation Ended",
+          description: "Returned to admin view",
+        });
+      }
     }
   };
 
-  if (!user || !hasPermission('impersonate_users')) {
+  if (!user || !hasPermission || !hasPermission('impersonate_users')) {
     return (
       <div className="text-center py-8">
         <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
@@ -216,7 +237,7 @@ const AdminImpersonationPanel: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {targetUser.department}
+                      {targetUser.department_name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Button
