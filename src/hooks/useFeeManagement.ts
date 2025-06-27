@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { SupabaseFeeService } from '../services/supabaseFeeService';
@@ -56,7 +57,7 @@ export const useFeeManagement = () => {
       } else {
         toast({
           title: "Payment Failed",
-          description: result.failure_reason || result.failureReason || "Payment processing failed",
+          description: result.failureReason || "Payment processing failed",
           variant: "destructive"
         });
         return false;

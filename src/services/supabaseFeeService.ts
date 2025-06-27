@@ -295,7 +295,7 @@ export class SupabaseFeeService {
       processedBy: dbRecord.processed_by!,
       receiptNumber: dbRecord.receipt_number,
       gateway: dbRecord.gateway,
-      failureReason: dbRecord.failure_reason
+      failureReason: dbRecord.failureReason
     };
   }
 
