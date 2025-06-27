@@ -19,6 +19,11 @@ interface PendingInvite {
   department?: string;
 }
 
+// Utility function to format date for Supabase/Postgres (no milliseconds, +00:00 timezone)
+function toSupabaseTimestamp(date: Date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+}
+
 const UserInvitationManager: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,7 +49,7 @@ const UserInvitationManager: React.FC = () => {
         .select('*')
         .eq('used_at', null)
         .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString());
+        .gt('expires_at', toSupabaseTimestamp(new Date()));
 
       if (error) {
         console.error('Error loading pending invites:', error);
@@ -77,6 +82,7 @@ const UserInvitationManager: React.FC = () => {
 
   useEffect(() => {
     loadPendingInvites();
+    // eslint-disable-next-line
   }, []);
 
   const handleSendInvitation = async (e: React.FormEvent) => {
@@ -96,7 +102,7 @@ const UserInvitationManager: React.FC = () => {
           employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
           invited_by: user.id,
           is_active: true,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          expires_at: toSupabaseTimestamp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
         })
         .select()
         .single();
