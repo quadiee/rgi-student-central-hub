@@ -1,4 +1,5 @@
-import { User, FeeRecord } from '../types';
+
+import { User, FeeRecord, PaymentTransaction, FeeReport } from '../types';
 import { mockUsers } from '../data/mockData';
 
 export interface FeePermissions {
@@ -91,16 +92,18 @@ export class FeeService {
     // Simulate payment processing
     const transaction: PaymentTransaction = {
       id: Date.now().toString(),
-      studentId: payment.studentId!,
-      feeRecordId: payment.feeRecordId!,
+      student_id: payment.student_id || payment.studentId!,
+      fee_record_id: payment.fee_record_id || payment.feeRecordId!,
       amount: payment.amount!,
-      paymentMethod: payment.paymentMethod!,
-      transactionId: `TXN${Date.now()}`,
+      payment_method: payment.payment_method || payment.paymentMethod!,
+      transaction_id: `TXN${Date.now()}`,
       status: Math.random() > 0.1 ? 'Success' : 'Failed',
-      processedAt: new Date().toISOString(),
-      processedBy: user.id,
-      receiptNumber: `RCP${Date.now()}`,
-      gateway: payment.paymentMethod === 'Online' ? 'RGCE_Gateway' : undefined
+      processed_at: new Date().toISOString(),
+      processed_by: user.id,
+      receipt_number: `RCP${Date.now()}`,
+      created_at: new Date().toISOString(),
+      gateway: (payment.payment_method || payment.paymentMethod) === 'Online' ? 'RGCE_Gateway' : undefined,
+      failure_reason: Math.random() <= 0.1 ? 'Insufficient funds' : undefined
     };
     
     return transaction;

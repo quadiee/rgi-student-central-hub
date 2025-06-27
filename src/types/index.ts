@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -89,6 +88,7 @@ export interface PaymentTransaction {
   feeRecordId?: string;
   studentId?: string;
   paymentMethod?: 'Online' | 'Cash' | 'UPI' | 'Cheque';
+  failureReason?: string;
 }
 
 export interface FeeReport {
