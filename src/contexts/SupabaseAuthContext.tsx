@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -6,7 +7,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'hod' | 'principal' | 'admin'; // Fixed: properly typed role
+  role: 'student' | 'hod' | 'principal' | 'admin';
   department_id: string;
   department_name?: string;
   roll_number?: string;
@@ -14,8 +15,8 @@ export interface UserProfile {
   profile_photo_url?: string;
   is_active: boolean;
   created_at: string;
-  // Add aliases for backward compatibility
-  avatar?: string;
+  // Make avatar required to match User interface
+  avatar: string;
   rollNumber?: string;
   department?: string;
 }
@@ -76,9 +77,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       return {
         ...data,
-        role: data.role as 'student' | 'hod' | 'principal' | 'admin', // Proper type casting
+        role: data.role as 'student' | 'hod' | 'principal' | 'admin',
         department_name: data.departments?.name || 'Unknown',
-        // Add aliases for backward compatibility
+        // Ensure avatar is always a string
         avatar: data.profile_photo_url || '',
         rollNumber: data.roll_number,
         department: data.departments?.code || 'Unknown'

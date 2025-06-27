@@ -35,6 +35,12 @@ export interface Student {
   emergencyContact: string;
   department: string;
   yearSection: string;
+  // Add missing fee-related properties
+  section?: string;
+  totalFees?: number;
+  paidAmount?: number;
+  dueAmount?: number;
+  feeStatus?: string;
 }
 
 export interface FeeRecord {
@@ -83,6 +89,22 @@ export interface PaymentTransaction {
   feeRecordId?: string;
   studentId?: string;
   paymentMethod?: 'Online' | 'Cash' | 'UPI' | 'Cheque';
+}
+
+export interface FeeReport {
+  id: string;
+  title: string;
+  type: 'Revenue' | 'Outstanding' | 'Collection';
+  generatedBy: string;
+  generatedAt: string;
+  dateRange: {
+    from: string;
+    to: string;
+  };
+  filters: any;
+  data: any;
+  totalRevenue: number;
+  totalOutstanding: number;
 }
 
 export type UserRole = 'student' | 'hod' | 'principal' | 'admin';

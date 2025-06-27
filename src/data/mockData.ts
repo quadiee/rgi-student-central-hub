@@ -1,4 +1,3 @@
-
 import { User, Student, FeeRecord } from '../types';
 
 export const mockUsers: User[] = [
@@ -60,7 +59,12 @@ export const mockStudents: Student[] = [
     address: '123 Main Street, Chennai',
     emergencyContact: '9876543212',
     department: 'CSE',
-    yearSection: '3rd Year A'
+    yearSection: '3rd Year A',
+    section: 'A',
+    totalFees: 120000,
+    paidAmount: 80000,
+    dueAmount: 40000,
+    feeStatus: 'Partial'
   },
   {
     id: '5',
@@ -77,7 +81,34 @@ export const mockStudents: Student[] = [
     address: '456 Park Avenue, Chennai',
     emergencyContact: '9876543215',
     department: 'CSE',
-    yearSection: '3rd Year A'
+    yearSection: '3rd Year A',
+    section: 'A',
+    totalFees: 120000,
+    paidAmount: 120000,
+    dueAmount: 0,
+    feeStatus: 'Paid'
+  },
+  {
+    id: '6',
+    name: 'Ravi Patel',
+    rollNumber: 'CSE2021003',
+    course: 'B.Tech Computer Science',
+    year: 3,
+    semester: 5,
+    email: 'ravi.patel@rgce.edu.in',
+    phone: '9876543216',
+    admissionDate: '2021-08-15',
+    guardianName: 'Suresh Patel',
+    guardianPhone: '9876543217',
+    address: '789 Garden Road, Chennai',
+    emergencyContact: '9876543218',
+    department: 'CSE',
+    yearSection: '3rd Year A',
+    section: 'A',
+    totalFees: 120000,
+    paidAmount: 0,
+    dueAmount: 120000,
+    feeStatus: 'Overdue'
   }
 ];
 

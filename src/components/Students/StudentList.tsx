@@ -1,32 +1,12 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, Users, Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { mockStudents } from '../../data/mockData';
 import { useIsMobile } from '../../hooks/use-mobile';
-
-interface StudentData {
-  id: string;
-  name: string;
-  rollNumber: string;
-  department: string;
-  year: number;
-  section: string;
-  yearSection: string;
-  email: string;
-  phone: string;
-  guardianName: string;
-  guardianPhone: string;
-  address: string;
-  profilePhoto?: string;
-  totalFees: number;
-  paidAmount: number;
-  dueAmount: number;
-  feeStatus: string;
-}
+import { Student } from '../../types';
 
 interface StudentListProps {
-  onViewStudent: (student: StudentData) => void;
+  onViewStudent: (student: Student) => void;
 }
 
 const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
@@ -47,9 +27,9 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
   const departments = [...new Set(mockStudents.map(s => s.department))];
   const years = ['1', '2', '3', '4'];
 
-  const getStudentStatus = (student: StudentData) => {
+  const getStudentStatus = (student: Student) => {
     if (student.dueAmount === 0) return { label: 'Paid', color: 'bg-green-100 text-green-800' };
-    if (student.paidAmount > 0) return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
+    if (student.paidAmount && student.paidAmount > 0) return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
     return { label: 'Pending', color: 'bg-red-100 text-red-800' };
   };
 
@@ -150,7 +130,7 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                     </div>
                     <div>
                       <span className="text-gray-500">Fee Due:</span>
-                      <p className="font-medium text-red-600">₹{student.dueAmount.toLocaleString()}</p>
+                      <p className="font-medium text-red-600">₹{(student.dueAmount || 0).toLocaleString()}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Status:</span>
@@ -222,7 +202,7 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                             {status.label}
                           </span>
                           <span className="text-xs text-gray-500">
-                            Due: ₹{student.dueAmount.toLocaleString()}
+                            Due: ₹{(student.dueAmount || 0).toLocaleString()}
                           </span>
                         </div>
                       </td>
