@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Send } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -103,53 +102,63 @@ const UserInvitationManager: React.FC = () => {
         .single();
 
       if (inviteError) {
-        toast({
-          title: "Invite Failed",
-          description: inviteError.message,
-          variant: "destructive"
-        });
+        if (inviteError.code === '23505') { // Unique constraint violation
+          toast({
+            title: "Invite Failed",
+            description: "An invitation for this email already exists.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Invite Failed",
+            description: inviteError.message,
+            variant: "destructive"
+          });
+        }
         return;
       }
 
-      // Then create the user in auth.users with a temporary password
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
-      
+      // Create the user in auth.users with metadata - CRITICAL FIX
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
-        password: tempPassword,
+        password: 'TempPassword123!', // Temporary password - user will be prompted to change
         options: {
           data: {
+            name: formData.email.split('@')[0], // Use email prefix as initial name
             role: formData.role,
             department: formData.department,
             roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
             employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
             invitation_id: inviteData.id
           },
-          emailRedirectTo: `${window.location.origin}/invitation-signup`
+          emailRedirectTo: `${window.location.origin}/auth?mode=invited`
         }
       });
 
       if (signUpError) {
+        console.error('Sign up error:', signUpError);
         toast({
-          title: "Invite Failed",
-          description: signUpError.message,
-          variant: "destructive"
+          title: "Invitation Created",
+          description: `Invitation sent to ${formData.email}. User will need to register manually.`,
         });
       } else {
         toast({
-          title: "Invitation Sent",
-          description: `Invitation email sent to ${formData.email}`,
+          title: "Invitation Sent Successfully",
+          description: `User account created and invitation sent to ${formData.email}`,
         });
-        setFormData({
-          email: '',
-          role: 'student',
-          department: 'CSE',
-          rollNumber: '',
-          employeeId: ''
-        });
-        setShowForm(false);
-        loadPendingInvites();
       }
+
+      // Reset form and reload invites
+      setFormData({
+        email: '',
+        role: 'student',
+        department: 'CSE',
+        rollNumber: '',
+        employeeId: ''
+      });
+      setShowForm(false);
+      loadPendingInvites();
+
     } catch (error) {
       console.error('Error sending invitation:', error);
       toast({

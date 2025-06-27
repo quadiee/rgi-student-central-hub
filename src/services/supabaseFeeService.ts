@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 import { User, FeeRecord } from '../types';
 import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions, FeeCategory } from '../types/feeTypes';
@@ -32,7 +31,7 @@ export class SupabaseFeeService {
         canModifyFeeStructure: false,
         canGenerateReports: true,
         canApproveWaivers: true,
-        allowedDepartments: [user.department]
+        allowedDepartments: [user.department_name || 'Unknown']
       },
       principal: {
         canViewAllStudents: true,
@@ -71,7 +70,10 @@ export class SupabaseFeeService {
             name,
             email,
             roll_number,
-            department
+            departments:department_id (
+              name,
+              code
+            )
           ),
           fee_structures (
             academic_year,
@@ -79,18 +81,20 @@ export class SupabaseFeeService {
             fee_categories
           )
         `)
-        .limit(100); // Add limit for performance
+        .limit(100);
 
       const permissions = this.getFeePermissions(user);
       
       if (permissions.canViewOwnFees && user.role === 'student') {
         query = query.eq('student_id', user.id);
       } else if (permissions.canViewDepartmentStudents && !permissions.canViewAllStudents) {
-        // More efficient query - get students from department first
+        // Use department_name for filtering
+        const departmentName = user.department_name || 'Unknown';
+        
         const { data: departmentStudents } = await supabase
           .from('profiles')
           .select('id')
-          .eq('department', user.department as any) // Cast to avoid strict type checking
+          .eq('departments.name', departmentName)
           .eq('role', 'student')
           .limit(50);
         
