@@ -1,9 +1,11 @@
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: 'student' | 'hod' | 'principal' | 'admin';
-  department: string;
+  department_id: string;
+  department_name?: string;
   avatar: string;
   rollNumber?: string;
   employeeId?: string;

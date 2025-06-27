@@ -10,13 +10,17 @@ const UserProfile: React.FC = () => {
   const [showRoleSwitch, setShowRoleSwitch] = useState(false);
 
   const handleRoleSwitch = (newRole: UserRole) => {
-    switchRole(newRole);
+    if (switchRole) {
+      switchRole(newRole);
+    }
     setShowRoleSwitch(false);
   };
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
-      logout();
+      if (logout) {
+        logout();
+      }
     }
   };
 
@@ -45,7 +49,7 @@ const UserProfile: React.FC = () => {
             <User className="w-5 h-5 text-gray-500" />
             <span className="text-gray-700">Department</span>
           </div>
-          <span className="text-gray-900 font-medium">{user.department}</span>
+          <span className="text-gray-900 font-medium">{user.department_name || 'Unknown'}</span>
         </div>
 
         {user.rollNumber && (

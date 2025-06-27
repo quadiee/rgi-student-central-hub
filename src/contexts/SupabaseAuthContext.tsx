@@ -21,20 +21,22 @@ interface SupabaseAuthContextType {
   user: UserProfile | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  signUp: (email: string, password: string, userData?: any) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error?: any }>;
+  signOut: () => Promise<{ error?: any }>;
+  signUp: (email: string, password: string, userData?: any) => Promise<{ error?: any }>;
   refreshUser: () => Promise<void>;
+  getInvitationDetails: (email: string) => Promise<{ data?: any; error?: any }>;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   user: null,
   session: null,
   loading: true,
-  signIn: async () => {},
-  signOut: async () => {},
-  signUp: async () => {},
+  signIn: async () => ({}),
+  signOut: async () => ({}),
+  signUp: async () => ({}),
   refreshUser: async () => {},
+  getInvitationDetails: async () => ({}),
 });
 
 export const useAuth = () => {
@@ -76,6 +78,22 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
       return null;
+    }
+  };
+
+  const getInvitationDetails = async (email: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_invitation_details', {
+        invitation_email: email
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      return { data: data?.[0] || null };
+    } catch (error) {
+      return { error };
     }
   };
 
@@ -133,14 +151,16 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       email,
       password,
     });
-    if (error) throw error;
+    return { error };
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setUser(null);
-    setSession(null);
+    if (!error) {
+      setUser(null);
+      setSession(null);
+    }
+    return { error };
   };
 
   const signUp = async (email: string, password: string, userData?: any) => {
@@ -151,7 +171,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         data: userData
       }
     });
-    if (error) throw error;
+    return { error };
   };
 
   const value: SupabaseAuthContextType = {
@@ -162,6 +182,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     signOut,
     signUp,
     refreshUser,
+    getInvitationDetails,
   };
 
   return (

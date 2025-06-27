@@ -38,9 +38,9 @@ const EnhancedHODDashboard: React.FC = () => {
         setLoading(true);
         // Mock data since we don't have the enhanced fee service
         const mockDepartmentSummary: HODDepartmentSummary = {
-          department_id: user.id,
-          department_name: user.department === 'CSE' ? 'Computer Science Engineering' : user.department,
-          department_code: user.department,
+          department_id: user.department_id,
+          department_name: user.department_name === 'CSE' ? 'Computer Science Engineering' : user.department_name || 'Unknown',
+          department_code: user.department_name || 'CSE',
           total_students: 120,
           total_department_fees: 6000000,
           total_collected: 4500000,

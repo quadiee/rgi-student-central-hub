@@ -28,6 +28,8 @@ interface AuthContextType {
   isImpersonating?: boolean;
   hasPermission?: (permission: string) => boolean;
   refreshUser: () => Promise<void>;
+  switchRole?: (role: string) => void;
+  logout?: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -179,6 +181,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const switchRole = (role: string) => {
+    if (user) {
+      setUser({ ...user, role });
+    }
+  };
+
+  const logout = () => {
+    signOut();
+  };
+
   const value: AuthContextType = {
     user,
     loading,
@@ -189,6 +201,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isImpersonating,
     hasPermission,
     refreshUser,
+    switchRole,
+    logout,
   };
 
   return (
