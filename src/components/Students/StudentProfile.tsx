@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, Clock, FileText, Edit, DollarSign } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, FileText, Edit, DollarSign } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Student } from '../../types';
+import { Student } from '../../types/user-student-fees';
 import { mockFeeRecords } from '../../data/mockData';
 import { useIsMobile } from '../../hooks/use-mobile';
 
@@ -49,28 +48,28 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
         <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} items-start space-x-0 ${!isMobile && 'space-x-6'} ${isMobile && 'space-y-4'}`}>
           <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
             <span className="text-white text-2xl font-bold">
-              {student.name.split(' ').map(n => n[0]).join('')}
+              {student.name?.split(' ').map(n => n[0]).join('') || '-'}
             </span>
           </div>
           
           <div className="flex-1">
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">{student.name}</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">{student.name || '-'}</h3>
             <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4 text-sm`}>
               <div className="flex items-center space-x-2">
                 <span className="text-gray-500">Roll Number:</span>
-                <span className="font-medium">{student.rollNumber}</span>
+                <span className="font-medium">{student.rollNumber || '-'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-gray-400" />
-                <span className="font-medium">{student.email}</span>
+                <span className="font-medium">{student.email || '-'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-gray-500">Department:</span>
-                <span className="font-medium">{student.department}</span>
+                <span className="font-medium">{student.department || '-'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-gray-500">Year & Section:</span>
-                <span className="font-medium">{student.yearSection}</span>
+                <span className="font-medium">{student.yearSection || '-'}</span>
               </div>
             </div>
           </div>
@@ -181,10 +180,10 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                 <tbody className="divide-y divide-gray-200">
                   {studentFeeRecords.map((record, index) => (
                     <tr key={index}>
-                      <td className="px-4 py-2 text-sm text-gray-900">{record.academicYear}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{record.semester}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{record.feeType}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">₹{record.amount.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{record.academicYear || '-'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{record.semester || '-'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{record.feeType || '-'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">₹{record.amount?.toLocaleString() || '0'}</td>
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           record.status === 'Paid' ? 'bg-green-100 text-green-800' :
@@ -212,17 +211,17 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                   <div className="flex items-center space-x-2">
                     <Phone className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-600">Phone:</span>
-                    <span className="font-medium">{student.phone}</span>
+                    <span className="font-medium">{student.phone || '-'}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Mail className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-600">Email:</span>
-                    <span className="font-medium">{student.email}</span>
+                    <span className="font-medium">{student.email || '-'}</span>
                   </div>
                   <div className="flex items-start space-x-2">
                     <MapPin className="w-4 h-4 text-gray-400 mt-1" />
                     <span className="text-gray-600">Address:</span>
-                    <span className="font-medium">{student.address}</span>
+                    <span className="font-medium">{student.address || '-'}</span>
                   </div>
                 </div>
               </div>
@@ -232,11 +231,11 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                 <div className="space-y-3">
                   <div>
                     <span className="text-gray-600">Name:</span>
-                    <span className="font-medium ml-2">{student.guardianName}</span>
+                    <span className="font-medium ml-2">{student.guardianName || '-'}</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Phone:</span>
-                    <span className="font-medium ml-2">{student.guardianPhone}</span>
+                    <span className="font-medium ml-2">{student.guardianPhone || '-'}</span>
                   </div>
                 </div>
               </div>
