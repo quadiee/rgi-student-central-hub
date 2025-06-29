@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, Settings, Shield, Clock, LogOut, Edit2, Save, X } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -12,8 +11,8 @@ const UserProfile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: user?.name || '',
-    phone: '',
-    address: ''
+    phone: user?.phone || '',
+    address: user?.address || ''
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -38,7 +37,7 @@ const UserProfile: React.FC = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -76,8 +75,8 @@ const UserProfile: React.FC = () => {
   const handleCancelEdit = () => {
     setEditData({
       name: user?.name || '',
-      phone: '',
-      address: ''
+      phone: user?.phone || '',
+      address: user?.address || ''
     });
     setIsEditing(false);
   };
@@ -182,7 +181,7 @@ const UserProfile: React.FC = () => {
             <span className="text-gray-700">Member Since</span>
           </div>
           <span className="text-gray-900 font-medium">
-            {new Date(user.created_at).toLocaleDateString()}
+            {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
           </span>
         </div>
 
