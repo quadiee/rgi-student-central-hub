@@ -12,13 +12,12 @@ interface SuperAdminPanelProps {
   onUserManagementClick?: () => void;
 }
 
-// Utility: always grant all permissions to admin role
-function isAdmin(user: any) {
+function isAdmin(user) {
   return user?.role?.toLowerCase() === 'admin';
 }
 
 const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick }) => {
-  const { user, hasPermission: origHasPermission, isImpersonating, exitImpersonation } = useAuth();
+  const { user, hasPermission, isImpersonating, exitImpersonation } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
@@ -27,13 +26,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     pendingInvitations: 0
   });
   const { toast } = useToast();
-
-  // Wrap hasPermission to always return true for admin
-  const hasPermission = (perm: string) => {
-    if (isAdmin(user)) return true;
-    if (typeof origHasPermission === 'function') return origHasPermission(perm);
-    return false;
-  };
 
   useEffect(() => {
     loadSystemStats();
@@ -62,7 +54,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     }
   };
 
-  // Grant full access to admin
+  // Grant access if admin, or if hasPermission returns true
   if (!user || (!isAdmin(user) && !hasPermission('access_admin_panel'))) {
     return (
       <div className="text-center py-8">
@@ -207,7 +199,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Super Admin Panel</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
         {hasPermission('manage_users') && (
           <div className="flex items-center space-x-2 text-sm text-green-600">
             <Shield className="w-4 h-4" />
