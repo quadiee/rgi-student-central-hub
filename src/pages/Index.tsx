@@ -45,37 +45,59 @@ const AppContent = () => {
     }
   }, [user?.id]);
 
-  // Fetch all students once
+  // Fetch real students from database
   useEffect(() => {
     const fetchStudents = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, department, role')
-        .eq('role', 'student');
+      if (!user) return;
 
-      if (error) {
-        console.error('Error fetching students:', error);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id, 
+            name, 
+            email, 
+            roll_number,
+            role,
+            departments:department_id (
+              name,
+              code
+            )
+          `)
+          .eq('role', 'student')
+          .eq('is_active', true);
+
+        if (error) {
+          console.error('Error fetching students:', error);
+          // Use mock data as fallback
+          setStudents([
+            { id: '1', name: 'John Doe', email: 'john@example.com', department: 'CSE', role: 'student' },
+            { id: '2', name: 'Jane Smith', email: 'jane@example.com', department: 'ECE', role: 'student' },
+            { id: '3', name: 'Bob Wilson', email: 'bob@example.com', department: 'MECH', role: 'student' },
+          ]);
+        } else {
+          const simpleStudents: SimpleStudent[] = (data || []).map((profile: any) => ({
+            id: profile.id,
+            name: profile.name || 'Unknown',
+            email: profile.email,
+            department: profile.departments?.code || 'Unknown',
+            role: profile.role
+          }));
+          setStudents(simpleStudents);
+        }
+      } catch (error) {
+        console.error('Error in fetchStudents:', error);
         // Use mock data as fallback
         setStudents([
           { id: '1', name: 'John Doe', email: 'john@example.com', department: 'CSE', role: 'student' },
           { id: '2', name: 'Jane Smith', email: 'jane@example.com', department: 'ECE', role: 'student' },
           { id: '3', name: 'Bob Wilson', email: 'bob@example.com', department: 'MECH', role: 'student' },
         ]);
-      } else {
-        // Convert database response to SimpleStudent format
-        const simpleStudents: SimpleStudent[] = (data || []).map((profile: any) => ({
-          id: profile.id,
-          name: profile.name || 'Unknown',
-          email: profile.email,
-          department: profile.department || 'Unknown',
-          role: profile.role
-        }));
-        setStudents(simpleStudents);
       }
     };
 
     fetchStudents();
-  }, []);
+  }, [user]);
 
   const renderContent = () => {
     switch (activeTab) {

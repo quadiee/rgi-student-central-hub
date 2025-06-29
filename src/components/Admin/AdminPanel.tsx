@@ -1,17 +1,20 @@
+
 import React, { useState } from 'react';
-import { Users, Settings, Shield, MailPlus } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Users, Settings, Shield, MailPlus, UserCheck, Building2 } from 'lucide-react';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
-import UserInvitationManager from './UserInvitationManager'; // <-- Add this import
-// import EnhancedUserInvitationManager from './EnhancedUserInvitationManager'; // Optionally use the enhanced version
+import UserInvitationManager from './UserInvitationManager';
 
 const AdminPanel: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('super-admin');
 
-  if (!user || !hasPermission('access_admin_panel')) {
+  // Check if user has admin permissions
+  const hasAdminAccess = user?.role === 'admin' || user?.role === 'principal';
+
+  if (!user || !hasAdminAccess) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -24,7 +27,7 @@ const AdminPanel: React.FC = () => {
     { id: 'super-admin', label: 'Super Admin', icon: Shield },
     { id: 'user-management', label: 'User Management', icon: Users },
     { id: 'enhanced-users', label: 'Enhanced Users', icon: Settings },
-    { id: 'invite-users', label: 'Invite Users', icon: MailPlus }, // <-- Add Invite Users tab
+    { id: 'invite-users', label: 'Invite Users', icon: MailPlus },
   ];
 
   const renderContent = () => {
@@ -43,7 +46,6 @@ const AdminPanel: React.FC = () => {
               User Invitations
             </h3>
             <UserInvitationManager />
-            {/* Or use <EnhancedUserInvitationManager /> for bulk invites */}
           </div>
         );
       default:
@@ -63,7 +65,7 @@ const AdminPanel: React.FC = () => {
 
       {/* Section Tabs */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex space-x-1 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {sections.map((section) => {
             const Icon = section.icon;
             return (

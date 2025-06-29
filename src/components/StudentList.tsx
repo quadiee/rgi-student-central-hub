@@ -1,44 +1,141 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Users, Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { Button } from './ui/button';
-import { useIsMobile } from '../hooks/use-mobile';
+import { useAuth } from '../contexts/SupabaseAuthContext';
+import { supabase } from '../integrations/supabase/client';
+import { useToast } from './ui/use-toast';
 
 interface Student {
   id: string;
   name: string;
   email: string;
-  department: string;
-  role: string;
+  department_name?: string;
+  roll_number?: string;
+  is_active: boolean;
+  created_at: string;
 }
 
 interface StudentListProps {
-  students: Student[];
+  students?: Student[];
   onViewStudent: (student: Student) => void;
 }
 
-const StudentList: React.FC<StudentListProps> = ({ students, onViewStudent }) => {
+const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
-  const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
+  useEffect(() => {
+    if (user) {
+      loadStudents();
+      loadDepartments();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    filterStudents();
+  }, [students, searchTerm, selectedDepartment]);
+
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id, 
+          name, 
+          email, 
+          roll_number, 
+          is_active, 
+          created_at,
+          departments:department_id (
+            name
+          )
+        `)
+        .eq('role', 'student')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading students:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load students",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const studentsData = (data || []).map(student => ({
+        ...student,
+        department_name: student.departments?.name || 'Unknown'
+      }));
+
+      setStudents(studentsData);
+    } catch (error) {
+      console.error('Error in loadStudents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('name')
+        .eq('is_active', true);
+
+      if (!error && data) {
+        setDepartments(data.map(d => d.name));
+      }
+    } catch (error) {
+      console.error('Error loading departments:', error);
+    }
+  };
+
+  const filterStudents = () => {
+    let filtered = students;
     
-    return matchesSearch && matchesDepartment;
-  });
+    if (searchTerm) {
+      filtered = filtered.filter(student => 
+        student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.roll_number?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (selectedDepartment) {
+      filtered = filtered.filter(student => student.department_name === selectedDepartment);
+    }
+    
+    setFilteredStudents(filtered);
+  };
 
-  const departments = [...new Set(students.map(s => s.department))];
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
-          Student Management
-        </h2>
-        <Button className="flex items-center space-x-2" size={isMobile ? 'sm' : 'default'}>
+        <h2 className="text-2xl font-bold text-gray-800">Student Management</h2>
+        <Button className="flex items-center space-x-2">
           <Plus className="w-4 h-4" />
           <span>Add Student</span>
         </Button>
@@ -46,7 +143,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onViewStudent }) =>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'} gap-4`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
@@ -78,116 +175,89 @@ const StudentList: React.FC<StudentListProps> = ({ students, onViewStudent }) =>
 
       {/* Student List */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        {isMobile ? (
-          // Mobile Card View
-          <div className="p-4 space-y-4">
-            {filteredStudents.map(student => (
-              <div key={student.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium">
-                        {student.name.split(' ').map(n => n[0]).join('')}
-                      </span>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Student
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Roll Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Department
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredStudents.map(student => (
+                <tr key={student.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-medium">
+                          {student.name?.split(' ').map(n => n[0]).join('') || student.email[0].toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-900">{student.name || 'No Name'}</div>
+                        <div className="text-sm text-gray-500">{student.email}</div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{student.name}</h3>
-                      <p className="text-sm text-gray-500">{student.email}</p>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {student.roll_number || 'Not Set'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {student.department_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      student.is_active 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {student.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => onViewStudent(student)}
+                        className="flex items-center space-x-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>View</span>
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Edit className="w-3 h-3" />
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => onViewStudent(student)}
-                    className="flex items-center space-x-1"
-                  >
-                    <Eye className="w-3 h-3" />
-                    <span>View</span>
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-2 text-sm">
-                  <div>
-                    <span className="text-gray-500">Department:</span>
-                    <p className="font-medium">{student.department}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // Desktop Table View
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Student
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Department
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStudents.map(student => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">
-                            {student.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {student.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {student.department}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => onViewStudent(student)}
-                          className="flex items-center space-x-1"
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span>View</span>
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredStudents.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">
+              {searchTerm || selectedDepartment ? 'No students match your filters.' : 'No students found.'}
+            </p>
           </div>
         )}
       </div>
-
-      {filteredStudents.length === 0 && (
-        <div className="text-center py-12">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No students found matching the search criteria.</p>
-        </div>
-      )}
     </div>
   );
 };

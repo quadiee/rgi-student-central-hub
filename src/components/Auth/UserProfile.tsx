@@ -1,44 +1,148 @@
 
 import React, { useState } from 'react';
-import { User, Settings, Shield, Clock, LogOut } from 'lucide-react';
+import { User, Settings, Shield, Clock, LogOut, Edit2, Save, X } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useAuth } from '../../contexts/AuthContext';
-import { UserRole } from '../../types';
+import { Input } from '../ui/input';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { supabase } from '../../integrations/supabase/client';
+import { useToast } from '../ui/use-toast';
 
 const UserProfile: React.FC = () => {
-  const { user, switchRole, logout } = useAuth();
-  const [showRoleSwitch, setShowRoleSwitch] = useState(false);
+  const { user, signOut, refreshUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    name: user?.name || '',
+    phone: '',
+    address: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleRoleSwitch = (newRole: UserRole) => {
-    if (switchRole) {
-      switchRole(newRole);
-    }
-    setShowRoleSwitch(false);
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('Are you sure you want to logout?')) {
-      if (logout) {
-        logout();
+      try {
+        await signOut();
+        toast({
+          title: "Success",
+          description: "Logged out successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to logout",
+          variant: "destructive",
+        });
       }
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: editData.name,
+          phone: editData.phone,
+          address: editData.address,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      await refreshUser();
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditData({
+      name: user?.name || '',
+      phone: '',
+      address: ''
+    });
+    setIsEditing(false);
+  };
+
   if (!user) return null;
 
-  const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'principal':
+        return 'bg-purple-100 text-purple-800';
+      case 'hod':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-green-100 text-green-800';
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 max-w-md mx-auto">
       <div className="text-center mb-6">
         <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-white text-2xl font-bold">
-            {user.name.split(' ').map(n => n[0]).join('')}
-          </span>
+          {user.profile_photo_url ? (
+            <img 
+              src={user.profile_photo_url} 
+              alt={user.name}
+              className="w-20 h-20 rounded-full object-cover"
+            />
+          ) : (
+            <span className="text-white text-2xl font-bold">
+              {user.name?.split(' ').map(n => n[0]).join('') || user.email[0].toUpperCase()}
+            </span>
+          )}
         </div>
-        <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
-        <p className="text-gray-600">{user.email}</p>
-        <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium capitalize">
+        
+        {isEditing ? (
+          <div className="space-y-3">
+            <Input
+              value={editData.name}
+              onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Full Name"
+              className="text-center"
+            />
+            <Input
+              value={editData.phone}
+              onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Phone Number"
+              className="text-center"
+            />
+            <Input
+              value={editData.address}
+              onChange={(e) => setEditData(prev => ({ ...prev, address: e.target.value }))}
+              placeholder="Address"
+              className="text-center"
+            />
+          </div>
+        ) : (
+          <>
+            <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
+            <p className="text-gray-600">{user.email}</p>
+          </>
+        )}
+        
+        <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium capitalize ${getRoleColor(user.role)}`}>
           {user.role}
         </span>
       </div>
@@ -52,59 +156,74 @@ const UserProfile: React.FC = () => {
           <span className="text-gray-900 font-medium">{user.department_name || 'Unknown'}</span>
         </div>
 
-        {user.rollNumber && (
+        {user.roll_number && (
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-3">
               <Shield className="w-5 h-5 text-gray-500" />
               <span className="text-gray-700">Roll Number</span>
             </div>
-            <span className="text-gray-900 font-medium">{user.rollNumber}</span>
+            <span className="text-gray-900 font-medium">{user.roll_number}</span>
           </div>
         )}
 
-        {user.employeeId && (
+        {user.employee_id && (
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-3">
               <Shield className="w-5 h-5 text-gray-500" />
               <span className="text-gray-700">Employee ID</span>
             </div>
-            <span className="text-gray-900 font-medium">{user.employeeId}</span>
+            <span className="text-gray-900 font-medium">{user.employee_id}</span>
           </div>
         )}
 
-        <div className="border-t pt-4">
-          <Button
-            onClick={() => setShowRoleSwitch(!showRoleSwitch)}
-            variant="outline"
-            className="w-full mb-3"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Switch Role (Demo)
-          </Button>
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <Clock className="w-5 h-5 text-gray-500" />
+            <span className="text-gray-700">Member Since</span>
+          </div>
+          <span className="text-gray-900 font-medium">
+            {new Date(user.created_at).toLocaleDateString()}
+          </span>
+        </div>
 
-          {showRoleSwitch && (
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {roles.map(role => (
-                <Button
-                  key={role}
-                  onClick={() => handleRoleSwitch(role)}
-                  variant={user.role === role ? "default" : "outline"}
-                  size="sm"
-                  className="capitalize"
-                >
-                  {role}
-                </Button>
-              ))}
+        <div className="border-t pt-4 space-y-3">
+          {isEditing ? (
+            <div className="flex space-x-2">
+              <Button
+                onClick={handleSaveProfile}
+                disabled={loading}
+                className="flex-1 flex items-center justify-center space-x-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{loading ? 'Saving...' : 'Save'}</span>
+              </Button>
+              <Button
+                onClick={handleCancelEdit}
+                variant="outline"
+                className="flex-1 flex items-center justify-center space-x-2"
+              >
+                <X className="w-4 h-4" />
+                <span>Cancel</span>
+              </Button>
             </div>
+          ) : (
+            <Button
+              onClick={() => setIsEditing(true)}
+              variant="outline"
+              className="w-full flex items-center justify-center space-x-2"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>Edit Profile</span>
+            </Button>
           )}
 
           <Button
             onClick={handleLogout}
             variant="destructive"
-            className="w-full"
+            className="w-full flex items-center justify-center space-x-2"
           >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
           </Button>
         </div>
       </div>

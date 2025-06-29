@@ -1,141 +1,95 @@
 
 import React, { useState } from 'react';
-import { Bell, Menu, User, Search, LogOut } from 'lucide-react';
+import { Bell, Settings, User, LogOut, Menu } from 'lucide-react';
+import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { useIsMobile } from '../../hooks/use-mobile';
-import NotificationCenter from '../Notifications/NotificationCenter';
-import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
+import UserProfile from '../Auth/UserProfile';
 
 interface HeaderProps {
   onMenuClick?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { user, signOut } = useAuth();
-  const isMobile = useIsMobile();
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
-  const getDepartmentName = (deptCode: string) => {
-    return DEPARTMENT_CODES[deptCode as keyof typeof DEPARTMENT_CODES] || deptCode;
-  };
+  const { user } = useAuth();
+  const [showProfile, setShowProfile] = useState(false);
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center space-x-4">
-          {isMobile && (
-            <button
-              onClick={onMenuClick}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Menu className="w-6 h-6 text-gray-600" />
-            </button>
-          )}
-          
-          {!isMobile && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search students, courses, transactions..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {isMobile && (
-            <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <Search className="w-5 h-5 text-gray-600" />
-            </button>
-          )}
-
-          {/* Notifications */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-            
-            {showNotifications && (
-              <div className="absolute right-0 top-12 w-80 max-w-sm">
-                <NotificationCenter onClose={() => setShowNotifications(false)} />
-              </div>
+    <>
+      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {onMenuClick && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onMenuClick}
+                className="md:hidden"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
             )}
+            <div>
+              <h1 className="text-xl font-semibold text-gray-800">
+                Welcome back, {user?.name || user?.email}
+              </h1>
+              <p className="text-sm text-gray-600 capitalize">
+                {user?.role} Dashboard
+              </p>
+            </div>
           </div>
 
-          {/* User Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                3
+              </span>
+            </Button>
+
+            <Button variant="ghost" size="sm">
+              <Settings className="w-5 h-5" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowProfile(true)}
+              className="flex items-center space-x-2"
             >
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  {user?.name?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase()}
                 </span>
               </div>
-              {!isMobile && (
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-800">{user?.name || 'User'}</p>
-                  <p className="text-xs text-gray-600">
-                    {user?.role && (
-                      <span className="capitalize">{user.role}</span>
-                    )}
-                    {user?.department && (
-                      <span className="text-gray-400"> • {user.department}</span>
-                    )}
-                  </p>
-                </div>
-              )}
-            </button>
-
-            {showUserMenu && (
-              <div className="absolute right-0 top-12 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-800">{user?.name}</p>
-                  <p className="text-xs text-gray-600">{user?.email}</p>
-                  {user?.department && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {getDepartmentName(user.department)}
-                    </p>
-                  )}
-                  {user?.rollNumber && (
-                    <p className="text-xs text-gray-500">Roll No: {user.rollNumber}</p>
-                  )}
-                </div>
-                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
-                  <User className="w-4 h-4" />
-                  <span>Profile & Settings</span>
-                </button>
-                <div className="px-4 py-2 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2">{INSTITUTION.name}</p>
-                  <p className="text-xs text-gray-400">
-                    Support: {INSTITUTION.contact.emails[0]}
-                  </p>
-                </div>
-                <button 
-                  onClick={handleSignOut}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 border-t border-gray-100"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            )}
+              <span className="hidden md:block text-sm font-medium">
+                {user?.name || user?.email}
+              </span>
+            </Button>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Profile Modal */}
+      {showProfile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-semibold">Profile Settings</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowProfile(false)}
+              >
+                ×
+              </Button>
+            </div>
+            <div className="p-4">
+              <UserProfile />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
