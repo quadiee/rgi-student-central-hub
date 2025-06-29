@@ -12,16 +12,28 @@ interface SuperAdminPanelProps {
   onUserManagementClick?: () => void;
 }
 
+// Utility: always grant all permissions to admin role
+function isAdmin(user: any) {
+  return user?.role?.toLowerCase() === 'admin';
+}
+
 const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick }) => {
-  const { user, isImpersonating, exitImpersonation } = useAuth();
+  const { user, hasPermission: origHasPermission, isImpersonating, exitImpersonation } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
-    totalDepartments: 0,
+    totaldepartment_ids: 0,
     pendingInvitations: 0
   });
   const { toast } = useToast();
+
+  // Wrap hasPermission to always return true for admin
+  const hasPermission = (perm: string) => {
+    if (isAdmin(user)) return true;
+    if (typeof origHasPermission === 'function') return origHasPermission(perm);
+    return false;
+  };
 
   useEffect(() => {
     loadSystemStats();
@@ -29,20 +41,20 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
 
   const loadSystemStats = async () => {
     try {
-      const [usersQuery, departmentsQuery, invitationsQuery] = await Promise.all([
+      const [usersQuery, department_idsQuery, invitationsQuery] = await Promise.all([
         supabase.from('profiles').select('id, is_active'),
-        supabase.from('departments').select('id').eq('is_active', true),
+        supabase.from('department_ids').select('id').eq('is_active', true),
         supabase.from('user_invitations').select('id').eq('is_active', true).is('used_at', null)
       ]);
 
       const users = usersQuery.data || [];
-      const departments = departmentsQuery.data || [];
+      const department_ids = department_idsQuery.data || [];
       const invitations = invitationsQuery.data || [];
 
       setSystemStats({
         totalUsers: users.length,
         activeUsers: users.filter(u => u.is_active).length,
-        totalDepartments: departments.length,
+        totaldepartment_ids: department_ids.length,
         pendingInvitations: invitations.length
       });
     } catch (error) {
@@ -50,8 +62,8 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     }
   };
 
-  // Allow "admin" to have all superadmin privileges
-  if (!user || user.role?.toLowerCase() !== 'admin') {
+  // Grant full access to admin
+  if (!user || !isAdmin(user) && !hasPermission('access_admin_panel')) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -97,8 +109,8 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
               <div className="bg-purple-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-600 text-sm font-medium">Departments</p>
-                    <p className="text-2xl font-bold text-purple-900">{systemStats.totalDepartments}</p>
+                    <p className="text-purple-600 text-sm font-medium">department_ids</p>
+                    <p className="text-2xl font-bold text-purple-900">{systemStats.totaldepartment_ids}</p>
                   </div>
                   <Building className="w-8 h-8 text-purple-600" />
                 </div>
@@ -195,11 +207,13 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
-        <div className="flex items-center space-x-2 text-sm text-green-600">
-          <Shield className="w-4 h-4" />
-          <span>Administrator Access</span>
-        </div>
+        <h2 className="text-2xl font-bold text-gray-800">Super Admin Panel</h2>
+        {hasPermission('manage_users') && (
+          <div className="flex items-center space-x-2 text-sm text-green-600">
+            <Shield className="w-4 h-4" />
+            <span>Full System Access</span>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-lg p-6">
