@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Plus, Save, Trash2 } from 'lucide-react';
+import { Shield, Users } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,7 +26,7 @@ interface RolePermission {
 }
 
 const UserRoleManager: React.FC = () => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
@@ -42,7 +41,7 @@ const UserRoleManager: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       const [rolesResponse, permissionsResponse, rolePermissionsResponse] = await Promise.all([
         supabase.from('roles').select('*').eq('is_active', true),
         supabase.from('permissions').select('*'),
@@ -56,7 +55,7 @@ const UserRoleManager: React.FC = () => {
       setRoles(rolesResponse.data || []);
       setPermissions(permissionsResponse.data || []);
       setRolePermissions(rolePermissionsResponse.data || []);
-      
+
       if (rolesResponse.data && rolesResponse.data.length > 0) {
         setSelectedRole(rolesResponse.data[0].id);
       }
@@ -131,7 +130,9 @@ const UserRoleManager: React.FC = () => {
     return acc;
   }, {} as Record<string, Permission[]>);
 
-  if (!hasPermission('manage_roles')) {
+  // Give all admin/principal users permission to manage roles
+  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
+  if (!isAdmin && !hasPermission('manage_roles')) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
