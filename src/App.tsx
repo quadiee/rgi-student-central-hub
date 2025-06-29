@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Toaster } from "./components/ui/toaster";
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -14,8 +14,8 @@ import { useAuth } from './contexts/SupabaseAuthContext';
 import InvitationSignup from './components/Auth/InvitationSignup';
 import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Student } from './user-student-fee'; // <-- import your canonical type
-import { supabase } from './integrations/supabase/client'; // adjust import as needed
+import { Student } from './types/user-student-fee'; // Adjust path if your types are elsewhere
+import { supabase } from './integrations/supabase/client';
 
 const queryClient = new QueryClient();
 
@@ -26,13 +26,13 @@ function MainAppContent() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
 
-  // Fetch from Supabase or use mock data
+  // Fetch student records from Supabase only (no mock data)
   useEffect(() => {
     const fetchStudents = async () => {
       setLoadingStudents(true);
       try {
         const { data, error } = await supabase
-          .from('students') // <-- your Supabase table name
+          .from('profiles') // Use 'profiles' as your student/user table
           .select(`
             id,
             name,
@@ -57,114 +57,14 @@ function MainAppContent() {
             dueAmount,
             feeStatus
           `);
-        if (error || !data || data.length === 0) {
-          // fallback to mock data
-          setStudents([
-            {
-              id: '1',
-              name: 'John Doe',
-              rollNumber: '1001',
-              course: 'BTech',
-              year: 4,
-              semester: 8,
-              email: 'john@example.com',
-              phone: '9000000001',
-              profileImage: '',
-              admissionDate: '2020-08-01',
-              guardianName: 'Mr. Doe',
-              guardianPhone: '9000001111',
-              address: '123 Main St',
-              bloodGroup: 'O+',
-              emergencyContact: '9000002222',
-              department: 'CSE',
-              yearSection: 'IV-A',
-              section: 'A',
-              totalFees: 50000,
-              paidAmount: 50000,
-              dueAmount: 0,
-              feeStatus: 'Paid'
-            },
-            {
-              id: '2',
-              name: 'Jane Smith',
-              rollNumber: '1002',
-              course: 'BTech',
-              year: 4,
-              semester: 8,
-              email: 'jane@example.com',
-              phone: '9000000002',
-              profileImage: '',
-              admissionDate: '2020-08-01',
-              guardianName: 'Mrs. Smith',
-              guardianPhone: '9000003333',
-              address: '456 Main St',
-              bloodGroup: 'A+',
-              emergencyContact: '9000004444',
-              department: 'ECE',
-              yearSection: 'IV-B',
-              section: 'B',
-              totalFees: 50000,
-              paidAmount: 25000,
-              dueAmount: 25000,
-              feeStatus: 'Partial'
-            },
-            {
-              id: '3',
-              name: 'Bob Wilson',
-              rollNumber: '1003',
-              course: 'BTech',
-              year: 4,
-              semester: 8,
-              email: 'bob@example.com',
-              phone: '9000000003',
-              profileImage: '',
-              admissionDate: '2020-08-01',
-              guardianName: 'Mr. Wilson',
-              guardianPhone: '9000005555',
-              address: '789 Main St',
-              bloodGroup: 'B+',
-              emergencyContact: '9000006666',
-              department: 'MECH',
-              yearSection: 'IV-C',
-              section: 'C',
-              totalFees: 50000,
-              paidAmount: 0,
-              dueAmount: 50000,
-              feeStatus: 'Due'
-            }
-          ]);
+
+        if (error) {
+          setStudents([]);
         } else {
-          setStudents(data as Student[]);
+          setStudents((data ?? []) as Student[]);
         }
       } catch (err) {
-        // fallback to mock data
-        setStudents([
-          {
-            id: '1',
-            name: 'John Doe',
-            rollNumber: '1001',
-            course: 'BTech',
-            year: 4,
-            semester: 8,
-            email: 'john@example.com',
-            phone: '9000000001',
-            profileImage: '',
-            admissionDate: '2020-08-01',
-            guardianName: 'Mr. Doe',
-            guardianPhone: '9000001111',
-            address: '123 Main St',
-            bloodGroup: 'O+',
-            emergencyContact: '9000002222',
-            department: 'CSE',
-            yearSection: 'IV-A',
-            section: 'A',
-            totalFees: 50000,
-            paidAmount: 50000,
-            dueAmount: 0,
-            feeStatus: 'Paid'
-          }
-          // ...add more if you want
-        ]);
+        setStudents([]);
       }
       setLoadingStudents(false);
     };
@@ -175,7 +75,7 @@ function MainAppContent() {
     setSelectedStudent(student);
   };
 
-  // Show loading state while checking authentication
+  // Show loading state while checking authentication or students
   if (loading || loadingStudents) {
     return <SupabaseAuthPage />;
   }
