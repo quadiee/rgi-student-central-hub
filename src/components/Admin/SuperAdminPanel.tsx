@@ -1,4 +1,3 @@
-console.log("Current user in SuperAdminPanel:", user);
 import React, { useState, useEffect } from 'react';
 import { Users, Settings, Eye, EyeOff, Shield, UserCheck, Building } from 'lucide-react';
 import { Button } from '../ui/button';
