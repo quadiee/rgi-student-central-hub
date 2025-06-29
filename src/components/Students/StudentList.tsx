@@ -3,7 +3,7 @@ import { Search, Filter, Users, Eye, Edit, Trash2, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { mockStudents } from '../../data/mockData';
 import { useIsMobile } from '../../hooks/use-mobile';
-import { Student } from '../../types';
+import { Student } from '../../types/user-student-fees';
 
 interface StudentListProps {
   onViewStudent: (student: Student) => void;
@@ -16,15 +16,15 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
   const isMobile = useIsMobile();
 
   const filteredStudents = mockStudents.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (student.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.rollNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
-    const matchesYear = !selectedYear || student.yearSection.startsWith(selectedYear);
-    
+    const matchesYear = !selectedYear || (student.yearSection || '').startsWith(selectedYear);
+
     return matchesSearch && matchesDepartment && matchesYear;
   });
 
-  const departments = [...new Set(mockStudents.map(s => s.department))];
+  const departments = [...new Set(mockStudents.map(s => s.department || '-'))];
   const years = ['1', '2', '3', '4'];
 
   const getStudentStatus = (student: Student) => {
@@ -58,7 +58,7 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -101,12 +101,12 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                         <span className="text-white font-medium">
-                          {student.name.split(' ').map(n => n[0]).join('')}
+                          {(student.name || '-').split(' ').map(n => n[0]).join('')}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-900">{student.name}</h3>
-                        <p className="text-sm text-gray-500">{student.rollNumber}</p>
+                        <h3 className="font-medium text-gray-900">{student.name || '-'}</h3>
+                        <p className="text-sm text-gray-500">{student.rollNumber || '-'}</p>
                       </div>
                     </div>
                     <Button
@@ -118,15 +118,15 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                       <span>View</span>
                     </Button>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500">Department:</span>
-                      <p className="font-medium">{student.department}</p>
+                      <p className="font-medium">{student.department || '-'}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Year & Section:</span>
-                      <p className="font-medium">{student.yearSection}</p>
+                      <p className="font-medium">{student.yearSection || '-'}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Fee Due:</span>
@@ -178,23 +178,23 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                         <div className="flex items-center">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                             <span className="text-white text-sm font-medium">
-                              {student.name.split(' ').map(n => n[0]).join('')}
+                              {(student.name || '-').split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
                           <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                            <div className="text-sm text-gray-500">{student.email}</div>
+                            <div className="text-sm font-medium text-gray-900">{student.name || '-'}</div>
+                            <div className="text-sm text-gray-500">{student.email || '-'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {student.rollNumber}
+                        {student.rollNumber || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {student.department}
+                        {student.department || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {student.yearSection}
+                        {student.yearSection || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
@@ -208,8 +208,8 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-2">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => onViewStudent(student)}
                             className="flex items-center space-x-1"
