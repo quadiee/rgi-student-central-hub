@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Settings, Shield, MailPlus, UserCheck, Building2 } from 'lucide-react';
+import { Users, Settings, Shield, MailPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
@@ -10,8 +10,9 @@ const AdminPanel: React.FC = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('admin-overview');
 
-  // Check if user has admin permissions (admin or principal)
-  const hasAdminAccess = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
+  // Check if user has admin privileges (admin or principal)
+  const hasAdminAccess =
+    user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
 
   if (!user || !hasAdminAccess) {
     return (
