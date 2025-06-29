@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useQuickAuth } from '../../hooks/useQuickAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { GraduationCap, Users, BookOpen, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -7,16 +8,18 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useToast } from '../ui/use-toast';
 import SecureAdminButton from './SecureAdminButton';
+import { supabase } from '../../integrations/supabase/client';
 
 const SupabaseAuthPage = () => {
-  const { loading, signIn } = useAuth();
+  const { loading: quickAuthLoading } = useQuickAuth();
   const { toast } = useToast();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  if (loading) {
+  // Show loading only for the initial quick auth check, not profile loading
+  if (quickAuthLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -41,13 +44,21 @@ const SupabaseAuthPage = () => {
         });
         return;
       }
-      const { error } = await signIn(loginEmail, loginPassword);
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword
+      });
+      
       if (error) {
         toast({
           title: "Login Failed",
           description: error.message,
           variant: "destructive"
         });
+      } else {
+        // Don't show success toast, let the app handle the redirect
+        console.log('Login successful, redirecting...');
       }
     } catch (err: any) {
       toast({
@@ -126,7 +137,14 @@ const SupabaseAuthPage = () => {
               </div>
 
               <Button type="submit" className="w-full" disabled={loginLoading}>
-                {loginLoading ? 'Signing in...' : 'Sign In'}
+                {loginLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
             

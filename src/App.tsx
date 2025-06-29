@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { Toaster } from "./components/ui/toaster";
-import { AuthProvider } from './contexts/AuthContext';
+import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SupabaseAuthPage from './components/Auth/SupabaseAuthPage';
 import Sidebar from './components/Layout/Sidebar';
@@ -10,9 +11,9 @@ import FeeManagement from './components/Fees/FeeManagement';
 import AdminPanel from './components/Admin/AdminPanel';
 import StudentList from './components/StudentList';
 import ReportGenerator from './components/Reports/ReportGenerator';
-import { useAuth } from './contexts/AuthContext';
-import InvitationSignup from './components/Auth/InvitationSignup'; // <-- Add this import
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // <-- For routing
+import { useAuth } from './contexts/SupabaseAuthContext';
+import InvitationSignup from './components/Auth/InvitationSignup';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 const queryClient = new QueryClient();
 
@@ -44,7 +45,6 @@ function MainAppContent() {
   }
 
   if (!user) {
-    // Render login page by default for non-invite routes
     return <SupabaseAuthPage />;
   }
 
@@ -109,19 +109,16 @@ function MainAppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <SupabaseAuthProvider>
         <Router>
           <Routes>
-            {/* Invitation-based signup route */}
             <Route path="/invite/:token" element={<InvitationSignup />} />
-            {/* Main app fallback */}
             <Route path="/*" element={<MainAppContent />} />
-            {/* Optionally: catch-all route */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Router>
         <Toaster />
-      </AuthProvider>
+      </SupabaseAuthProvider>
     </QueryClientProvider>
   );
 }

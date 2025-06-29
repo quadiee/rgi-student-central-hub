@@ -15,7 +15,6 @@ export interface UserProfile {
   profile_photo_url?: string;
   is_active: boolean;
   created_at: string;
-  // Make avatar required to match User interface
   avatar: string;
   rollNumber?: string;
   department?: string;
@@ -51,6 +50,43 @@ export const useAuth = () => {
   return context;
 };
 
+// Cache for department names to avoid repeated queries
+const departmentCache = new Map<string, string>();
+
+const loadDepartmentName = async (departmentId: string): Promise<string> => {
+  // Check cache first
+  if (departmentCache.has(departmentId)) {
+    return departmentCache.get(departmentId)!;
+  }
+
+  // Check localStorage cache
+  const cachedName = localStorage.getItem(`dept_${departmentId}`);
+  if (cachedName) {
+    departmentCache.set(departmentId, cachedName);
+    return cachedName;
+  }
+
+  // Fetch from database
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('name, code')
+      .eq('id', departmentId)
+      .single();
+
+    if (!error && data) {
+      const deptName = data.name || 'Unknown';
+      departmentCache.set(departmentId, deptName);
+      localStorage.setItem(`dept_${departmentId}`, deptName);
+      return deptName;
+    }
+  } catch (error) {
+    console.error('Error loading department:', error);
+  }
+
+  return 'Unknown';
+};
+
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -58,32 +94,75 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const loadUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
-      const { data, error } = await supabase
+      // Check session cache first
+      const cachedProfile = sessionStorage.getItem(`profile_${userId}`);
+      if (cachedProfile) {
+        try {
+          const parsed = JSON.parse(cachedProfile);
+          // Use cached profile but refresh department name in background
+          setTimeout(() => {
+            if (parsed.department_id) {
+              loadDepartmentName(parsed.department_id).then(deptName => {
+                if (deptName !== parsed.department_name) {
+                  // Update cache if department name changed
+                  const updatedProfile = { ...parsed, department_name: deptName };
+                  sessionStorage.setItem(`profile_${userId}`, JSON.stringify(updatedProfile));
+                  setUser(updatedProfile);
+                }
+              });
+            }
+          }, 0);
+          return parsed;
+        } catch (e) {
+          console.error('Error parsing cached profile:', e);
+        }
+      }
+
+      // Fetch basic profile without JOIN first for speed
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          departments:department_id (
-            name,
-            code
-          )
-        `)
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error loading user profile:', error);
+      if (profileError) {
+        console.error('Error loading user profile:', profileError);
         return null;
       }
 
-      return {
-        ...data,
-        role: data.role as 'student' | 'hod' | 'principal' | 'admin',
-        department_name: data.departments?.name || 'Unknown',
-        // Ensure avatar is always a string
-        avatar: data.profile_photo_url || '',
-        rollNumber: data.roll_number,
-        department: data.departments?.code || 'Unknown'
+      // Load department name asynchronously
+      let departmentName = 'Unknown';
+      let departmentCode = 'Unknown';
+      
+      if (profileData.department_id) {
+        try {
+          departmentName = await loadDepartmentName(profileData.department_id);
+          const { data: deptData } = await supabase
+            .from('departments')
+            .select('code')
+            .eq('id', profileData.department_id)
+            .single();
+          if (deptData) {
+            departmentCode = deptData.code;
+          }
+        } catch (error) {
+          console.error('Error loading department details:', error);
+        }
+      }
+
+      const userProfile: UserProfile = {
+        ...profileData,
+        role: profileData.role as 'student' | 'hod' | 'principal' | 'admin',
+        department_name: departmentName,
+        avatar: profileData.profile_photo_url || '',
+        rollNumber: profileData.roll_number,
+        department: departmentCode
       };
+
+      // Cache the profile
+      sessionStorage.setItem(`profile_${userId}`, JSON.stringify(userProfile));
+
+      return userProfile;
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
       return null;
@@ -109,6 +188,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const refreshUser = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (currentSession?.user) {
+      // Clear cache to force refresh
+      sessionStorage.removeItem(`profile_${currentSession.user.id}`);
       const profile = await loadUserProfile(currentSession.user.id);
       setUser(profile);
       setSession(currentSession);
@@ -116,43 +197,73 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('Auth state changed:', event, currentSession?.user?.email);
+      
+      if (!mounted) return;
+
+      setSession(currentSession);
+      
+      if (currentSession?.user) {
+        // Load profile asynchronously to avoid blocking UI
+        setTimeout(async () => {
+          if (mounted) {
+            const profile = await loadUserProfile(currentSession.user.id);
+            if (mounted) {
+              setUser(profile);
+            }
+          }
+        }, 0);
+      } else {
+        setUser(null);
+        // Clear all caches on logout
+        sessionStorage.clear();
+        departmentCache.clear();
+      }
+      
+      if (mounted) {
+        setLoading(false);
+      }
+    });
+
     // Get initial session
     const getInitialSession = async () => {
-      setLoading(true);
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
         setSession(initialSession);
         
         if (initialSession?.user) {
-          const profile = await loadUserProfile(initialSession.user.id);
-          setUser(profile);
+          // Load profile asynchronously
+          setTimeout(async () => {
+            if (mounted) {
+              const profile = await loadUserProfile(initialSession.user.id);
+              if (mounted) {
+                setUser(profile);
+              }
+            }
+          }, 0);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     getInitialSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log('Auth state changed:', event, currentSession?.user?.email);
-      
-      setSession(currentSession);
-      
-      if (currentSession?.user) {
-        const profile = await loadUserProfile(currentSession.user.id);
-        setUser(profile);
-      } else {
-        setUser(null);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -168,6 +279,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!error) {
       setUser(null);
       setSession(null);
+      // Clear all caches
+      sessionStorage.clear();
+      departmentCache.clear();
     }
     return { error };
   };
@@ -177,7 +291,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       email,
       password,
       options: {
-        data: userData
+        data: userData,
+        emailRedirectTo: `${window.location.origin}/`
       }
     });
     return { error };
@@ -201,5 +316,4 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-// Export AuthProvider alias for backward compatibility
 export const AuthProvider = SupabaseAuthProvider;
