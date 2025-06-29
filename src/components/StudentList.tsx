@@ -1,38 +1,34 @@
-
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Users, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { Search, Filter, Users, Eye, Edit, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from './ui/use-toast';
-
-interface Student {
-  id: string;
-  name: string;
-  email: string;
-  department_name?: string;
-  roll_number?: string;
-  is_active: boolean;
-  created_at: string;
-}
+import { Student } from '../types/user-student-fees';
 
 interface StudentListProps {
   students?: Student[];
   onViewStudent: (student: Student) => void;
 }
 
-const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], onViewStudent }) => {
+  const [students, setStudents] = useState<Student[]>(propStudents);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>(propStudents);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<string[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // If propStudents changes, update local state
   useEffect(() => {
-    if (user) {
+    setStudents(propStudents);
+    setFilteredStudents(propStudents);
+  }, [propStudents]);
+
+  useEffect(() => {
+    if (user && propStudents.length === 0) {
       loadStudents();
       loadDepartments();
     }
@@ -51,12 +47,10 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
           id, 
           name, 
           email, 
-          roll_number, 
+          rollNumber,
+          department,
           is_active, 
-          created_at,
-          departments:department_id (
-            name
-          )
+          created_at
         `)
         .eq('role', 'student')
         .eq('is_active', true)
@@ -72,9 +66,15 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
         return;
       }
 
-      const studentsData = (data || []).map(student => ({
-        ...student,
-        department_name: student.departments?.name || 'Unknown'
+      const studentsData: Student[] = (data || []).map((student: any) => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        department: student.department,
+        rollNumber: student.rollNumber,
+        is_active: student.is_active,
+        created_at: student.created_at,
+        // ...add other fields as needed
       }));
 
       setStudents(studentsData);
@@ -98,7 +98,7 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
         .eq('is_active', true);
 
       if (!error && data) {
-        setDepartments(data.map(d => d.name));
+        setDepartments(data.map((d: any) => d.name));
       }
     } catch (error) {
       console.error('Error loading departments:', error);
@@ -107,19 +107,19 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
 
   const filterStudents = () => {
     let filtered = students;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(student => 
+      filtered = filtered.filter(student =>
         student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.roll_number?.toLowerCase().includes(searchTerm.toLowerCase())
+        student.rollNumber?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (selectedDepartment) {
-      filtered = filtered.filter(student => student.department_name === selectedDepartment);
+      filtered = filtered.filter(student => student.department === selectedDepartment);
     }
-    
+
     setFilteredStudents(filtered);
   };
 
@@ -141,7 +141,6 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
@@ -154,7 +153,7 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -173,7 +172,6 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
         </div>
       </div>
 
-      {/* Student List */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -213,18 +211,18 @@ const StudentList: React.FC<StudentListProps> = ({ onViewStudent }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {student.roll_number || 'Not Set'}
+                    {student.rollNumber || 'Not Set'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {student.department_name}
+                    {student.department}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      student.is_active 
-                        ? 'bg-green-100 text-green-800' 
+                      (student as any).is_active
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {student.is_active ? 'Active' : 'Inactive'}
+                      {(student as any).is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

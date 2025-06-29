@@ -13,34 +13,29 @@ import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
 import StudentList from '../components/StudentList';
-import { Student } from '../user-models'; // <-- Import your Student interface
-
-// Remove SimpleStudent interface completely!
+import { Student } from '../types/user-student-fees'; // <-- Correct import
 
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null); // Use Student type!
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  // Redirect to dashboard route after login if on root path
   useEffect(() => {
     if (!loading && user && window.location.pathname === '/') {
       navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 
-  // Reset to dashboard when user changes
   useEffect(() => {
     if (user) {
       setActiveTab('dashboard');
     }
   }, [user?.id]);
 
-  // Fetch real students from database
   useEffect(() => {
     const fetchStudents = async () => {
       if (!user) return;
@@ -52,8 +47,7 @@ const AppContent = () => {
             id, 
             name, 
             email, 
-            roll_number,
-            role,
+            rollNumber,
             course,
             year,
             semester,
@@ -65,9 +59,7 @@ const AppContent = () => {
             address,
             bloodGroup,
             emergencyContact,
-            department:departments (
-              code
-            ),
+            department,
             yearSection,
             section,
             totalFees,
@@ -79,89 +71,12 @@ const AppContent = () => {
           .eq('is_active', true);
 
         if (error) {
-          console.error('Error fetching students:', error);
-          // Use mock data as fallback with ALL required Student fields!
-          setStudents([
-            {
-              id: '1',
-              name: 'John Doe',
-              rollNumber: '1001',
-              course: 'BTech',
-              year: 4,
-              semester: 8,
-              email: 'john@example.com',
-              phone: '9000000001',
-              admissionDate: '2020-08-01',
-              guardianName: 'Mr. Doe',
-              guardianPhone: '9000001111',
-              address: '123 Main St',
-              emergencyContact: '9000002222',
-              department: 'CSE',
-              yearSection: 'IV-A',
-              // Optional fields:
-              profileImage: '',
-              bloodGroup: '',
-              section: '',
-              totalFees: 0,
-              paidAmount: 0,
-              dueAmount: 0,
-              feeStatus: 'Paid'
-            },
-            {
-              id: '2',
-              name: 'Jane Smith',
-              rollNumber: '1002',
-              course: 'BTech',
-              year: 4,
-              semester: 8,
-              email: 'jane@example.com',
-              phone: '9000000002',
-              admissionDate: '2020-08-01',
-              guardianName: 'Mrs. Smith',
-              guardianPhone: '9000003333',
-              address: '456 Main St',
-              emergencyContact: '9000004444',
-              department: 'ECE',
-              yearSection: 'IV-B',
-              profileImage: '',
-              bloodGroup: '',
-              section: '',
-              totalFees: 0,
-              paidAmount: 0,
-              dueAmount: 0,
-              feeStatus: 'Paid'
-            },
-            {
-              id: '3',
-              name: 'Bob Wilson',
-              rollNumber: '1003',
-              course: 'BTech',
-              year: 4,
-              semester: 8,
-              email: 'bob@example.com',
-              phone: '9000000003',
-              admissionDate: '2020-08-01',
-              guardianName: 'Mr. Wilson',
-              guardianPhone: '9000005555',
-              address: '789 Main St',
-              emergencyContact: '9000006666',
-              department: 'MECH',
-              yearSection: 'IV-C',
-              profileImage: '',
-              bloodGroup: '',
-              section: '',
-              totalFees: 0,
-              paidAmount: 0,
-              dueAmount: 0,
-              feeStatus: 'Paid'
-            }
-          ]);
+          setStudents([]);
         } else {
-          // Build Student[] from data
           const studentsData: Student[] = (data || []).map((profile: any) => ({
             id: profile.id,
             name: profile.name || 'Unknown',
-            rollNumber: profile.roll_number || '',
+            rollNumber: profile.rollNumber || '',
             course: profile.course || '',
             year: profile.year || 0,
             semester: profile.semester || 0,
@@ -174,7 +89,7 @@ const AppContent = () => {
             address: profile.address || '',
             bloodGroup: profile.bloodGroup || '',
             emergencyContact: profile.emergencyContact || '',
-            department: profile.department?.code || '',
+            department: profile.department || '',
             yearSection: profile.yearSection || '',
             section: profile.section || '',
             totalFees: profile.totalFees || 0,
@@ -185,35 +100,7 @@ const AppContent = () => {
           setStudents(studentsData);
         }
       } catch (error) {
-        console.error('Error in fetchStudents:', error);
-        // Use mock data as fallback with Student fields
-        setStudents([
-          {
-            id: '1',
-            name: 'John Doe',
-            rollNumber: '1001',
-            course: 'BTech',
-            year: 4,
-            semester: 8,
-            email: 'john@example.com',
-            phone: '9000000001',
-            admissionDate: '2020-08-01',
-            guardianName: 'Mr. Doe',
-            guardianPhone: '9000001111',
-            address: '123 Main St',
-            emergencyContact: '9000002222',
-            department: 'CSE',
-            yearSection: 'IV-A',
-            profileImage: '',
-            bloodGroup: '',
-            section: '',
-            totalFees: 0,
-            paidAmount: 0,
-            dueAmount: 0,
-            feeStatus: 'Paid'
-          },
-          // ...repeat for other mock students
-        ]);
+        setStudents([]);
       }
     };
 
@@ -258,7 +145,6 @@ const AppContent = () => {
                       <div><strong>Roll Number:</strong> {selectedStudent.rollNumber}</div>
                       <div><strong>Year & Section:</strong> {selectedStudent.yearSection}</div>
                       <div><strong>Course:</strong> {selectedStudent.course}</div>
-                      {/* Add more fields as needed */}
                     </div>
                   </div>
                 </div>
@@ -294,7 +180,6 @@ const AppContent = () => {
     }
   };
 
-  // Show loading screen while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -310,12 +195,10 @@ const AppContent = () => {
     );
   }
 
-  // Show authentication page if user is not logged in
   if (!user) {
     return <SupabaseAuthPage />;
   }
 
-  // Main application interface
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 w-full">
       {isMobile ? (
