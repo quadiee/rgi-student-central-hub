@@ -1,13 +1,28 @@
 import React, { useState } from 'react';
-import { User, Settings, Shield, Clock, LogOut, Edit2, Save, X } from 'lucide-react';
+import { User, Shield, Clock, LogOut, Edit2, Save, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../ui/use-toast';
 
+// Make sure this type matches your DB schema!
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  role?: string;
+  profile_photo_url?: string;
+  department_name?: string;
+  roll_number?: string;
+  employee_id?: string;
+  created_at?: string;
+}
+
 const UserProfile: React.FC = () => {
-  const { user, signOut, refreshUser } = useAuth();
+  const { user, signOut, refreshUser } = useAuth() as { user: UserProfile | null, signOut: () => Promise<void>, refreshUser: () => Promise<void> };
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: user?.name || '',
@@ -37,7 +52,6 @@ const UserProfile: React.FC = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-
     setLoading(true);
     try {
       const { error } = await supabase
@@ -83,7 +97,7 @@ const UserProfile: React.FC = () => {
 
   if (!user) return null;
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string | undefined) => {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
