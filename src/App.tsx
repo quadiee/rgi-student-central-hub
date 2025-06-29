@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from "./components/ui/toaster";
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,27 +14,169 @@ import { useAuth } from './contexts/SupabaseAuthContext';
 import InvitationSignup from './components/Auth/InvitationSignup';
 import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Student } from './user-student-fee'; // <-- import your canonical type
+import { supabase } from './integrations/supabase/client'; // adjust import as needed
 
 const queryClient = new QueryClient();
 
 function MainAppContent() {
   const { user, session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
 
-  // Mock student data that matches the simplified interface
-  const mockStudents = [
-    { id: '1', name: 'John Doe', email: 'john@example.com', department: 'CSE', role: 'student' },
-    { id: '2', name: 'Jane Smith', email: 'jane@example.com', department: 'ECE', role: 'student' },
-    { id: '3', name: 'Bob Wilson', email: 'bob@example.com', department: 'MECH', role: 'student' },
-  ];
+  // Fetch from Supabase or use mock data
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setLoadingStudents(true);
+      try {
+        const { data, error } = await supabase
+          .from('students') // <-- your Supabase table name
+          .select(`
+            id,
+            name,
+            rollNumber,
+            course,
+            year,
+            semester,
+            email,
+            phone,
+            profileImage,
+            admissionDate,
+            guardianName,
+            guardianPhone,
+            address,
+            bloodGroup,
+            emergencyContact,
+            department,
+            yearSection,
+            section,
+            totalFees,
+            paidAmount,
+            dueAmount,
+            feeStatus
+          `);
+        if (error || !data || data.length === 0) {
+          // fallback to mock data
+          setStudents([
+            {
+              id: '1',
+              name: 'John Doe',
+              rollNumber: '1001',
+              course: 'BTech',
+              year: 4,
+              semester: 8,
+              email: 'john@example.com',
+              phone: '9000000001',
+              profileImage: '',
+              admissionDate: '2020-08-01',
+              guardianName: 'Mr. Doe',
+              guardianPhone: '9000001111',
+              address: '123 Main St',
+              bloodGroup: 'O+',
+              emergencyContact: '9000002222',
+              department: 'CSE',
+              yearSection: 'IV-A',
+              section: 'A',
+              totalFees: 50000,
+              paidAmount: 50000,
+              dueAmount: 0,
+              feeStatus: 'Paid'
+            },
+            {
+              id: '2',
+              name: 'Jane Smith',
+              rollNumber: '1002',
+              course: 'BTech',
+              year: 4,
+              semester: 8,
+              email: 'jane@example.com',
+              phone: '9000000002',
+              profileImage: '',
+              admissionDate: '2020-08-01',
+              guardianName: 'Mrs. Smith',
+              guardianPhone: '9000003333',
+              address: '456 Main St',
+              bloodGroup: 'A+',
+              emergencyContact: '9000004444',
+              department: 'ECE',
+              yearSection: 'IV-B',
+              section: 'B',
+              totalFees: 50000,
+              paidAmount: 25000,
+              dueAmount: 25000,
+              feeStatus: 'Partial'
+            },
+            {
+              id: '3',
+              name: 'Bob Wilson',
+              rollNumber: '1003',
+              course: 'BTech',
+              year: 4,
+              semester: 8,
+              email: 'bob@example.com',
+              phone: '9000000003',
+              profileImage: '',
+              admissionDate: '2020-08-01',
+              guardianName: 'Mr. Wilson',
+              guardianPhone: '9000005555',
+              address: '789 Main St',
+              bloodGroup: 'B+',
+              emergencyContact: '9000006666',
+              department: 'MECH',
+              yearSection: 'IV-C',
+              section: 'C',
+              totalFees: 50000,
+              paidAmount: 0,
+              dueAmount: 50000,
+              feeStatus: 'Due'
+            }
+          ]);
+        } else {
+          setStudents(data as Student[]);
+        }
+      } catch (err) {
+        // fallback to mock data
+        setStudents([
+          {
+            id: '1',
+            name: 'John Doe',
+            rollNumber: '1001',
+            course: 'BTech',
+            year: 4,
+            semester: 8,
+            email: 'john@example.com',
+            phone: '9000000001',
+            profileImage: '',
+            admissionDate: '2020-08-01',
+            guardianName: 'Mr. Doe',
+            guardianPhone: '9000001111',
+            address: '123 Main St',
+            bloodGroup: 'O+',
+            emergencyContact: '9000002222',
+            department: 'CSE',
+            yearSection: 'IV-A',
+            section: 'A',
+            totalFees: 50000,
+            paidAmount: 50000,
+            dueAmount: 0,
+            feeStatus: 'Paid'
+          }
+          // ...add more if you want
+        ]);
+      }
+      setLoadingStudents(false);
+    };
+    fetchStudents();
+  }, []);
 
-  const handleViewStudent = (student: any) => {
+  const handleViewStudent = (student: Student) => {
     setSelectedStudent(student);
   };
 
   // Show loading state while checking authentication
-  if (loading) {
+  if (loading || loadingStudents) {
     return <SupabaseAuthPage />;
   }
 
@@ -54,7 +195,7 @@ function MainAppContent() {
         return <AdminPanel />;
       case 'students':
         return !selectedStudent ? (
-          <StudentList students={mockStudents} onViewStudent={handleViewStudent} />
+          <StudentList students={students} onViewStudent={handleViewStudent} />
         ) : (
           <div className="p-6">
             <button
@@ -76,8 +217,18 @@ function MainAppContent() {
                   <strong>Department:</strong> {selectedStudent.department}
                 </div>
                 <div>
-                  <strong>Role:</strong> {selectedStudent.role}
+                  <strong>Roll Number:</strong> {selectedStudent.rollNumber}
                 </div>
+                <div>
+                  <strong>Year:</strong> {selectedStudent.year}
+                </div>
+                <div>
+                  <strong>Section:</strong> {selectedStudent.section}
+                </div>
+                <div>
+                  <strong>Fee Status:</strong> {selectedStudent.feeStatus}
+                </div>
+                {/* Add more fields as needed */}
               </div>
             </div>
           </div>
