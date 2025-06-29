@@ -50,8 +50,8 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     }
   };
 
-  // Only allow users with role 'admin' full access
-  if (!user || user.role !== 'admin') {
+  // Allow "admin" to have all superadmin privileges
+  if (!user || user.role?.toLowerCase() !== 'admin') {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
