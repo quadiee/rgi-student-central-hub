@@ -23,7 +23,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
-    totaldepartment_ids: 0,
+    totalDepartments: 0,
     pendingInvitations: 0
   });
   const { toast } = useToast();
@@ -41,20 +41,20 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
 
   const loadSystemStats = async () => {
     try {
-      const [usersQuery, department_idsQuery, invitationsQuery] = await Promise.all([
+      const [usersQuery, departmentsQuery, invitationsQuery] = await Promise.all([
         supabase.from('profiles').select('id, is_active'),
-        supabase.from('department_ids').select('id').eq('is_active', true),
+        supabase.from('departments').select('id').eq('is_active', true),
         supabase.from('user_invitations').select('id').eq('is_active', true).is('used_at', null)
       ]);
 
       const users = usersQuery.data || [];
-      const department_ids = department_idsQuery.data || [];
+      const departments = departmentsQuery.data || [];
       const invitations = invitationsQuery.data || [];
 
       setSystemStats({
         totalUsers: users.length,
         activeUsers: users.filter(u => u.is_active).length,
-        totaldepartment_ids: department_ids.length,
+        totalDepartments: departments.length,
         pendingInvitations: invitations.length
       });
     } catch (error) {
@@ -63,7 +63,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
   };
 
   // Grant full access to admin
-  if (!user || !isAdmin(user) && !hasPermission('access_admin_panel')) {
+  if (!user || (!isAdmin(user) && !hasPermission('access_admin_panel'))) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -109,8 +109,8 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
               <div className="bg-purple-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-600 text-sm font-medium">department_ids</p>
-                    <p className="text-2xl font-bold text-purple-900">{systemStats.totaldepartment_ids}</p>
+                    <p className="text-purple-600 text-sm font-medium">Departments</p>
+                    <p className="text-2xl font-bold text-purple-900">{systemStats.totalDepartments}</p>
                   </div>
                   <Building className="w-8 h-8 text-purple-600" />
                 </div>
