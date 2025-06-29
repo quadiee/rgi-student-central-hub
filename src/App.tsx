@@ -14,7 +14,7 @@ import { useAuth } from './contexts/SupabaseAuthContext';
 import InvitationSignup from './components/Auth/InvitationSignup';
 import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Student } from './types/user-student-fee'; // Adjust path if your types are elsewhere
+import { Student } from './types/user-student-fees';
 import { supabase } from './integrations/supabase/client';
 
 const queryClient = new QueryClient();
@@ -26,13 +26,12 @@ function MainAppContent() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
 
-  // Fetch student records from Supabase only (no mock data)
   useEffect(() => {
     const fetchStudents = async () => {
       setLoadingStudents(true);
       try {
         const { data, error } = await supabase
-          .from('profiles') // Use 'profiles' as your student/user table
+          .from('profiles')
           .select(`
             id,
             name,
@@ -56,7 +55,8 @@ function MainAppContent() {
             paidAmount,
             dueAmount,
             feeStatus
-          `);
+          `)
+          .eq('role', 'student');
 
         if (error) {
           setStudents([]);
@@ -75,12 +75,10 @@ function MainAppContent() {
     setSelectedStudent(student);
   };
 
-  // Show loading state while checking authentication or students
   if (loading || loadingStudents) {
     return <SupabaseAuthPage />;
   }
 
-  // Show auth page if not authenticated or no session
   if (!session) {
     return <SupabaseAuthPage />;
   }
