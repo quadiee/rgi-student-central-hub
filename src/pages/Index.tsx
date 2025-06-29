@@ -13,21 +13,16 @@ import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
 import StudentList from '../components/StudentList';
+import { Student } from '../user-models'; // <-- Import your Student interface
 
-interface SimpleStudent {
-  id: string;
-  name: string;
-  email: string;
-  department: string;
-  role: string;
-}
+// Remove SimpleStudent interface completely!
 
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [students, setStudents] = useState<SimpleStudent[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<SimpleStudent | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null); // Use Student type!
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
@@ -59,39 +54,165 @@ const AppContent = () => {
             email, 
             roll_number,
             role,
-            departments:department_id (
-              name,
+            course,
+            year,
+            semester,
+            phone,
+            profileImage,
+            admissionDate,
+            guardianName,
+            guardianPhone,
+            address,
+            bloodGroup,
+            emergencyContact,
+            department:departments (
               code
-            )
+            ),
+            yearSection,
+            section,
+            totalFees,
+            paidAmount,
+            dueAmount,
+            feeStatus
           `)
           .eq('role', 'student')
           .eq('is_active', true);
 
         if (error) {
           console.error('Error fetching students:', error);
-          // Use mock data as fallback
+          // Use mock data as fallback with ALL required Student fields!
           setStudents([
-            { id: '1', name: 'John Doe', email: 'john@example.com', department: 'CSE', role: 'student' },
-            { id: '2', name: 'Jane Smith', email: 'jane@example.com', department: 'ECE', role: 'student' },
-            { id: '3', name: 'Bob Wilson', email: 'bob@example.com', department: 'MECH', role: 'student' },
+            {
+              id: '1',
+              name: 'John Doe',
+              rollNumber: '1001',
+              course: 'BTech',
+              year: 4,
+              semester: 8,
+              email: 'john@example.com',
+              phone: '9000000001',
+              admissionDate: '2020-08-01',
+              guardianName: 'Mr. Doe',
+              guardianPhone: '9000001111',
+              address: '123 Main St',
+              emergencyContact: '9000002222',
+              department: 'CSE',
+              yearSection: 'IV-A',
+              // Optional fields:
+              profileImage: '',
+              bloodGroup: '',
+              section: '',
+              totalFees: 0,
+              paidAmount: 0,
+              dueAmount: 0,
+              feeStatus: 'Paid'
+            },
+            {
+              id: '2',
+              name: 'Jane Smith',
+              rollNumber: '1002',
+              course: 'BTech',
+              year: 4,
+              semester: 8,
+              email: 'jane@example.com',
+              phone: '9000000002',
+              admissionDate: '2020-08-01',
+              guardianName: 'Mrs. Smith',
+              guardianPhone: '9000003333',
+              address: '456 Main St',
+              emergencyContact: '9000004444',
+              department: 'ECE',
+              yearSection: 'IV-B',
+              profileImage: '',
+              bloodGroup: '',
+              section: '',
+              totalFees: 0,
+              paidAmount: 0,
+              dueAmount: 0,
+              feeStatus: 'Paid'
+            },
+            {
+              id: '3',
+              name: 'Bob Wilson',
+              rollNumber: '1003',
+              course: 'BTech',
+              year: 4,
+              semester: 8,
+              email: 'bob@example.com',
+              phone: '9000000003',
+              admissionDate: '2020-08-01',
+              guardianName: 'Mr. Wilson',
+              guardianPhone: '9000005555',
+              address: '789 Main St',
+              emergencyContact: '9000006666',
+              department: 'MECH',
+              yearSection: 'IV-C',
+              profileImage: '',
+              bloodGroup: '',
+              section: '',
+              totalFees: 0,
+              paidAmount: 0,
+              dueAmount: 0,
+              feeStatus: 'Paid'
+            }
           ]);
         } else {
-          const simpleStudents: SimpleStudent[] = (data || []).map((profile: any) => ({
+          // Build Student[] from data
+          const studentsData: Student[] = (data || []).map((profile: any) => ({
             id: profile.id,
             name: profile.name || 'Unknown',
+            rollNumber: profile.roll_number || '',
+            course: profile.course || '',
+            year: profile.year || 0,
+            semester: profile.semester || 0,
             email: profile.email,
-            department: profile.departments?.code || 'Unknown',
-            role: profile.role
+            phone: profile.phone || '',
+            profileImage: profile.profileImage || '',
+            admissionDate: profile.admissionDate || '',
+            guardianName: profile.guardianName || '',
+            guardianPhone: profile.guardianPhone || '',
+            address: profile.address || '',
+            bloodGroup: profile.bloodGroup || '',
+            emergencyContact: profile.emergencyContact || '',
+            department: profile.department?.code || '',
+            yearSection: profile.yearSection || '',
+            section: profile.section || '',
+            totalFees: profile.totalFees || 0,
+            paidAmount: profile.paidAmount || 0,
+            dueAmount: profile.dueAmount || 0,
+            feeStatus: profile.feeStatus || ''
           }));
-          setStudents(simpleStudents);
+          setStudents(studentsData);
         }
       } catch (error) {
         console.error('Error in fetchStudents:', error);
-        // Use mock data as fallback
+        // Use mock data as fallback with Student fields
         setStudents([
-          { id: '1', name: 'John Doe', email: 'john@example.com', department: 'CSE', role: 'student' },
-          { id: '2', name: 'Jane Smith', email: 'jane@example.com', department: 'ECE', role: 'student' },
-          { id: '3', name: 'Bob Wilson', email: 'bob@example.com', department: 'MECH', role: 'student' },
+          {
+            id: '1',
+            name: 'John Doe',
+            rollNumber: '1001',
+            course: 'BTech',
+            year: 4,
+            semester: 8,
+            email: 'john@example.com',
+            phone: '9000000001',
+            admissionDate: '2020-08-01',
+            guardianName: 'Mr. Doe',
+            guardianPhone: '9000001111',
+            address: '123 Main St',
+            emergencyContact: '9000002222',
+            department: 'CSE',
+            yearSection: 'IV-A',
+            profileImage: '',
+            bloodGroup: '',
+            section: '',
+            totalFees: 0,
+            paidAmount: 0,
+            dueAmount: 0,
+            feeStatus: 'Paid'
+          },
+          // ...repeat for other mock students
         ]);
       }
     };
@@ -103,17 +224,14 @@ const AppContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
-      
       case 'fees':
         return <EnhancedFeeManagement />;
-      
       case 'admin':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal']}>
             <AdminPanel />
           </ProtectedRoute>
         );
-      
       case 'students':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
@@ -137,7 +255,10 @@ const AppContent = () => {
                       <div><strong>Name:</strong> {selectedStudent.name}</div>
                       <div><strong>Email:</strong> {selectedStudent.email}</div>
                       <div><strong>Department:</strong> {selectedStudent.department}</div>
-                      <div><strong>Role:</strong> {selectedStudent.role}</div>
+                      <div><strong>Roll Number:</strong> {selectedStudent.rollNumber}</div>
+                      <div><strong>Year & Section:</strong> {selectedStudent.yearSection}</div>
+                      <div><strong>Course:</strong> {selectedStudent.course}</div>
+                      {/* Add more fields as needed */}
                     </div>
                   </div>
                 </div>
@@ -145,7 +266,6 @@ const AppContent = () => {
             </div>
           </ProtectedRoute>
         );
-      
       case 'attendance':
         return (
           <div className="text-center py-8">
@@ -153,7 +273,6 @@ const AppContent = () => {
             <p className="text-gray-600">Attendance features coming soon...</p>
           </div>
         );
-      
       case 'exams':
         return (
           <div className="text-center py-8">
@@ -161,7 +280,6 @@ const AppContent = () => {
             <p className="text-gray-600">Exam management features coming soon...</p>
           </div>
         );
-      
       case 'reports':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
@@ -171,7 +289,6 @@ const AppContent = () => {
             </div>
           </ProtectedRoute>
         );
-      
       default:
         return <Dashboard />;
     }
