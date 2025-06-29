@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus, UserCheck, Building2 } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -9,10 +8,10 @@ import UserInvitationManager from './UserInvitationManager';
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('super-admin');
+  const [activeSection, setActiveSection] = useState('admin-overview');
 
-  // Check if user has admin permissions
-  const hasAdminAccess = user?.role === 'admin' || user?.role === 'principal';
+  // Check if user has admin permissions (admin or principal)
+  const hasAdminAccess = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
 
   if (!user || !hasAdminAccess) {
     return (
@@ -24,7 +23,7 @@ const AdminPanel: React.FC = () => {
   }
 
   const sections = [
-    { id: 'super-admin', label: 'Super Admin', icon: Shield },
+    { id: 'admin-overview', label: 'Admin Overview', icon: Shield },
     { id: 'user-management', label: 'User Management', icon: Users },
     { id: 'enhanced-users', label: 'Enhanced Users', icon: Settings },
     { id: 'invite-users', label: 'Invite Users', icon: MailPlus },
@@ -32,7 +31,7 @@ const AdminPanel: React.FC = () => {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'super-admin':
+      case 'admin-overview':
         return <SuperAdminPanel onUserManagementClick={() => setActiveSection('user-management')} />;
       case 'user-management':
         return <UserManagement />;
