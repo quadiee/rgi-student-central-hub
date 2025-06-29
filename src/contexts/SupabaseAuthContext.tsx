@@ -24,6 +24,7 @@ interface SupabaseAuthContextType {
   user: UserProfile | null;
   session: Session | null;
   loading: boolean;
+  profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
   signOut: () => Promise<{ error?: any }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ error?: any }>;
@@ -35,6 +36,7 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   user: null,
   session: null,
   loading: true,
+  profileLoading: false,
   signIn: async () => ({}),
   signOut: async () => ({}),
   signUp: async () => ({}),
@@ -50,8 +52,39 @@ export const useAuth = () => {
   return context;
 };
 
-// Cache for department names to avoid repeated queries
+// Enhanced caching system
+const profileCache = new Map<string, UserProfile>();
 const departmentCache = new Map<string, string>();
+
+const getCachedProfile = (userId: string): UserProfile | null => {
+  // Check memory cache first
+  if (profileCache.has(userId)) {
+    return profileCache.get(userId)!;
+  }
+
+  // Check sessionStorage
+  try {
+    const cached = sessionStorage.getItem(`profile_${userId}`);
+    if (cached) {
+      const profile = JSON.parse(cached);
+      profileCache.set(userId, profile);
+      return profile;
+    }
+  } catch (error) {
+    console.error('Error reading cached profile:', error);
+  }
+
+  return null;
+};
+
+const setCachedProfile = (userId: string, profile: UserProfile) => {
+  profileCache.set(userId, profile);
+  try {
+    sessionStorage.setItem(`profile_${userId}`, JSON.stringify(profile));
+  } catch (error) {
+    console.error('Error caching profile:', error);
+  }
+};
 
 const loadDepartmentName = async (departmentId: string): Promise<string> => {
   // Check cache first
@@ -60,10 +93,14 @@ const loadDepartmentName = async (departmentId: string): Promise<string> => {
   }
 
   // Check localStorage cache
-  const cachedName = localStorage.getItem(`dept_${departmentId}`);
-  if (cachedName) {
-    departmentCache.set(departmentId, cachedName);
-    return cachedName;
+  try {
+    const cachedName = localStorage.getItem(`dept_${departmentId}`);
+    if (cachedName) {
+      departmentCache.set(departmentId, cachedName);
+      return cachedName;
+    }
+  } catch (error) {
+    console.error('Error reading cached department:', error);
   }
 
   // Fetch from database
@@ -77,7 +114,11 @@ const loadDepartmentName = async (departmentId: string): Promise<string> => {
     if (!error && data) {
       const deptName = data.name || 'Unknown';
       departmentCache.set(departmentId, deptName);
-      localStorage.setItem(`dept_${departmentId}`, deptName);
+      try {
+        localStorage.setItem(`dept_${departmentId}`, deptName);
+      } catch (error) {
+        console.error('Error caching department:', error);
+      }
       return deptName;
     }
   } catch (error) {
@@ -91,34 +132,33 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  const loadUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const loadUserProfileLazy = async (userId: string): Promise<UserProfile | null> => {
     try {
-      // Check session cache first
-      const cachedProfile = sessionStorage.getItem(`profile_${userId}`);
+      setProfileLoading(true);
+
+      // Check cache first for instant loading
+      const cachedProfile = getCachedProfile(userId);
       if (cachedProfile) {
-        try {
-          const parsed = JSON.parse(cachedProfile);
-          // Use cached profile but refresh department name in background
-          setTimeout(() => {
-            if (parsed.department_id) {
-              loadDepartmentName(parsed.department_id).then(deptName => {
-                if (deptName !== parsed.department_name) {
-                  // Update cache if department name changed
-                  const updatedProfile = { ...parsed, department_name: deptName };
-                  sessionStorage.setItem(`profile_${userId}`, JSON.stringify(updatedProfile));
-                  setUser(updatedProfile);
-                }
-              });
+        setUser(cachedProfile);
+        setProfileLoading(false);
+        
+        // Refresh department name in background if needed
+        if (cachedProfile.department_id) {
+          loadDepartmentName(cachedProfile.department_id).then(deptName => {
+            if (deptName !== cachedProfile.department_name) {
+              const updatedProfile = { ...cachedProfile, department_name: deptName };
+              setCachedProfile(userId, updatedProfile);
+              setUser(updatedProfile);
             }
-          }, 0);
-          return parsed;
-        } catch (e) {
-          console.error('Error parsing cached profile:', e);
+          });
         }
+        
+        return cachedProfile;
       }
 
-      // Fetch basic profile without JOIN first for speed
+      // Fetch basic profile without JOIN for speed
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -127,6 +167,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (profileError) {
         console.error('Error loading user profile:', profileError);
+        setProfileLoading(false);
         return null;
       }
 
@@ -160,11 +201,14 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       };
 
       // Cache the profile
-      sessionStorage.setItem(`profile_${userId}`, JSON.stringify(userProfile));
+      setCachedProfile(userId, userProfile);
+      setUser(userProfile);
+      setProfileLoading(false);
 
       return userProfile;
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      console.error('Error in loadUserProfileLazy:', error);
+      setProfileLoading(false);
       return null;
     }
   };
@@ -189,9 +233,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (currentSession?.user) {
       // Clear cache to force refresh
+      profileCache.delete(currentSession.user.id);
       sessionStorage.removeItem(`profile_${currentSession.user.id}`);
-      const profile = await loadUserProfile(currentSession.user.id);
-      setUser(profile);
+      await loadUserProfileLazy(currentSession.user.id);
       setSession(currentSession);
     }
   };
@@ -206,26 +250,26 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (!mounted) return;
 
       setSession(currentSession);
+      setLoading(false); // Set loading to false immediately after auth check
       
       if (currentSession?.user) {
-        // Load profile asynchronously to avoid blocking UI
-        setTimeout(async () => {
+        // Load profile asynchronously without blocking UI
+        setTimeout(() => {
           if (mounted) {
-            const profile = await loadUserProfile(currentSession.user.id);
-            if (mounted) {
-              setUser(profile);
-            }
+            loadUserProfileLazy(currentSession.user.id);
           }
         }, 0);
       } else {
         setUser(null);
+        setProfileLoading(false);
         // Clear all caches on logout
-        sessionStorage.clear();
+        profileCache.clear();
         departmentCache.clear();
-      }
-      
-      if (mounted) {
-        setLoading(false);
+        try {
+          sessionStorage.clear();
+        } catch (error) {
+          console.error('Error clearing session storage:', error);
+        }
       }
     });
 
@@ -237,21 +281,18 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (!mounted) return;
 
         setSession(initialSession);
+        setLoading(false); // Set loading to false immediately
         
         if (initialSession?.user) {
           // Load profile asynchronously
-          setTimeout(async () => {
+          setTimeout(() => {
             if (mounted) {
-              const profile = await loadUserProfile(initialSession.user.id);
-              if (mounted) {
-                setUser(profile);
-              }
+              loadUserProfileLazy(initialSession.user.id);
             }
           }, 0);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
-      } finally {
         if (mounted) {
           setLoading(false);
         }
@@ -279,9 +320,15 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!error) {
       setUser(null);
       setSession(null);
+      setProfileLoading(false);
       // Clear all caches
-      sessionStorage.clear();
+      profileCache.clear();
       departmentCache.clear();
+      try {
+        sessionStorage.clear();
+      } catch (error) {
+        console.error('Error clearing storage on signOut:', error);
+      }
     }
     return { error };
   };
@@ -302,6 +349,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     user,
     session,
     loading,
+    profileLoading,
     signIn,
     signOut,
     signUp,

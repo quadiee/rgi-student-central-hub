@@ -13,12 +13,13 @@ import StudentList from './components/StudentList';
 import ReportGenerator from './components/Reports/ReportGenerator';
 import { useAuth } from './contexts/SupabaseAuthContext';
 import InvitationSignup from './components/Auth/InvitationSignup';
+import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 const queryClient = new QueryClient();
 
 function MainAppContent() {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
@@ -33,18 +34,13 @@ function MainAppContent() {
     setSelectedStudent(student);
   };
 
+  // Show loading state while checking authentication
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <SupabaseAuthPage />;
   }
 
-  if (!user) {
+  // Show auth page if not authenticated or no session
+  if (!session) {
     return <SupabaseAuthPage />;
   }
 
@@ -108,18 +104,20 @@ function MainAppContent() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <SupabaseAuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/invite/:token" element={<InvitationSignup />} />
-            <Route path="/*" element={<MainAppContent />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </Router>
-        <Toaster />
-      </SupabaseAuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SupabaseAuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/invite/:token" element={<InvitationSignup />} />
+              <Route path="/*" element={<MainAppContent />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Router>
+          <Toaster />
+        </SupabaseAuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
