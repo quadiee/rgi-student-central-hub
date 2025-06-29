@@ -12,7 +12,6 @@ interface SuperAdminPanelProps {
   onUserManagementClick?: () => void;
 }
 
-// Helper for admin check
 function isAdmin(user: any) {
   return user?.role?.toLowerCase() === 'admin';
 }
@@ -35,6 +34,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
 
   const loadSystemStats = async () => {
     try {
+      // Use correct snake_case fields everywhere!
       const [usersQuery, departmentsQuery, invitationsQuery] = await Promise.all([
         supabase.from('profiles').select('id, is_active'),
         supabase.from('departments').select('id').eq('is_active', true),
@@ -56,7 +56,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     }
   };
 
-  // Grant access if admin, or if hasPermission returns true
   if (!user || (!isAdmin(user) && !hasPermission('access_admin_panel'))) {
     return (
       <div className="text-center py-8">
@@ -89,7 +88,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                   <Users className="w-8 h-8 text-blue-600" />
                 </div>
               </div>
-
               <div className="bg-green-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -99,7 +97,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                   <UserCheck className="w-8 h-8 text-green-600" />
                 </div>
               </div>
-
               <div className="bg-purple-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -109,7 +106,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                   <Building className="w-8 h-8 text-purple-600" />
                 </div>
               </div>
-
               <div className="bg-orange-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -120,7 +116,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                 </div>
               </div>
             </div>
-
             {isImpersonating && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                 <div className="flex items-center justify-between">
@@ -142,7 +137,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                 </div>
               </div>
             )}
-
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -165,7 +159,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
             </div>
           </div>
         );
-
       case 'users':
         return (
           <div className="space-y-6">
@@ -183,16 +176,12 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
             </div>
           </div>
         );
-
       case 'roles':
         return <UserRoleManager />;
-
       case 'impersonation':
         return <AdminImpersonationPanel />;
-
       case 'invitations':
         return <EnhancedUserInvitationManager />;
-
       default:
         return <div>Section not found</div>;
     }
@@ -209,7 +198,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
           </div>
         )}
       </div>
-
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex flex-wrap gap-2 mb-6">
           {sections.map((section) => {
@@ -230,7 +218,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
             );
           })}
         </div>
-
         {renderContent()}
       </div>
     </div>
