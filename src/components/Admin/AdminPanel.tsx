@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
 import UserInvitationManager from './UserInvitationManager';
 
+function isAdmin(user) {
+  return user?.role?.toLowerCase() === 'admin';
+}
+
 const AdminPanel: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [activeSection, setActiveSection] = useState('admin-overview');
 
-  // Check if user has admin privileges (admin or principal)
-  const hasAdminAccess =
-    user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
-
-  if (!user || !hasAdminAccess) {
+  // Grant access if admin, or if hasPermission returns true
+  if (!user || (!isAdmin(user) && !hasPermission('access_admin_panel'))) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -65,7 +66,7 @@ const AdminPanel: React.FC = () => {
 
       {/* Section Tabs */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex space-x-1 mb-6">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
