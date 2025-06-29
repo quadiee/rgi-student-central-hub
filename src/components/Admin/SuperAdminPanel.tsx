@@ -12,7 +12,8 @@ interface SuperAdminPanelProps {
   onUserManagementClick?: () => void;
 }
 
-function isAdmin(user) {
+// Helper for admin check
+function isAdmin(user: any) {
   return user?.role?.toLowerCase() === 'admin';
 }
 
@@ -29,6 +30,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
 
   useEffect(() => {
     loadSystemStats();
+    // eslint-disable-next-line
   }, []);
 
   const loadSystemStats = async () => {
@@ -87,7 +89,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                   <Users className="w-8 h-8 text-blue-600" />
                 </div>
               </div>
-              
+
               <div className="bg-green-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -97,7 +99,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                   <UserCheck className="w-8 h-8 text-green-600" />
                 </div>
               </div>
-              
+
               <div className="bg-purple-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -107,7 +109,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                   <Building className="w-8 h-8 text-purple-600" />
                 </div>
               </div>
-              
+
               <div className="bg-orange-50 p-6 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
@@ -163,7 +165,7 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
             </div>
           </div>
         );
-      
+
       case 'users':
         return (
           <div className="space-y-6">
@@ -181,16 +183,16 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
             </div>
           </div>
         );
-      
+
       case 'roles':
         return <UserRoleManager />;
-      
+
       case 'impersonation':
         return <AdminImpersonationPanel />;
-      
+
       case 'invitations':
         return <EnhancedUserInvitationManager />;
-      
+
       default:
         return <div>Section not found</div>;
     }
