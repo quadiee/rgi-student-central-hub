@@ -13,6 +13,8 @@ export interface UserProfile {
   roll_number?: string;
   employee_id?: string;
   profile_photo_url?: string;
+  phone?: string;
+  address?: string;
   is_active: boolean;
   created_at: string;
   avatar: string;
@@ -197,7 +199,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         department_name: departmentName,
         avatar: profileData.profile_photo_url || '',
         rollNumber: profileData.roll_number,
-        department: departmentCode
+        department: departmentCode,
+        phone: profileData.phone || '',
+        address: profileData.address || ''
       };
 
       // Cache the profile
