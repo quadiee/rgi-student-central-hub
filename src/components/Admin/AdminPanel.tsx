@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -7,13 +6,33 @@ import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
 import UserInvitationManager from './UserInvitationManager';
 
+// Update this function to allow for flexible admin access.
+// Optionally, you can add more roles or use permissions.
 function isAdmin(user: any) {
-  return user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
+  return (
+    user?.role?.toLowerCase() === 'admin' ||
+    user?.role?.toLowerCase() === 'principal'
+    // If you want to allow "superadmin" again, add:
+    // || user?.role?.toLowerCase() === 'superadmin'
+  );
 }
 
 const AdminPanel: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [activeSection, setActiveSection] = useState('admin-overview');
+
+  // DEBUG: Log user and permissions
+  // console.log('user', user);
+  // console.log('hasPermission', hasPermission);
+  // console.log(
+  //   "hasPermission('admin_panel_access')",
+  //   typeof hasPermission === "function" ? hasPermission('admin_panel_access') : 'not a function'
+  // );
+
+  // Optionally, use permission-based checks if your system supports it
+  // const hasAdminPanelAccess = typeof hasPermission === "function"
+  //   ? hasPermission("admin_panel_access")
+  //   : isAdmin(user);
 
   // Check if user has admin privileges
   if (!user || !isAdmin(user)) {
