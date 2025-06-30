@@ -1,25 +1,27 @@
+
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
 import UserInvitationManager from './UserInvitationManager';
 
-function isAdmin(user) {
-  return user?.role?.toLowerCase() === 'admin';
+function isAdmin(user: any) {
+  return user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
 }
 
 const AdminPanel: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('admin-overview');
 
-  // Grant access if admin, or if hasPermission returns true
-  if (!user || (!isAdmin(user) && !hasPermission('access_admin_panel'))) {
+  // Check if user has admin privileges
+  if (!user || !isAdmin(user)) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Access denied. Administrator privileges required.</p>
+        <p className="text-sm text-gray-400 mt-2">Current role: {user?.role || 'Not authenticated'}</p>
       </div>
     );
   }
@@ -60,7 +62,7 @@ const AdminPanel: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
         <div className="flex items-center space-x-2 text-sm text-blue-600">
           <Shield className="w-4 h-4" />
-          <span>Administrator Access</span>
+          <span>Administrator Access ({user.role})</span>
         </div>
       </div>
 
