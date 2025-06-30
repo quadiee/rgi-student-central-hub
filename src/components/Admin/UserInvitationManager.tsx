@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Send } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -47,9 +48,9 @@ const UserInvitationManager: React.FC = () => {
       const { data, error } = await supabase
         .from('user_invitations')
         .select('*')
-        .eq('used_at', null)
+        .is('used_at', null)
         .eq('is_active', true)
-        .gt('expires_at', toSupabaseTimestamp(new Date()));
+        .gt('expires_at', new Date().toISOString());
 
       if (error) {
         console.error('Error loading pending invites:', error);
