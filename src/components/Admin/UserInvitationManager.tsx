@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Send } from 'lucide-react';
+import { Plus, Send, ExternalLink, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -18,6 +18,8 @@ interface PendingInvite {
   invited_at: string;
   role?: string;
   department?: string;
+  email_sent?: boolean;
+  email_sent_at?: string;
 }
 
 // Utility function to format date for Supabase/Postgres (no milliseconds, +00:00 timezone)
@@ -67,7 +69,9 @@ const UserInvitationManager: React.FC = () => {
         email: invite.email,
         invited_at: invite.invited_at || new Date().toISOString(),
         role: invite.role || "",
-        department: invite.department || ""
+        department: invite.department || "",
+        email_sent: invite.email_sent || false,
+        email_sent_at: invite.email_sent_at || null
       }));
       
       setPendingInvites(invites);
@@ -85,6 +89,31 @@ const UserInvitationManager: React.FC = () => {
     loadPendingInvites();
     // eslint-disable-next-line
   }, []);
+
+  const sendInvitationEmail = async (invitationId: string, email: string, role: string, department: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invitation-email', {
+        body: {
+          email,
+          role,
+          department,
+          invitedBy: user?.id,
+          invitationId
+        }
+      });
+
+      if (error) {
+        console.error('Error sending invitation email:', error);
+        return false;
+      }
+
+      console.log('Invitation email sent:', data);
+      return true;
+    } catch (error) {
+      console.error('Error in sendInvitationEmail:', error);
+      return false;
+    }
+  };
 
   const handleSendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +154,15 @@ const UserInvitationManager: React.FC = () => {
         return;
       }
 
-      // Create the user in auth.users with metadata - CRITICAL FIX
+      // Send invitation email
+      const emailSent = await sendInvitationEmail(
+        inviteData.id,
+        formData.email.trim().toLowerCase(),
+        formData.role,
+        formData.department
+      );
+
+      // Create the user in auth.users with metadata
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
         password: 'TempPassword123!', // Temporary password - user will be prompted to change
@@ -146,12 +183,12 @@ const UserInvitationManager: React.FC = () => {
         console.error('Sign up error:', signUpError);
         toast({
           title: "Invitation Created",
-          description: `Invitation sent to ${formData.email}. User will need to register manually.`,
+          description: `Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'}`,
         });
       } else {
         toast({
           title: "Invitation Sent Successfully",
-          description: `User account created and invitation sent to ${formData.email}`,
+          description: `User account created and invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : ''}`,
         });
       }
 
@@ -176,6 +213,38 @@ const UserInvitationManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendEmail = async (invite: PendingInvite) => {
+    const emailSent = await sendInvitationEmail(
+      invite.id,
+      invite.email,
+      invite.role || 'student',
+      invite.department || 'CSE'
+    );
+
+    if (emailSent) {
+      toast({
+        title: "Email Resent",
+        description: `Invitation email resent to ${invite.email}`,
+      });
+      loadPendingInvites();
+    } else {
+      toast({
+        title: "Failed to Resend",
+        description: "Failed to resend invitation email",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const copyInvitationUrl = (email: string) => {
+    const invitationUrl = `${window.location.origin}/auth?mode=invited&email=${encodeURIComponent(email)}`;
+    navigator.clipboard.writeText(invitationUrl);
+    toast({
+      title: "Link Copied",
+      description: "Invitation link copied to clipboard",
+    });
   };
 
   return (
@@ -302,13 +371,15 @@ const UserInvitationManager: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invited On</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {pendingInvites.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     No pending invitations.
                   </td>
                 </tr>
@@ -318,7 +389,41 @@ const UserInvitationManager: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">{invite.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.role}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {invite.email_sent ? (
+                          <div className="flex items-center space-x-1 text-green-600">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-sm">Email Sent</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-orange-600">Email Pending</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.invited_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResendEmail(invite)}
+                          className="flex items-center space-x-1"
+                        >
+                          <Mail className="w-3 h-3" />
+                          <span>Resend</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyInvitationUrl(invite.email)}
+                          className="flex items-center space-x-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Copy Link</span>
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
