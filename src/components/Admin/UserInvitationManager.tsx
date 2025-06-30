@@ -19,7 +19,7 @@ interface PendingInvite {
   role?: string;
   department?: string;
   email_sent?: boolean;
-  email_sent_at?: string;
+  email_sent_at?: string | null;
 }
 
 // Utility function to format date for Supabase/Postgres (no milliseconds, +00:00 timezone)
