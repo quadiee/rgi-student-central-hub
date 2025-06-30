@@ -1,7 +1,3 @@
-console.log('user', user);
-console.log('hasPermission', hasPermission);
-console.log('isAdmin', isAdmin);
-console.log('hasPermission(manage_roles)', typeof hasPermission === 'function' ? hasPermission('manage_roles') : 'not a function');
 import React, { useState, useEffect } from 'react';
 import { Shield, Users } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -136,6 +132,16 @@ const UserRoleManager: React.FC = () => {
 
   // Give all admin/principal users permission to manage roles
   const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
+
+  // Debug logging
+  console.log('user', user);
+  console.log('hasPermission', hasPermission);
+  console.log('isAdmin', isAdmin);
+  console.log(
+    'hasPermission(manage_roles)',
+    typeof hasPermission === 'function' ? hasPermission('manage_roles') : 'not a function'
+  );
+
   if (!isAdmin && (typeof hasPermission !== 'function' || !hasPermission('manage_roles'))) {
     return (
       <div className="text-center py-8">
