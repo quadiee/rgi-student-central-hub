@@ -132,7 +132,7 @@ const UserRoleManager: React.FC = () => {
 
   // Give all admin/principal users permission to manage roles
   const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
-  if (!isAdmin && !hasPermission('manage_roles')) {
+  if (!isAdmin && (typeof hasPermission !== 'function' || !hasPermission('manage_roles'))) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />

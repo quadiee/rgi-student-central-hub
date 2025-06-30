@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Search, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -115,7 +114,7 @@ const AdminImpersonationPanel: React.FC = () => {
     }
   };
 
-  if (!user || !hasPermission || !hasPermission('impersonate_users')) {
+  if (!user || typeof hasPermission !== "function" || !hasPermission('impersonate_users')) {
     return (
       <div className="text-center py-8">
         <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
