@@ -6,8 +6,7 @@ import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
 import UserInvitationManager from './UserInvitationManager';
 
-// Update this function to allow for flexible admin access.
-// Optionally, you can add more roles or use permissions.
+// Recognize admin/principal as admins
 function isAdmin(user: any) {
   return (
     user?.role?.toLowerCase() === 'admin' ||
@@ -18,21 +17,8 @@ function isAdmin(user: any) {
 }
 
 const AdminPanel: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('admin-overview');
-
-  // DEBUG: Log user and permissions
-  // console.log('user', user);
-  // console.log('hasPermission', hasPermission);
-  // console.log(
-  //   "hasPermission('admin_panel_access')",
-  //   typeof hasPermission === "function" ? hasPermission('admin_panel_access') : 'not a function'
-  // );
-
-  // Optionally, use permission-based checks if your system supports it
-  // const hasAdminPanelAccess = typeof hasPermission === "function"
-  //   ? hasPermission("admin_panel_access")
-  //   : isAdmin(user);
 
   // Check if user has admin privileges
   if (!user || !isAdmin(user)) {
