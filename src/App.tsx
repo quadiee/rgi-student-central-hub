@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Toaster } from "./components/ui/toaster";
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
@@ -35,41 +36,71 @@ function MainAppContent() {
           .select(`
             id,
             name,
-            rollNumber,
+            roll_number,
             course,
             year,
             semester,
             email,
             phone,
-            profileImage,
-            admissionDate,
-            guardianName,
-            guardianPhone,
+            profile_photo_url,
+            admission_date,
+            guardian_name,
+            guardian_phone,
             address,
-            bloodGroup,
-            emergencyContact,
-            department,
-            yearSection,
+            blood_group,
+            emergency_contact,
+            department_id,
+            year_section,
             section,
-            totalFees,
-            paidAmount,
-            dueAmount,
-            feeStatus
+            total_fees,
+            paid_amount,
+            due_amount,
+            fee_status
           `)
           .eq('role', 'student');
 
         if (error) {
+          console.error('Error fetching students:', error);
           setStudents([]);
         } else {
-          setStudents((data ?? []) as Student[]);
+          // Map the data to match Student interface
+          const mappedStudents: Student[] = (data || []).map((profile: any) => ({
+            id: profile.id,
+            name: profile.name || 'Unknown',
+            rollNumber: profile.roll_number || '',
+            course: profile.course || 'Not specified',
+            year: profile.year || 1,
+            semester: profile.semester || 1,
+            email: profile.email || '',
+            phone: profile.phone || '',
+            profileImage: profile.profile_photo_url,
+            admissionDate: profile.admission_date || new Date().toISOString(),
+            guardianName: profile.guardian_name || '',
+            guardianPhone: profile.guardian_phone || '',
+            address: profile.address || '',
+            bloodGroup: profile.blood_group,
+            emergencyContact: profile.emergency_contact || '',
+            department: profile.department_id || 'Unknown',
+            yearSection: profile.year_section || '',
+            section: profile.section,
+            totalFees: profile.total_fees,
+            paidAmount: profile.paid_amount,
+            dueAmount: profile.due_amount,
+            feeStatus: profile.fee_status
+          }));
+          setStudents(mappedStudents);
         }
       } catch (err) {
+        console.error('Error in fetchStudents:', err);
         setStudents([]);
       }
       setLoadingStudents(false);
     };
-    fetchStudents();
-  }, []);
+    
+    if (session) {
+      fetchStudents();
+    }
+  }, [session]);
 
   const handleViewStudent = (student: Student) => {
     setSelectedStudent(student);
@@ -126,7 +157,6 @@ function MainAppContent() {
                 <div>
                   <strong>Fee Status:</strong> {selectedStudent.feeStatus}
                 </div>
-                {/* Add more fields as needed */}
               </div>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User, Shield, Clock, LogOut, Edit2, Save, X } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -22,7 +23,7 @@ interface UserProfile {
 }
 
 const UserProfile: React.FC = () => {
-  const { user, signOut, refreshUser } = useAuth() as { user: UserProfile | null, signOut: () => Promise<void>, refreshUser: () => Promise<void> };
+  const { user, signOut, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: user?.name || '',
@@ -35,11 +36,15 @@ const UserProfile: React.FC = () => {
   const handleLogout = async () => {
     if (confirm('Are you sure you want to logout?')) {
       try {
-        await signOut();
-        toast({
-          title: "Success",
-          description: "Logged out successfully",
-        });
+        const result = await signOut();
+        if (!result.error) {
+          toast({
+            title: "Success",
+            description: "Logged out successfully",
+          });
+        } else {
+          throw result.error;
+        }
       } catch (error) {
         toast({
           title: "Error",

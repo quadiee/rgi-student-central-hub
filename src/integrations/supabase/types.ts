@@ -583,56 +583,92 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          admission_date: string | null
+          blood_group: string | null
+          course: string | null
           created_at: string | null
           department_id: string | null
+          due_amount: number | null
           email: string
+          emergency_contact: string | null
           employee_id: string | null
+          fee_status: string | null
           guardian_name: string | null
           guardian_phone: string | null
           id: string
           is_active: boolean | null
+          last_login: string | null
           name: string
+          paid_amount: number | null
           phone: string | null
           profile_photo_url: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           roll_number: string | null
+          section: string | null
+          semester: number | null
+          total_fees: number | null
           updated_at: string | null
+          year: number | null
           year_section: string | null
         }
         Insert: {
           address?: string | null
+          admission_date?: string | null
+          blood_group?: string | null
+          course?: string | null
           created_at?: string | null
           department_id?: string | null
+          due_amount?: number | null
           email: string
+          emergency_contact?: string | null
           employee_id?: string | null
+          fee_status?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           id: string
           is_active?: boolean | null
+          last_login?: string | null
           name: string
+          paid_amount?: number | null
           phone?: string | null
           profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
+          section?: string | null
+          semester?: number | null
+          total_fees?: number | null
           updated_at?: string | null
+          year?: number | null
           year_section?: string | null
         }
         Update: {
           address?: string | null
+          admission_date?: string | null
+          blood_group?: string | null
+          course?: string | null
           created_at?: string | null
           department_id?: string | null
+          due_amount?: number | null
           email?: string
+          emergency_contact?: string | null
           employee_id?: string | null
+          fee_status?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           id?: string
           is_active?: boolean | null
+          last_login?: string | null
           name?: string
+          paid_amount?: number | null
           phone?: string | null
           profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
+          section?: string | null
+          semester?: number | null
+          total_fees?: number | null
           updated_at?: string | null
+          year?: number | null
           year_section?: string | null
         }
         Relationships: [
