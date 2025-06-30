@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Users, Settings, Eye, EyeOff, Shield, UserCheck, Building } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import UserRoleManager from './UserRoleManager';
 import AdminImpersonationPanel from './AdminImpersonationPanel';
@@ -13,11 +14,11 @@ interface SuperAdminPanelProps {
 }
 
 function isAdmin(user: any) {
-  return user?.role?.toLowerCase() === 'admin';
+  return user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
 }
 
 const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick }) => {
-  const { user, hasPermission, isImpersonating, exitImpersonation } = useAuth();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
@@ -56,11 +57,12 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     }
   };
 
-  if (!user || (!isAdmin(user) && !hasPermission('access_admin_panel'))) {
+  if (!user || !isAdmin(user)) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Access denied. Administrator privileges required.</p>
+        <p className="text-sm text-gray-400 mt-2">Current role: {user?.role || 'Not authenticated'}</p>
       </div>
     );
   }
@@ -116,27 +118,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
                 </div>
               </div>
             </div>
-            {isImpersonating && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Eye className="w-5 h-5 text-yellow-600" />
-                    <span className="text-yellow-800 font-medium">
-                      Currently impersonating another user
-                    </span>
-                  </div>
-                  <Button
-                    onClick={exitImpersonation}
-                    variant="outline"
-                    size="sm"
-                    className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
-                  >
-                    <EyeOff className="w-4 h-4 mr-2" />
-                    Exit Impersonation
-                  </Button>
-                </div>
-              </div>
-            )}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -191,12 +172,10 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
-        {hasPermission('manage_users') && (
-          <div className="flex items-center space-x-2 text-sm text-green-600">
-            <Shield className="w-4 h-4" />
-            <span>Full System Access</span>
-          </div>
-        )}
+        <div className="flex items-center space-x-2 text-sm text-green-600">
+          <Shield className="w-4 h-4" />
+          <span>Administrator Access ({user.role})</span>
+        </div>
       </div>
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex flex-wrap gap-2 mb-6">
