@@ -26,10 +26,12 @@ const AdminImpersonationPanel: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
     filterUsers();
+    // eslint-disable-next-line
   }, [users, searchTerm, selectedRole]);
 
   const loadUsers = async () => {
@@ -53,16 +55,19 @@ const AdminImpersonationPanel: React.FC = () => {
         .neq('id', user?.id) // Exclude current admin user
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error loading users:', error); // ADD THIS LOG
+        throw error;
+      }
       
-      const usersData = (data || []).map(user => ({
+      const usersData = (data || []).map((user: any) => ({
         ...user,
         department_name: user.departments?.name || 'Unknown'
       }));
       
       setUsers(usersData);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('Error loading users:', error); // You already have this
       toast({
         title: "Error",
         description: "Failed to load users",
@@ -114,6 +119,15 @@ const AdminImpersonationPanel: React.FC = () => {
     }
   };
 
+  // ADD DEBUG LOGGING HERE:
+  console.log('user:', user);
+  console.log('hasPermission:', hasPermission);
+  console.log(
+    "hasPermission('impersonate_users'):",
+    typeof hasPermission === "function" ? hasPermission('impersonate_users') : 'not a function'
+  );
+
+  // Permission check
   if (!user || typeof hasPermission !== "function" || !hasPermission('impersonate_users')) {
     return (
       <div className="text-center py-8">
