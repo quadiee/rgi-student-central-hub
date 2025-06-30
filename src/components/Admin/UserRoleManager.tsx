@@ -1,3 +1,7 @@
+console.log('user', user);
+console.log('hasPermission', hasPermission);
+console.log('isAdmin', isAdmin);
+console.log('hasPermission(manage_roles)', typeof hasPermission === 'function' ? hasPermission('manage_roles') : 'not a function');
 import React, { useState, useEffect } from 'react';
 import { Shield, Users } from 'lucide-react';
 import { Button } from '../ui/button';
