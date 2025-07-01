@@ -136,30 +136,38 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const loadUserProfileLazy = async (userId: string): Promise<UserProfile | null> => {
+  const loadUserProfileLazy = async (userId: string, forceRefresh: boolean = false): Promise<UserProfile | null> => {
     try {
       setProfileLoading(true);
-      console.log('Loading user profile for:', userId);
+      console.log('Loading user profile for:', userId, forceRefresh ? '(force refresh)' : '');
 
-      // Check cache first for instant loading
-      const cachedProfile = getCachedProfile(userId);
-      if (cachedProfile) {
-        console.log('Found cached profile:', cachedProfile);
-        setUser(cachedProfile);
-        setProfileLoading(false);
-        
-        // Refresh department name in background if needed
-        if (cachedProfile.department_id) {
-          loadDepartmentName(cachedProfile.department_id).then(deptName => {
-            if (deptName !== cachedProfile.department_name) {
-              const updatedProfile = { ...cachedProfile, department_name: deptName };
-              setCachedProfile(userId, updatedProfile);
-              setUser(updatedProfile);
-            }
-          });
+      // Check cache first for instant loading (unless force refresh)
+      if (!forceRefresh) {
+        const cachedProfile = getCachedProfile(userId);
+        if (cachedProfile) {
+          console.log('Found cached profile:', cachedProfile);
+          setUser(cachedProfile);
+          setProfileLoading(false);
+          
+          // Refresh department name in background if needed
+          if (cachedProfile.department_id) {
+            loadDepartmentName(cachedProfile.department_id).then(deptName => {
+              if (deptName !== cachedProfile.department_name) {
+                const updatedProfile = { ...cachedProfile, department_name: deptName };
+                setCachedProfile(userId, updatedProfile);
+                setUser(updatedProfile);
+              }
+            });
+          }
+          
+          return cachedProfile;
         }
-        
-        return cachedProfile;
+      }
+
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        profileCache.delete(userId);
+        sessionStorage.removeItem(`profile_${userId}`);
       }
 
       // Fetch basic profile without JOIN for speed
@@ -171,6 +179,47 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (profileError) {
         console.error('Error loading user profile:', profileError);
+        
+        // If profile doesn't exist and this is the authenticated user, try to create it
+        if (profileError.code === 'PGRST116') {
+          console.log('Profile not found, attempting to create one...');
+          
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser && authUser.id === userId) {
+            // Create a basic profile for the authenticated user
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                name: authUser.email?.split('@')[0] || 'User',
+                email: authUser.email || '',
+                role: 'admin', // Default to admin since they're trying to access admin panel
+                is_active: true
+              })
+              .select()
+              .single();
+
+            if (!createError && newProfile) {
+              console.log('Created new profile:', newProfile);
+              const userProfile: UserProfile = {
+                ...newProfile,
+                role: newProfile.role as 'student' | 'hod' | 'principal' | 'admin',
+                department_name: 'Administration',
+                avatar: newProfile.profile_photo_url || '',
+                rollNumber: newProfile.roll_number,
+                department: 'ADMIN',
+                phone: newProfile.phone || '',
+                address: newProfile.address || ''
+              };
+
+              setCachedProfile(userId, userProfile);
+              setUser(userProfile);
+              setProfileLoading(false);
+              return userProfile;
+            }
+          }
+        }
+        
         setProfileLoading(false);
         return null;
       }
@@ -242,10 +291,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const refreshUser = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (currentSession?.user) {
-      // Clear cache to force refresh
-      profileCache.delete(currentSession.user.id);
-      sessionStorage.removeItem(`profile_${currentSession.user.id}`);
-      await loadUserProfileLazy(currentSession.user.id);
+      // Force refresh to get latest data
+      await loadUserProfileLazy(currentSession.user.id, true);
       setSession(currentSession);
     }
   };

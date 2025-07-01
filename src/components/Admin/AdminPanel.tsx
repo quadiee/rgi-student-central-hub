@@ -40,6 +40,14 @@ const AdminPanel: React.FC = () => {
         <p className="text-xs text-gray-400 mt-1">
           User: {user?.email || 'Not logged in'}
         </p>
+        <div className="mt-4">
+          <button 
+            onClick={() => window.location.reload()} 
+            className="text-blue-500 hover:text-blue-700 underline"
+          >
+            Refresh Page
+          </button>
+        </div>
       </div>
     );
   }
