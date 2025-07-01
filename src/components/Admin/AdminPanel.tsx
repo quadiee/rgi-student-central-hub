@@ -10,8 +10,8 @@ import UserInvitationManager from './UserInvitationManager';
 // Recognize admin/principal as admins
 function isAdmin(user: any) {
   if (!user) return false;
-  const role = user.role?.toLowerCase();
-  return role === 'admin' || role === 'principal';
+  // Always let any user with role "admin" in
+  return user.role?.toLowerCase() === 'admin';
 }
 
 const AdminPanel: React.FC = () => {
