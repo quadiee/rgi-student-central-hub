@@ -16,7 +16,7 @@ interface UserProfile {
 }
 
 const AdminImpersonationPanel: React.FC = () => {
-  const { user, switchToUserView, exitImpersonation, isImpersonating, hasPermission } = useAuth();
+  const { user, switchToUserView, exitImpersonation, isImpersonating } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,11 +52,10 @@ const AdminImpersonationPanel: React.FC = () => {
           )
         `)
         .eq('is_active', true)
-        .neq('id', user?.id) // Exclude current admin user
         .order('name');
 
       if (error) {
-        console.error('Supabase error loading users:', error); // ADD THIS LOG
+        console.error('Supabase error loading users:', error);
         throw error;
       }
       
@@ -67,7 +66,7 @@ const AdminImpersonationPanel: React.FC = () => {
       
       setUsers(usersData);
     } catch (error) {
-      console.error('Error loading users:', error); // You already have this
+      console.error('Error loading users:', error);
       toast({
         title: "Error",
         description: "Failed to load users",
@@ -118,24 +117,6 @@ const AdminImpersonationPanel: React.FC = () => {
       }
     }
   };
-
-  // ADD DEBUG LOGGING HERE:
-  console.log('user:', user);
-  console.log('hasPermission:', hasPermission);
-  console.log(
-    "hasPermission('impersonate_users'):",
-    typeof hasPermission === "function" ? hasPermission('impersonate_users') : 'not a function'
-  );
-
-  // Permission check
-  if (!user || typeof hasPermission !== "function" || !hasPermission('impersonate_users')) {
-    return (
-      <div className="text-center py-8">
-        <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-        <p className="text-gray-500">You don't have permission to impersonate users.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
