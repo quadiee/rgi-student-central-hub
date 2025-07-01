@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
@@ -11,8 +12,6 @@ function isAdmin(user: any) {
   return (
     user?.role?.toLowerCase() === 'admin' ||
     user?.role?.toLowerCase() === 'principal'
-    // If you want to allow "superadmin" again, add:
-    // || user?.role?.toLowerCase() === 'superadmin'
   );
 }
 

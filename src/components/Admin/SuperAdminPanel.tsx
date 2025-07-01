@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Settings, Eye, EyeOff, Shield, UserCheck, Building } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import UserRoleManager from './UserRoleManager';
 import AdminImpersonationPanel from './AdminImpersonationPanel';
@@ -30,7 +30,6 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onUserManagementClick
 
   useEffect(() => {
     loadSystemStats();
-    // eslint-disable-next-line
   }, []);
 
   const loadSystemStats = async () => {

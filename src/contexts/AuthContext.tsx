@@ -26,7 +26,7 @@ interface AuthContextType {
   switchToUserView?: (userId: string, role: string) => Promise<boolean>;
   exitImpersonation?: () => Promise<boolean>;
   isImpersonating?: boolean;
-  hasPermission?: (permission: string) => boolean;
+  hasPermission: (permission: string) => boolean;
   refreshUser: () => Promise<void>;
   switchRole?: (role: string) => void;
   logout?: () => void;
@@ -38,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signOut: async () => {},
   refreshUser: async () => {},
+  hasPermission: () => false,
 });
 
 export const useAuth = () => {
@@ -175,9 +176,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    // Simple role-based permissions
+    
+    // Admin has all permissions
     if (user.role === 'admin') return true;
-    if (permission === 'impersonate_users') return user.role === 'admin';
+    
+    // Principal has most permissions
+    if (user.role === 'principal') {
+      return [
+        'manage_users',
+        'manage_invitations', 
+        'impersonate_users',
+        'manage_roles',
+        'view_all_students',
+        'view_all_fees',
+        'generate_reports'
+      ].includes(permission);
+    }
+    
+    // HOD has department-level permissions
+    if (user.role === 'hod') {
+      return [
+        'view_department_students',
+        'view_department_fees',
+        'generate_reports'
+      ].includes(permission);
+    }
+    
+    // Students have limited permissions
+    if (user.role === 'student') {
+      return [
+        'view_own_profile',
+        'view_own_fees'
+      ].includes(permission);
+    }
+    
     return false;
   };
 
