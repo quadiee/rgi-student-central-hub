@@ -18,6 +18,7 @@ const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], 
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null); // <-- error state
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -41,6 +42,7 @@ const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], 
   const loadStudents = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -57,7 +59,7 @@ const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], 
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading students:', error);
+        setError("Failed to load students");
         toast({
           title: "Error",
           description: "Failed to load students",
@@ -74,12 +76,11 @@ const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], 
         rollNumber: student.rollNumber,
         is_active: student.is_active,
         created_at: student.created_at,
-        // ...add other fields as needed
       }));
 
       setStudents(studentsData);
     } catch (error) {
-      console.error('Error in loadStudents:', error);
+      setError("Failed to load students");
       toast({
         title: "Error",
         description: "Failed to load students",
@@ -101,7 +102,7 @@ const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], 
         setDepartments(data.map((d: any) => d.name));
       }
     } catch (error) {
-      console.error('Error loading departments:', error);
+      // Departments failing to load doesn't block student list
     }
   };
 
@@ -127,6 +128,16 @@ const StudentList: React.FC<StudentListProps> = ({ students: propStudents = [], 
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <Users className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Student Management</h2>
+        <p className="text-red-600 font-semibold">{error}</p>
       </div>
     );
   }
