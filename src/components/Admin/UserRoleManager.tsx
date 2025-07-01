@@ -131,7 +131,7 @@ const UserRoleManager: React.FC = () => {
   }, {} as Record<string, Permission[]>);
 
   // Give all admin/principal users permission to manage roles
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'principal';
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   // Debug logging
   console.log('user', user);
