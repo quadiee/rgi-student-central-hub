@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Mail, Upload, Users, Send, Download, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 
 interface BulkInvitation {
@@ -22,7 +20,6 @@ interface Department {
 }
 
 const EnhancedUserInvitationManager: React.FC = () => {
-  const { user, hasPermission } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [invitations, setInvitations] = useState<BulkInvitation[]>([]);
   const [csvData, setCsvData] = useState<string>('');
@@ -171,7 +168,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
               department: invitation.department as any,
               roll_number: invitation.rollNumber || null,
               employee_id: invitation.employeeId || null,
-              invited_by: user?.id,
+              // removed invited_by and user dependency for no-auth
               is_active: true,
               expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
             });
@@ -209,14 +206,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
     }
   };
 
-  if (!hasPermission('manage_invitations')) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-        <p className="text-gray-500">You don't have permission to send invitations.</p>
-      </div>
-    );
-  }
+  // NO permission/auth check here, open to everyone who can see the page
 
   return (
     <div className="space-y-6">
