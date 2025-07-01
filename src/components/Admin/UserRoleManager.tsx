@@ -133,6 +133,7 @@ const UserRoleManager: React.FC = () => {
   // Only check if user is admin (case-insensitive)
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
+  // NO extra permission checks here; only admin role is required
   if (!isAdmin) {
     return (
       <div className="text-center py-8">
