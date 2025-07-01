@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import CSVFeeUploader from './CSVFeeUploader';
@@ -22,14 +21,12 @@ const EnhancedFeeManagement: React.FC = () => {
     switch (user.role) {
       case 'student':
         return <StudentPaymentPortal />;
-      
       case 'hod':
         return (
           <div className="space-y-6">
             <RealTimeFeeDashboard />
           </div>
         );
-      
       case 'principal':
         return (
           <div className="space-y-6">
@@ -37,10 +34,14 @@ const EnhancedFeeManagement: React.FC = () => {
             <CSVFeeUploader />
           </div>
         );
-      
       case 'admin':
-        return <AdminDashboard />;
-      
+        // Show the fee management dashboard for admin, not the full AdminDashboard
+        return (
+          <div className="space-y-6">
+            <RealTimeFeeDashboard />
+            <CSVFeeUploader />
+          </div>
+        );
       default:
         return (
           <div className="text-center py-8">
@@ -50,11 +51,6 @@ const EnhancedFeeManagement: React.FC = () => {
         );
     }
   };
-
-  // For admin users, show the full admin dashboard instead of fee management
-  if (user.role === 'admin') {
-    return renderRoleSpecificView();
-  }
 
   return (
     <div className="space-y-6">
