@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
 import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
