@@ -26,7 +26,7 @@ interface RolePermission {
 }
 
 const UserRoleManager: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
@@ -130,19 +130,10 @@ const UserRoleManager: React.FC = () => {
     return acc;
   }, {} as Record<string, Permission[]>);
 
-  // Give all admin/principal users permission to manage roles
+  // Only check if user is admin (case-insensitive)
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
-  // Debug logging
-  console.log('user', user);
-  console.log('hasPermission', hasPermission);
-  console.log('isAdmin', isAdmin);
-  console.log(
-    'hasPermission(manage_roles)',
-    typeof hasPermission === 'function' ? hasPermission('manage_roles') : 'not a function'
-  );
-
-  if (!isAdmin && (typeof hasPermission !== 'function' || !hasPermission('manage_roles'))) {
+  if (!isAdmin) {
     return (
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
