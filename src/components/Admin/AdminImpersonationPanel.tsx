@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Search, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 
 interface UserProfile {
@@ -16,16 +15,21 @@ interface UserProfile {
 }
 
 const AdminImpersonationPanel: React.FC = () => {
-  const { user, switchToUserView, exitImpersonation, isImpersonating } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // On mount, load users and check impersonation state
   useEffect(() => {
     loadUsers();
+    const adminId = localStorage.getItem('originalAdminUserId');
+    setIsImpersonating(!!adminId);
+    setAdminUserId(adminId);
     // eslint-disable-next-line
   }, []);
 
@@ -58,12 +62,12 @@ const AdminImpersonationPanel: React.FC = () => {
         console.error('Supabase error loading users:', error);
         throw error;
       }
-      
+
       const usersData = (data || []).map((user: any) => ({
         ...user,
         department_name: user.departments?.name || 'Unknown'
       }));
-      
+
       setUsers(usersData);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -79,42 +83,131 @@ const AdminImpersonationPanel: React.FC = () => {
 
   const filterUsers = () => {
     let filtered = users;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (selectedRole !== 'all') {
       filtered = filtered.filter(user => user.role === selectedRole);
     }
-    
+
     setFilteredUsers(filtered);
   };
 
+  // Helper to get the current user from Supabase
+  const getCurrentUserId = async (): Promise<string | null> => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user?.id || null;
+  };
+
   const handleImpersonate = async (targetUser: UserProfile) => {
-    if (switchToUserView) {
-      const success = await switchToUserView(targetUser.id, targetUser.role);
-      if (success) {
+    try {
+      setLoading(true);
+
+      // Store the current admin user id before impersonating
+      let originalAdminId = adminUserId;
+      if (!originalAdminId) {
+        originalAdminId = await getCurrentUserId();
+        if (originalAdminId) {
+          localStorage.setItem('originalAdminUserId', originalAdminId);
+          setAdminUserId(originalAdminId);
+        }
+      }
+
+      const res = await fetch("/functions/v1/impersonate-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: targetUser.id }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({
+          title: "Error",
+          description: data.error || "Impersonation failed.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { access_token, refresh_token } = data;
+      if (access_token && refresh_token) {
+        await supabase.auth.setSession({ access_token, refresh_token });
+        setIsImpersonating(true);
         toast({
           title: "Impersonation Started",
           description: `Now viewing as ${targetUser.name} (${targetUser.role})`,
         });
+        // Optionally reload to refresh the session context
+        window.location.reload();
       }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Impersonation failed.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleExitImpersonation = async () => {
-    if (exitImpersonation) {
-      const success = await exitImpersonation();
-      if (success) {
+    try {
+      setLoading(true);
+      const originalAdminId = localStorage.getItem('originalAdminUserId');
+      if (!originalAdminId) {
+        toast({
+          title: "Error",
+          description: "Original admin user ID unknown.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const res = await fetch("/functions/v1/stop-impersonation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminUserId: originalAdminId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to exit impersonation.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { access_token, refresh_token } = data;
+      if (access_token && refresh_token) {
+        await supabase.auth.setSession({ access_token, refresh_token });
+        setIsImpersonating(false);
+        localStorage.removeItem('originalAdminUserId');
+        setAdminUserId(null);
         toast({
           title: "Impersonation Ended",
-          description: "Returned to admin view",
+          description: "Returned to admin view.",
         });
+        // Optionally reload to refresh the session context
+        window.location.reload();
       }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to exit impersonation.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,6 +220,7 @@ const AdminImpersonationPanel: React.FC = () => {
             onClick={handleExitImpersonation}
             variant="outline"
             className="flex items-center space-x-2"
+            disabled={loading}
           >
             <EyeOff className="w-4 h-4" />
             <span>Exit Impersonation</span>
@@ -169,6 +263,7 @@ const AdminImpersonationPanel: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
             />
           </div>
         </div>
@@ -176,6 +271,7 @@ const AdminImpersonationPanel: React.FC = () => {
           value={selectedRole}
           onChange={(e) => setSelectedRole(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={loading}
         >
           <option value="all">All Roles</option>
           <option value="student">Student</option>
@@ -239,7 +335,7 @@ const AdminImpersonationPanel: React.FC = () => {
                         variant="outline"
                         size="sm"
                         className="flex items-center space-x-1"
-                        disabled={isImpersonating}
+                        disabled={isImpersonating || loading}
                       >
                         <Eye className="w-4 h-4" />
                         <span>Impersonate</span>
