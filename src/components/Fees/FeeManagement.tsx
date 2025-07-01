@@ -1,1 +1,1 @@
-export { default } from './enhanced-fee-management';
+export { default } from './EnhancedFeeManagement';
