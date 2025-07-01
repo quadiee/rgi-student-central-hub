@@ -139,10 +139,12 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const loadUserProfileLazy = async (userId: string): Promise<UserProfile | null> => {
     try {
       setProfileLoading(true);
+      console.log('Loading user profile for:', userId);
 
       // Check cache first for instant loading
       const cachedProfile = getCachedProfile(userId);
       if (cachedProfile) {
+        console.log('Found cached profile:', cachedProfile);
         setUser(cachedProfile);
         setProfileLoading(false);
         
@@ -172,6 +174,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setProfileLoading(false);
         return null;
       }
+
+      console.log('Loaded profile data:', profileData);
 
       // Load department name asynchronously
       let departmentName = 'Unknown';
@@ -203,6 +207,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         phone: profileData.phone || '',
         address: profileData.address || ''
       };
+
+      console.log('Created user profile:', userProfile);
 
       // Cache the profile
       setCachedProfile(userId, userProfile);
@@ -257,6 +263,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading(false); // Set loading to false immediately after auth check
       
       if (currentSession?.user) {
+        console.log('User authenticated, loading profile...');
         // Load profile asynchronously without blocking UI
         setTimeout(() => {
           if (mounted) {
@@ -264,6 +271,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           }
         }, 0);
       } else {
+        console.log('User not authenticated, clearing profile');
         setUser(null);
         setProfileLoading(false);
         // Clear all caches on logout
@@ -284,10 +292,12 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         
         if (!mounted) return;
 
+        console.log('Initial session:', initialSession?.user?.email);
         setSession(initialSession);
         setLoading(false); // Set loading to false immediately
         
         if (initialSession?.user) {
+          console.log('Initial user found, loading profile...');
           // Load profile asynchronously
           setTimeout(() => {
             if (mounted) {

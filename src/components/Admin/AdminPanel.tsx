@@ -9,15 +9,24 @@ import UserInvitationManager from './UserInvitationManager';
 
 // Recognize admin/principal as admins
 function isAdmin(user: any) {
-  return (
-    user?.role?.toLowerCase() === 'admin' ||
-    user?.role?.toLowerCase() === 'principal'
-  );
+  if (!user) return false;
+  const role = user.role?.toLowerCase();
+  return role === 'admin' || role === 'principal';
 }
 
 const AdminPanel: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading, profileLoading } = useAuth();
   const [activeSection, setActiveSection] = useState('admin-overview');
+
+  // Show loading state while authentication or profile is loading
+  if (loading || profileLoading) {
+    return (
+      <div className="text-center py-8">
+        <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-pulse" />
+        <p className="text-gray-500">Loading admin panel...</p>
+      </div>
+    );
+  }
 
   // Check if user has admin privileges
   if (!user || !isAdmin(user)) {
@@ -25,7 +34,12 @@ const AdminPanel: React.FC = () => {
       <div className="text-center py-8">
         <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Access denied. Administrator privileges required.</p>
-        <p className="text-sm text-gray-400 mt-2">Current role: {user?.role || 'Not authenticated'}</p>
+        <p className="text-sm text-gray-400 mt-2">
+          Current role: {user?.role || 'Not authenticated'}
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          User: {user?.email || 'Not logged in'}
+        </p>
       </div>
     );
   }
