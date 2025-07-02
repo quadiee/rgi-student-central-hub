@@ -4,6 +4,7 @@ import { Bell, Settings, User, LogOut, Menu } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import UserProfile from '../Auth/UserProfile';
+import NotificationCenter from '../Notifications/NotificationCenter';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -12,6 +13,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
     <>
@@ -39,7 +41,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" className="relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative"
+              onClick={() => setShowNotifications(true)}
+            >
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
                 3
@@ -85,6 +92,27 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </div>
             <div className="p-4">
               <UserProfile />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {showNotifications && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-semibold">Notifications</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNotifications(false)}
+              >
+                ×
+              </Button>
+            </div>
+            <div className="p-4">
+              <NotificationCenter onClose={() => setShowNotifications(false)} />
             </div>
           </div>
         </div>

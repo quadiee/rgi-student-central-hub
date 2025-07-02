@@ -7,7 +7,8 @@ import {
   Settings,
   FileText,
   UserCheck,
-  GraduationCap
+  GraduationCap,
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 
@@ -17,7 +18,12 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = '/';
+  };
 
   const getMenuItems = () => {
     const baseItems = [
@@ -82,6 +88,34 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           );
         })}
       </nav>
+      
+      {/* User Profile and Logout */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm font-medium">
+                {user?.name?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {user?.name || user?.email}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">
+                {user?.role}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

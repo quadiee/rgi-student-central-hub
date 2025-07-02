@@ -11,6 +11,8 @@ import FeeManagement from './components/Fees/FeeManagement';
 import AdminPanel from './components/Admin/AdminPanel';
 import StudentList from './components/StudentList';
 import ReportGenerator from './components/Reports/ReportGenerator';
+import AttendanceManagement from './components/Attendance/AttendanceManagement';
+import ExamManagement from './components/Exams/ExamManagement';
 import { useAuth } from './contexts/SupabaseAuthContext';
 import InvitationSignup from './components/Auth/InvitationSignup';
 import { ErrorBoundary } from './components/Auth/ErrorBoundary';
@@ -22,10 +24,13 @@ const queryClient = new QueryClient();
 
 function MainAppContent() {
   const { user, session, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
+
+  // Get active tab from current route
+  const location = window.location.pathname;
+  const activeTab = location.slice(1) || 'dashboard';
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -163,6 +168,10 @@ function MainAppContent() {
         );
       case 'reports':
         return <ReportGenerator />;
+      case 'attendance':
+        return <AttendanceManagement />;
+      case 'exams':
+        return <ExamManagement />;
       default:
         return <Dashboard />;
     }
@@ -170,7 +179,7 @@ function MainAppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar activeTab={activeTab} onTabChange={(tab) => window.location.href = `/${tab}`} />
       <div className="flex-1 ml-64">
         <Header />
         <main className="p-6">
@@ -189,8 +198,15 @@ function App() {
           <Router>
             <Routes>
               <Route path="/invite/:token" element={<InvitationSignup />} />
-              <Route path="/*" element={<MainAppContent />} />
-              <Route path="*" element={<Navigate to="/" />} />
+              <Route path="/dashboard" element={<MainAppContent />} />
+              <Route path="/fees" element={<MainAppContent />} />
+              <Route path="/admin" element={<MainAppContent />} />
+              <Route path="/students" element={<MainAppContent />} />
+              <Route path="/reports" element={<MainAppContent />} />
+              <Route path="/attendance" element={<MainAppContent />} />
+              <Route path="/exams" element={<MainAppContent />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Router>
           <Toaster />
