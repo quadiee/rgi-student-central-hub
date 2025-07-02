@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import UserInvitationManager from './UserInvitationManager';
 import EnhancedUserInvitationManager from './EnhancedUserInvitationManager';
 
+/**
+ * UnifiedUserInvitationManager
+ * Lets you switch between inviting a single user (form)
+ * or inviting many users at once (CSV upload) in one easy panel.
+ */
 const UnifiedUserInvitationManager: React.FC = () => {
   const [tab, setTab] = useState<'single' | 'bulk'>('single');
 
