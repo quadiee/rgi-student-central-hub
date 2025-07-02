@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Shield, User, Users, Building } from 'lucide-react';
+import { Search, Shield, User, Users, Building, Mail, KeyRound, MailPlus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
-
-// 👇 AUTH HELPERS (these use your /src/lib/ helpers, no wiring needed)
+// Import auth helpers
 import { sendMagicLink } from '../../lib/sendMagicLink';
 import { changeEmail } from '../../lib/changeEmail';
 import { resetPassword } from '../../lib/resetPassword';
@@ -15,8 +14,8 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
-  department_id: string; // Changed: required, now the main reference
-  department?: string;   // Optional: legacy support if needed
+  department_id: string;
+  department?: string;
   roll_number?: string;
   employee_id?: string;
   is_active: boolean;
@@ -31,6 +30,20 @@ interface DepartmentData {
   is_active: boolean;
 }
 
+// Simple Modal dialog
+const Modal: React.FC<{ open: boolean, onClose: () => void, title: string, children: React.ReactNode }> = ({ open, onClose, title, children }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+        <button className="absolute top-2 right-2 text-xl text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
+        <h3 className="text-lg font-semibold mb-4">{title}</h3>
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+};
+
 const EnhancedUserManagement: React.FC = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -43,13 +56,16 @@ const EnhancedUserManagement: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentData[]>([]);
   const { toast } = useToast();
 
-  // --- Auth UI state ---
-  const [magicLinkEmail, setMagicLinkEmail] = useState('');
-  const [magicLinkStatus, setMagicLinkStatus] = useState('');
-  const [changeEmailValue, setChangeEmailValue] = useState('');
-  const [changeEmailStatus, setChangeEmailStatus] = useState('');
-  const [resetPasswordEmail, setResetPasswordEmail] = useState('');
-  const [resetPasswordStatus, setResetPasswordStatus] = useState('');
+  // Modal state
+  const [modal, setModal] = useState<null | {
+    type: 'magic-link' | 'change-email' | 'reset-password',
+    user: UserProfile
+  }>(null);
+
+  // For change email
+  const [newEmail, setNewEmail] = useState('');
+  // Status message for modal actions
+  const [actionStatus, setActionStatus] = useState('');
 
   const roles = ['student', 'hod', 'principal', 'admin'];
 
@@ -70,7 +86,6 @@ const EnhancedUserManagement: React.FC = () => {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error loading departments:', error);
         setDepartments([
           { id: 'cse-uuid', name: 'Computer Science Engineering', code: 'CSE', is_active: true },
           { id: 'ece-uuid', name: 'Electronics & Communication', code: 'ECE', is_active: true },
@@ -83,7 +98,7 @@ const EnhancedUserManagement: React.FC = () => {
       }
       setDepartments(data || []);
     } catch (error) {
-      console.error('Error loading departments:', error);
+      //
     }
   };
 
@@ -96,20 +111,14 @@ const EnhancedUserManagement: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       const usersData = data || [];
       setUsers(usersData);
-      
+
       const total = usersData.length;
       const active = usersData.filter(u => u.is_active).length;
       setStats({ total, active, inactive: total - active });
-      
     } catch (error) {
-      console.error('Error loading users:', error);
       toast({
         title: "Error",
         description: "Failed to load users. Please check your database connection.",
@@ -122,24 +131,20 @@ const EnhancedUserManagement: React.FC = () => {
 
   const filterUsers = () => {
     let filtered = users;
-    
     if (searchTerm) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.roll_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.employee_id?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
     if (selectedRole !== 'all') {
       filtered = filtered.filter(user => user.role === selectedRole);
     }
-
     if (selectedDepartment !== 'all') {
       filtered = filtered.filter(user => user.department_id === selectedDepartment);
     }
-    
     setFilteredUsers(filtered);
   };
 
@@ -156,10 +161,8 @@ const EnhancedUserManagement: React.FC = () => {
         title: "Success",
         description: `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
       });
-      
       loadUsers();
     } catch (error) {
-      console.error('Error updating user status:', error);
       toast({
         title: "Error",
         description: "Failed to update user status",
@@ -199,29 +202,30 @@ const EnhancedUserManagement: React.FC = () => {
     return dept ? dept.name : deptId;
   };
 
-  // --- AUTH HANDLERS ---
-
-  const handleSendMagicLink = async () => {
-    setMagicLinkStatus("Sending...");
-    const error = await sendMagicLink(magicLinkEmail);
-    if (error) setMagicLinkStatus("Failed: " + error.message);
-    else setMagicLinkStatus("Magic link sent! Check your inbox.");
+  // ===== Per-user Auth Action Handlers =====
+  const handleAuthAction = async () => {
+    if (!modal) return;
+    setActionStatus('Processing...');
+    if (modal.type === 'magic-link') {
+      const error = await sendMagicLink(modal.user.email);
+      if (error) setActionStatus("Failed: " + error.message);
+      else setActionStatus("Magic link sent!");
+    } else if (modal.type === 'change-email') {
+      if (!newEmail) {
+        setActionStatus('Please enter a new email address.');
+        return;
+      }
+      const error = await changeEmail(newEmail);
+      if (error) setActionStatus("Failed: " + error.message);
+      else setActionStatus("Change email request sent! (Confirm via email)");
+    } else if (modal.type === 'reset-password') {
+      const error = await resetPassword(modal.user.email);
+      if (error) setActionStatus("Failed: " + error.message);
+      else setActionStatus("Reset password email sent!");
+    }
   };
 
-  const handleChangeEmail = async () => {
-    setChangeEmailStatus("Processing...");
-    const error = await changeEmail(changeEmailValue);
-    if (error) setChangeEmailStatus("Failed: " + error.message);
-    else setChangeEmailStatus("Please check your new email for confirmation.");
-  };
-
-  const handleResetPassword = async () => {
-    setResetPasswordStatus("Sending...");
-    const error = await resetPassword(resetPasswordEmail);
-    if (error) setResetPasswordStatus("Failed: " + error.message);
-    else setResetPasswordStatus("Password reset email sent! Check your inbox.");
-  };
-
+  // ===== Render =====
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -231,71 +235,7 @@ const EnhancedUserManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* --- AUTH BLOCKS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Magic Link Login */}
-        <div className="border rounded-lg p-4 shadow">
-          <h4 className="font-semibold mb-2">Magic Link Login</h4>
-          <input
-            type="email"
-            placeholder="Enter your email"
-            className="border px-3 py-2 rounded w-full mb-2"
-            value={magicLinkEmail}
-            onChange={e => setMagicLinkEmail(e.target.value)}
-          />
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded w-full"
-            onClick={handleSendMagicLink}
-            disabled={!magicLinkEmail}
-          >
-            Send Magic Link
-          </button>
-          {magicLinkStatus && <div className="text-sm text-gray-600 mt-2">{magicLinkStatus}</div>}
-        </div>
-
-        {/* Change Email */}
-        <div className="border rounded-lg p-4 shadow">
-          <h4 className="font-semibold mb-2">Change Email</h4>
-          <input
-            type="email"
-            placeholder="New email address"
-            className="border px-3 py-2 rounded w-full mb-2"
-            value={changeEmailValue}
-            onChange={e => setChangeEmailValue(e.target.value)}
-          />
-          <button
-            className="bg-purple-600 text-white px-4 py-2 rounded w-full"
-            onClick={handleChangeEmail}
-            disabled={!changeEmailValue}
-          >
-            Change Email
-          </button>
-          {changeEmailStatus && <div className="text-sm text-gray-600 mt-2">{changeEmailStatus}</div>}
-        </div>
-
-        {/* Reset Password */}
-        <div className="border rounded-lg p-4 shadow">
-          <h4 className="font-semibold mb-2">Reset Password</h4>
-          <input
-            type="email"
-            placeholder="Enter your email"
-            className="border px-3 py-2 rounded w-full mb-2"
-            value={resetPasswordEmail}
-            onChange={e => setResetPasswordEmail(e.target.value)}
-          />
-          <button
-            className="bg-yellow-600 text-white px-4 py-2 rounded w-full"
-            onClick={handleResetPassword}
-            disabled={!resetPasswordEmail}
-          >
-            Reset Password
-          </button>
-          {resetPasswordStatus && <div className="text-sm text-gray-600 mt-2">{resetPasswordStatus}</div>}
-        </div>
-      </div>
-
-      {/* --- EXISTING USER MANAGEMENT --- */}
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-800">Enhanced User Management</h3>
         <div className="flex space-x-4 text-sm text-gray-600">
@@ -305,7 +245,7 @@ const EnhancedUserManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Enhanced Filters */}
+      {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -317,7 +257,6 @@ const EnhancedUserManagement: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        
         <select
           value={selectedRole}
           onChange={(e) => setSelectedRole(e.target.value)}
@@ -330,7 +269,6 @@ const EnhancedUserManagement: React.FC = () => {
             </option>
           ))}
         </select>
-
         <select
           value={selectedDepartment}
           onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -413,15 +351,45 @@ const EnhancedUserManagement: React.FC = () => {
                       {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                      className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
-                    >
-                      {user.is_active ? 'Deactivate' : 'Activate'}
-                    </Button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex flex-col gap-2">
+                    {/* Admin action buttons */}
+                    <div className="flex gap-1 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleUserStatus(user.id, user.is_active)}
+                        className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
+                      >
+                        {user.is_active ? 'Deactivate' : 'Activate'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setModal({ type: 'magic-link', user }); setActionStatus(''); }}
+                        title="Send Magic Link"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Mail className="w-4 h-4 mr-1" /> Magic Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setModal({ type: 'change-email', user }); setActionStatus(''); setNewEmail(''); }}
+                        title="Change Email"
+                        className="text-purple-600 hover:text-purple-800"
+                      >
+                        <MailPlus className="w-4 h-4 mr-1" /> Change Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setModal({ type: 'reset-password', user }); setActionStatus(''); }}
+                        title="Reset Password"
+                        className="text-yellow-600 hover:text-yellow-800"
+                      >
+                        <KeyRound className="w-4 h-4 mr-1" /> Reset Password
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -439,6 +407,75 @@ const EnhancedUserManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal dialog for user actions */}
+      <Modal
+        open={!!modal}
+        onClose={() => setModal(null)}
+        title={
+          modal
+            ? modal.type === 'magic-link'
+              ? `Send Magic Link to ${modal.user.name || modal.user.email}`
+              : modal.type === 'change-email'
+                ? `Change Email for ${modal.user.name || modal.user.email}`
+                : `Reset Password for ${modal.user.name || modal.user.email}`
+            : ''
+        }
+      >
+        {modal && (
+          <div>
+            {modal.type === 'magic-link' && (
+              <div>
+                <p>
+                  Send a magic login link to <span className="font-semibold">{modal.user.email}</span>?
+                </p>
+                <Button
+                  className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+                  onClick={handleAuthAction}
+                >
+                  Send Magic Link
+                </Button>
+              </div>
+            )}
+            {modal.type === 'change-email' && (
+              <div>
+                <p>
+                  Change email for <span className="font-semibold">{modal.user.name || modal.user.email}</span>.<br />
+                  Enter new email address below:
+                </p>
+                <input
+                  type="email"
+                  className="border px-3 py-2 rounded w-full my-4"
+                  placeholder="New email address"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                />
+                <Button
+                  className="bg-purple-600 text-white px-4 py-2 rounded"
+                  onClick={handleAuthAction}
+                  disabled={!newEmail}
+                >
+                  Change Email
+                </Button>
+              </div>
+            )}
+            {modal.type === 'reset-password' && (
+              <div>
+                <p>
+                  Send password reset email to <span className="font-semibold">{modal.user.email}</span>?
+                </p>
+                <Button
+                  className="mt-4 bg-yellow-600 text-white px-4 py-2 rounded"
+                  onClick={handleAuthAction}
+                >
+                  Send Reset Password Email
+                </Button>
+              </div>
+            )}
+            {actionStatus && <div className="mt-4 text-sm text-gray-700">{actionStatus}</div>}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
