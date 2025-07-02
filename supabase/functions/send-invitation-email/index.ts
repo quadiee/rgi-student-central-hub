@@ -97,7 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "no-reply@resend.dev", // safe default sender
+        from: "noreply@rgei.ac.in", // <--- THIS IS THE KEY PART: must match your verified domain!
         to: email,
         subject: "You're Invited to Join RGI Student Central Hub",
         html: emailHtml
