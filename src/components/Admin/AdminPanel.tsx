@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
+import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
-import UserInvitationManager from './UserInvitationManager';
+import UnifiedUserInvitationManager from './UnifiedUserInvitationManager'; // The new combined invite manager
 
 // Recognize admin/principal as admins
 function isAdmin(user: any) {
@@ -54,7 +55,7 @@ const AdminPanel: React.FC = () => {
     { id: 'admin-overview', label: 'Admin Overview', icon: Shield },
     { id: 'user-management', label: 'User Management', icon: Users },
     { id: 'enhanced-users', label: 'Enhanced Users', icon: Settings },
-    { id: 'invite-users', label: 'Invite Users', icon: MailPlus },
+    { id: 'invite-users', label: 'User Invitations', icon: MailPlus },
   ];
 
   const renderContent = () => {
@@ -62,19 +63,9 @@ const AdminPanel: React.FC = () => {
       case 'admin-overview':
         return <SuperAdminPanel onUserManagementClick={() => setActiveSection('user-management')} />;
       case 'user-management':
-        // Always show EnhancedUserManagement for User Management section!
-        return <EnhancedUserManagement />;
+        return <UserManagement />;
       case 'enhanced-users':
-        // You can keep this for future expansion
-        return (
-          <div>
-            <h3 className="text-xl font-semibold mb-4 flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
-              Enhanced Users
-            </h3>
-            <p className="text-gray-500">Enhanced users panel placeholder.</p>
-          </div>
-        );
+        return <EnhancedUserManagement />;
       case 'invite-users':
         return (
           <div>
@@ -82,7 +73,7 @@ const AdminPanel: React.FC = () => {
               <MailPlus className="w-5 h-5 mr-2" />
               User Invitations
             </h3>
-            <UserInvitationManager />
+            <UnifiedUserInvitationManager />
           </div>
         );
       default:
