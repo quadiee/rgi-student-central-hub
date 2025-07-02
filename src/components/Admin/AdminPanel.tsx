@@ -1,9 +1,7 @@
-
 import React, { useState } from 'react';
 import { Users, Settings, Shield, MailPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import SuperAdminPanel from './SuperAdminPanel';
-import UserManagement from './UserManagement';
 import EnhancedUserManagement from './EnhancedUserManagement';
 import UserInvitationManager from './UserInvitationManager';
 
@@ -64,9 +62,19 @@ const AdminPanel: React.FC = () => {
       case 'admin-overview':
         return <SuperAdminPanel onUserManagementClick={() => setActiveSection('user-management')} />;
       case 'user-management':
-        return <UserManagement />;
-      case 'enhanced-users':
+        // Always show EnhancedUserManagement for User Management section!
         return <EnhancedUserManagement />;
+      case 'enhanced-users':
+        // You can keep this for future expansion
+        return (
+          <div>
+            <h3 className="text-xl font-semibold mb-4 flex items-center">
+              <Settings className="w-5 h-5 mr-2" />
+              Enhanced Users
+            </h3>
+            <p className="text-gray-500">Enhanced users panel placeholder.</p>
+          </div>
+        );
       case 'invite-users':
         return (
           <div>
