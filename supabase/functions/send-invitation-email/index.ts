@@ -1,23 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { SmtpClient } from "https://deno.land/x/smtp@v0.10.0/mod.ts";
+
+const RESEND_API_KEY = "re_j9X6eXgU_By73fLLepM1s2qYZsaG1WqaL";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
-
-// Your Gmail details here
-const GMAIL_ADDRESS = "praveen@rgce.edu.in"; // <-- change to your Gmail address
-const GMAIL_APP_PASSWORD = "qjnj rpik nnmq iwf"; // <-- change to your app password
-
-interface InvitationEmailRequest {
-  email: string;
-  role: string;
-  department: string;
-  invitedBy: string;
-  invitationId: string;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -30,7 +19,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, role, department, invitedBy, invitationId }: InvitationEmailRequest = await req.json();
+    const { email, role, department, invitedBy, invitationId } = await req.json();
 
     // Get inviter details
     const { data: inviterData } = await supabase
@@ -40,11 +29,9 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const inviterName = inviterData?.name || "Administrator";
-
-    // Create invitation email content
     const invitationUrl = `${Deno.env.get("SITE_URL") || "https://your-site-url.com"}/auth?mode=invited&email=${encodeURIComponent(email)}`;
 
-    const emailContent = `
+    const emailHtml = `
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -77,25 +64,25 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // SEND EMAIL via Gmail SMTP
-    const client = new SmtpClient();
-
-    await client.connectTLS({
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: GMAIL_ADDRESS,
-      password: GMAIL_APP_PASSWORD,
+    // Send email using Resend API
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "no-reply@resend.dev", // You can update this to a verified sender if you wish
+        to: email,
+        subject: "You're Invited to Join RGI Student Central Hub",
+        html: emailHtml
+      }),
     });
 
-    await client.send({
-      from: GMAIL_ADDRESS,
-      to: email,
-      subject: "You're Invited to Join RGI Student Central Hub",
-      content: "", // plain text fallback, optional
-      html: emailContent,
-    });
-
-    await client.close();
+    if (!res.ok) {
+      const errorDetails = await res.text();
+      throw new Error(`Email sending failed: ${errorDetails}`);
+    }
 
     // Update the invitation to mark as email sent
     await supabase
