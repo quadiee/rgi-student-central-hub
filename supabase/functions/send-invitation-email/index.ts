@@ -19,14 +19,37 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, role, department, invitedBy, invitationId, invitationToken } = await req.json();
+    // Fetch invitation data
+    const { email, role, department, invitedBy, invitationId } = await req.json();
 
-    // Check required fields (invitationToken is new and required)
+    // Fetch the invitationToken automatically from the database
+    const { data: invitationRecord, error: invitationRecordError } = await supabase
+      .from('user_invitations')
+      .select('token')
+      .eq('id', invitationId)
+      .single();
+
+    if (invitationRecordError || !invitationRecord?.token) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Could not fetch invitation token.",
+          details: invitationRecordError || "No token found for this invitation."
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+
+    const invitationToken = invitationRecord.token;
+
     if (!email || !role || !department || !invitedBy || !invitationId || !invitationToken) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required field. Please provide email, role, department, invitedBy, invitationId, and invitationToken."
+          error: "Missing required field. Please provide email, role, department, invitedBy, and invitationId."
         }),
         {
           status: 400,
@@ -56,7 +79,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const inviterName = inviterData?.name || "Administrator";
-    // The registration page for invited users is /invite/<token>
     const invitationUrl = `${Deno.env.get("SITE_URL") || "https://rgi-student-central-hub.lovable.app"}/invite/${encodeURIComponent(invitationToken)}`;
 
     const emailHtml = `
@@ -99,7 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "no-reply@resend.dev", // safe default sender
+        from: "no-reply@resend.dev",
         to: email,
         subject: "You're Invited to Join RGI Student Central Hub",
         html: emailHtml
