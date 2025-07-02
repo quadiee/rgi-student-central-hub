@@ -21,6 +21,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, role, department, invitedBy, invitationId } = await req.json();
 
+    // Check for missing required fields
+    if (!email || !role || !department || !invitedBy || !invitationId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing required field. Please provide email, role, department, invitedBy, and invitationId."
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+
     // Get inviter details
     const { data: inviterData } = await supabase
       .from("profiles")
@@ -31,19 +45,23 @@ const handler = async (req: Request): Promise<Response> => {
     const inviterName = inviterData?.name || "Administrator";
     const invitationUrl = `${Deno.env.get("SITE_URL") || "https://your-site-url.com"}/auth?mode=invited&email=${encodeURIComponent(email)}`;
 
+    const safeRole = typeof role === "string" ? role : "";
+    const safeDepartment = typeof department === "string" ? department : "";
+    const safeEmail = typeof email === "string" ? email : "";
+
     const emailHtml = `
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #2563eb;">You're Invited to Join RGI Student Central Hub</h2>
             <p>Hello,</p>
-            <p>You have been invited by <strong>${inviterName}</strong> to join the RGI Student Central Hub as a <strong>${role.toUpperCase()}</strong> in the <strong>${department}</strong> department.</p>
+            <p>You have been invited by <strong>${inviterName}</strong> to join the RGI Student Central Hub as a <strong>${safeRole.toUpperCase()}</strong> in the <strong>${safeDepartment}</strong> department.</p>
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="margin-top: 0; color: #1e40af;">Invitation Details:</h3>
               <ul style="list-style: none; padding: 0;">
-                <li><strong>Role:</strong> ${role.charAt(0).toUpperCase() + role.slice(1)}</li>
-                <li><strong>Department:</strong> ${department}</li>
-                <li><strong>Email:</strong> ${email}</li>
+                <li><strong>Role:</strong> ${safeRole.charAt(0).toUpperCase() + safeRole.slice(1)}</li>
+                <li><strong>Department:</strong> ${safeDepartment}</li>
+                <li><strong>Email:</strong> ${safeEmail}</li>
               </ul>
             </div>
             <div style="text-align: center; margin: 30px 0;">
@@ -64,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send email using Resend API
+    // Send email using Resend API, and capture the real response
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -72,19 +90,30 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "no-reply@resend.dev", // You can update this to a verified sender if you wish
+        from: "no-reply@resend.dev", // safe default sender
         to: email,
         subject: "You're Invited to Join RGI Student Central Hub",
         html: emailHtml
       }),
     });
 
+    const resendResult = await res.json();
+
     if (!res.ok) {
-      const errorDetails = await res.text();
-      throw new Error(`Email sending failed: ${errorDetails}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: resendResult.error || resendResult.message || "Unknown error from Resend",
+          resendResult
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
     }
 
-    // Update the invitation to mark as email sent
+    // Mark the invitation as email sent
     await supabase
       .from("user_invitations")
       .update({
@@ -98,6 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         message: "Invitation email sent successfully",
         invitationUrl: invitationUrl,
+        resendResult
       }),
       {
         status: 200,
@@ -108,7 +138,6 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error sending invitation email:", error);
     return new Response(
       JSON.stringify({
         success: false,
