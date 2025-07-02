@@ -5,6 +5,11 @@ import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 
+// 👇 AUTH HELPERS (these use your /src/lib/ helpers, no wiring needed)
+import { sendMagicLink } from '../../lib/sendMagicLink';
+import { changeEmail } from '../../lib/changeEmail';
+import { resetPassword } from '../../lib/resetPassword';
+
 interface UserProfile {
   id: string;
   name: string;
@@ -38,6 +43,14 @@ const EnhancedUserManagement: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentData[]>([]);
   const { toast } = useToast();
 
+  // --- Auth UI state ---
+  const [magicLinkEmail, setMagicLinkEmail] = useState('');
+  const [magicLinkStatus, setMagicLinkStatus] = useState('');
+  const [changeEmailValue, setChangeEmailValue] = useState('');
+  const [changeEmailStatus, setChangeEmailStatus] = useState('');
+  const [resetPasswordEmail, setResetPasswordEmail] = useState('');
+  const [resetPasswordStatus, setResetPasswordStatus] = useState('');
+
   const roles = ['student', 'hod', 'principal', 'admin'];
 
   useEffect(() => {
@@ -58,7 +71,6 @@ const EnhancedUserManagement: React.FC = () => {
 
       if (error) {
         console.error('Error loading departments:', error);
-        // Use fallback departments if query fails
         setDepartments([
           { id: 'cse-uuid', name: 'Computer Science Engineering', code: 'CSE', is_active: true },
           { id: 'ece-uuid', name: 'Electronics & Communication', code: 'ECE', is_active: true },
@@ -125,7 +137,6 @@ const EnhancedUserManagement: React.FC = () => {
     }
 
     if (selectedDepartment !== 'all') {
-      // Changed: filter by department_id (UUID) instead of code
       filtered = filtered.filter(user => user.department_id === selectedDepartment);
     }
     
@@ -183,10 +194,32 @@ const EnhancedUserManagement: React.FC = () => {
     }
   };
 
-  // Changed: lookup department name by department_id (UUID)
   const getDepartmentName = (deptId: string) => {
     const dept = departments.find(d => d.id === deptId);
     return dept ? dept.name : deptId;
+  };
+
+  // --- AUTH HANDLERS ---
+
+  const handleSendMagicLink = async () => {
+    setMagicLinkStatus("Sending...");
+    const error = await sendMagicLink(magicLinkEmail);
+    if (error) setMagicLinkStatus("Failed: " + error.message);
+    else setMagicLinkStatus("Magic link sent! Check your inbox.");
+  };
+
+  const handleChangeEmail = async () => {
+    setChangeEmailStatus("Processing...");
+    const error = await changeEmail(changeEmailValue);
+    if (error) setChangeEmailStatus("Failed: " + error.message);
+    else setChangeEmailStatus("Please check your new email for confirmation.");
+  };
+
+  const handleResetPassword = async () => {
+    setResetPasswordStatus("Sending...");
+    const error = await resetPassword(resetPasswordEmail);
+    if (error) setResetPasswordStatus("Failed: " + error.message);
+    else setResetPasswordStatus("Password reset email sent! Check your inbox.");
   };
 
   if (loading) {
@@ -198,7 +231,71 @@ const EnhancedUserManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* --- AUTH BLOCKS --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Magic Link Login */}
+        <div className="border rounded-lg p-4 shadow">
+          <h4 className="font-semibold mb-2">Magic Link Login</h4>
+          <input
+            type="email"
+            placeholder="Enter your email"
+            className="border px-3 py-2 rounded w-full mb-2"
+            value={magicLinkEmail}
+            onChange={e => setMagicLinkEmail(e.target.value)}
+          />
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+            onClick={handleSendMagicLink}
+            disabled={!magicLinkEmail}
+          >
+            Send Magic Link
+          </button>
+          {magicLinkStatus && <div className="text-sm text-gray-600 mt-2">{magicLinkStatus}</div>}
+        </div>
+
+        {/* Change Email */}
+        <div className="border rounded-lg p-4 shadow">
+          <h4 className="font-semibold mb-2">Change Email</h4>
+          <input
+            type="email"
+            placeholder="New email address"
+            className="border px-3 py-2 rounded w-full mb-2"
+            value={changeEmailValue}
+            onChange={e => setChangeEmailValue(e.target.value)}
+          />
+          <button
+            className="bg-purple-600 text-white px-4 py-2 rounded w-full"
+            onClick={handleChangeEmail}
+            disabled={!changeEmailValue}
+          >
+            Change Email
+          </button>
+          {changeEmailStatus && <div className="text-sm text-gray-600 mt-2">{changeEmailStatus}</div>}
+        </div>
+
+        {/* Reset Password */}
+        <div className="border rounded-lg p-4 shadow">
+          <h4 className="font-semibold mb-2">Reset Password</h4>
+          <input
+            type="email"
+            placeholder="Enter your email"
+            className="border px-3 py-2 rounded w-full mb-2"
+            value={resetPasswordEmail}
+            onChange={e => setResetPasswordEmail(e.target.value)}
+          />
+          <button
+            className="bg-yellow-600 text-white px-4 py-2 rounded w-full"
+            onClick={handleResetPassword}
+            disabled={!resetPasswordEmail}
+          >
+            Reset Password
+          </button>
+          {resetPasswordStatus && <div className="text-sm text-gray-600 mt-2">{resetPasswordStatus}</div>}
+        </div>
+      </div>
+
+      {/* --- EXISTING USER MANAGEMENT --- */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-800">Enhanced User Management</h3>
         <div className="flex space-x-4 text-sm text-gray-600">
@@ -240,7 +337,6 @@ const EnhancedUserManagement: React.FC = () => {
           className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">All Departments</option>
-          {/* Changed: options use dept.id (UUID) */}
           {departments.map(dept => (
             <option key={dept.id} value={dept.id}>
               {dept.name} ({dept.code})
@@ -304,7 +400,6 @@ const EnhancedUserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>
-                      {/* Changed: use department_id lookup */}
                       <div className="font-medium">{getDepartmentName(user.department_id)}</div>
                       <div className="text-xs text-gray-500">{user.department_id}</div>
                     </div>
