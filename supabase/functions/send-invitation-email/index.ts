@@ -19,13 +19,14 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, role, department, invitedBy, invitationId } = await req.json();
+    const { email, role, department, invitedBy, invitationId, invitationToken } = await req.json();
 
-    if (!email || !role || !department || !invitedBy || !invitationId) {
+    // Check required fields (invitationToken is new and required)
+    if (!email || !role || !department || !invitedBy || !invitationId || !invitationToken) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required field. Please provide email, role, department, invitedBy, and invitationId."
+          error: "Missing required field. Please provide email, role, department, invitedBy, invitationId, and invitationToken."
         }),
         {
           status: 400,
@@ -55,7 +56,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const inviterName = inviterData?.name || "Administrator";
-    const invitationUrl = `${Deno.env.get("SITE_URL") || "https://your-site-url.com"}/auth?mode=invited&email=${encodeURIComponent(email)}`;
+    // The registration page for invited users is /invite/<token>
+    const invitationUrl = `${Deno.env.get("SITE_URL") || "https://rgi-student-central-hub.lovable.app"}/invite/${encodeURIComponent(invitationToken)}`;
 
     const emailHtml = `
       <html>
@@ -97,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "noreply@rgei.ac.in", // <--- THIS IS THE KEY PART: must match your verified domain!
+        from: "no-reply@resend.dev", // safe default sender
         to: email,
         subject: "You're Invited to Join RGI Student Central Hub",
         html: emailHtml
