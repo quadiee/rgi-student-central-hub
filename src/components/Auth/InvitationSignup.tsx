@@ -28,15 +28,11 @@ const InvitationSignup: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<any>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
-      toast({
-        title: "Invalid Invitation",
-        description: "Missing invitation token.",
-        variant: "destructive"
-      });
-      navigate("/login");
+      setInviteError("Missing invitation token.");
       return;
     }
     loadInvitationDetails();
@@ -44,17 +40,16 @@ const InvitationSignup: React.FC = () => {
   }, [token]);
 
   const loadInvitationDetails = async () => {
-    // getInvitationDetails should accept token and return invitation data (including email, role, department, etc.)
-    const { data, error } = await getInvitationDetails(token);
-    if (data && data.is_valid) {
-      setInvitationData(data);
-    } else {
-      toast({
-        title: "Invalid Invitation",
-        description: "This invitation is invalid or has expired.",
-        variant: "destructive"
-      });
-      navigate("/login");
+    try {
+      const { data, error } = await getInvitationDetails(token);
+      if (data && data.is_valid && (!data.expires_at || new Date(data.expires_at) > new Date())) {
+        setInvitationData(data);
+        setInviteError(null);
+      } else {
+        setInviteError("This invitation is invalid or has expired. Please contact your administrator to request a new invitation link.");
+      }
+    } catch (err: any) {
+      setInviteError("Something went wrong while verifying your invitation. Please contact support.");
     }
   };
 
@@ -119,6 +114,20 @@ const InvitationSignup: React.FC = () => {
 
     setLoading(false);
   };
+
+  // Show friendly error if invitation is invalid/expired
+  if (inviteError) {
+    return (
+      <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-red-200 rounded shadow text-center">
+        <h2 className="text-xl font-bold text-red-700 mb-3">Invitation Invalid or Expired</h2>
+        <p className="mb-4">{inviteError}</p>
+        <p className="text-gray-500">If you believe this is a mistake, please contact your administrator to request a new invitation link.</p>
+        <Button type="button" onClick={() => navigate("/login")} className="mt-4">
+          Back to Login
+        </Button>
+      </div>
+    );
+  }
 
   if (!invitationData) {
     return <div className="text-center">Loading invitation details...</div>;
