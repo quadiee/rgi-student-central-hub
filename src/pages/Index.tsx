@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '../integrations/supabase/client';
 import MobileSidebar from '../components/Layout/MobileSidebar';
@@ -7,34 +7,33 @@ import Header from '../components/Layout/Header';
 import Dashboard from '../components/Dashboard/Dashboard';
 import EnhancedFeeManagement from '../components/Fees/EnhancedFeeManagement';
 import AdminPanel from '../components/Admin/AdminPanel';
+import AttendanceManagement from '../components/Attendance/AttendanceManagement';
+import ExamManagement from '../components/Exams/ExamManagement';
+import ReportGenerator from '../components/Reports/ReportGenerator';
 import ProtectedRoute from '../components/Auth/ProtectedRoute';
 import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
 import StudentList from '../components/StudentList';
-import { Student } from '../types/user-student-fees'; // <-- Correct import
+import { Student } from '../types/user-student-fees';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && user && window.location.pathname === '/') {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, loading, navigate]);
+  // Get active tab from current route
+  const activeTab = location.pathname.slice(1) || 'dashboard';
 
-  useEffect(() => {
-    if (user) {
-      setActiveTab('dashboard');
-    }
-  }, [user?.id]);
+  const handleTabChange = (tab: string) => {
+    navigate(`/${tab}`);
+    setSidebarOpen(false); // Close mobile sidebar after navigation
+  };
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -47,25 +46,25 @@ const AppContent = () => {
             id, 
             name, 
             email, 
-            rollNumber,
+            roll_number,
             course,
             year,
             semester,
             phone,
-            profileImage,
-            admissionDate,
-            guardianName,
-            guardianPhone,
+            profile_photo_url,
+            admission_date,
+            guardian_name,
+            guardian_phone,
             address,
-            bloodGroup,
-            emergencyContact,
-            department,
-            yearSection,
+            blood_group,
+            emergency_contact,
+            department_id,
+            year_section,
             section,
-            totalFees,
-            paidAmount,
-            dueAmount,
-            feeStatus
+            total_fees,
+            paid_amount,
+            due_amount,
+            fee_status
           `)
           .eq('role', 'student')
           .eq('is_active', true);
@@ -76,26 +75,26 @@ const AppContent = () => {
           const studentsData: Student[] = (data || []).map((profile: any) => ({
             id: profile.id,
             name: profile.name || 'Unknown',
-            rollNumber: profile.rollNumber || '',
+            rollNumber: profile.roll_number || '',
             course: profile.course || '',
             year: profile.year || 0,
             semester: profile.semester || 0,
             email: profile.email,
             phone: profile.phone || '',
-            profileImage: profile.profileImage || '',
-            admissionDate: profile.admissionDate || '',
-            guardianName: profile.guardianName || '',
-            guardianPhone: profile.guardianPhone || '',
+            profileImage: profile.profile_photo_url || '',
+            admissionDate: profile.admission_date || '',
+            guardianName: profile.guardian_name || '',
+            guardianPhone: profile.guardian_phone || '',
             address: profile.address || '',
-            bloodGroup: profile.bloodGroup || '',
-            emergencyContact: profile.emergencyContact || '',
-            department: profile.department || '',
-            yearSection: profile.yearSection || '',
+            bloodGroup: profile.blood_group || '',
+            emergencyContact: profile.emergency_contact || '',
+            department: profile.department_id || '',
+            yearSection: profile.year_section || '',
             section: profile.section || '',
-            totalFees: profile.totalFees || 0,
-            paidAmount: profile.paidAmount || 0,
-            dueAmount: profile.dueAmount || 0,
-            feeStatus: profile.feeStatus || ''
+            totalFees: profile.total_fees || 0,
+            paidAmount: profile.paid_amount || 0,
+            dueAmount: profile.due_amount || 0,
+            feeStatus: profile.fee_status || ''
           }));
           setStudents(studentsData);
         }
@@ -154,25 +153,20 @@ const AppContent = () => {
         );
       case 'attendance':
         return (
-          <div className="text-center py-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Attendance Management</h2>
-            <p className="text-gray-600">Attendance features coming soon...</p>
-          </div>
+          <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
+            <AttendanceManagement />
+          </ProtectedRoute>
         );
       case 'exams':
         return (
-          <div className="text-center py-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Exam Management</h2>
-            <p className="text-gray-600">Exam management features coming soon...</p>
-          </div>
+          <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
+            <ExamManagement />
+          </ProtectedRoute>
         );
       case 'reports':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
-            <div className="text-center py-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Reports</h2>
-              <p className="text-gray-600">Reporting features coming soon...</p>
-            </div>
+            <ReportGenerator />
           </ProtectedRoute>
         );
       default:
@@ -205,7 +199,7 @@ const AppContent = () => {
         <>
           <MobileSidebar 
             activeTab={activeTab} 
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             isOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
           />
@@ -220,7 +214,7 @@ const AppContent = () => {
         <div className="flex w-full">
           <MobileSidebar 
             activeTab={activeTab} 
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             isOpen={true}
             onClose={() => {}}
           />

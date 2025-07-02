@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, CreditCard, Settings, X, LogOut } from 'lucide-react';
+import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
 import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
@@ -27,6 +27,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'hod', 'principal', 'admin'] },
     { id: 'fees', label: 'Fee Management', icon: CreditCard, roles: ['student', 'hod', 'principal', 'admin'] },
+    { id: 'students', label: 'Students', icon: Users, roles: ['hod', 'principal', 'admin'] },
+    { id: 'attendance', label: 'Attendance', icon: UserCheck, roles: ['hod', 'principal', 'admin'] },
+    { id: 'exams', label: 'Exams', icon: BookOpen, roles: ['hod', 'principal', 'admin'] },
+    { id: 'reports', label: 'Reports', icon: FileText, roles: ['hod', 'principal', 'admin'] },
     { id: 'admin', label: 'Admin Panel', icon: Settings, roles: ['principal', 'admin'] }
   ];
 

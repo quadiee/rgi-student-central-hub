@@ -34,15 +34,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       return [
         ...baseItems,
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
-        { id: 'admin', label: 'Admin Panel', icon: Settings },
         { id: 'students', label: 'Students', icon: Users },
-        { id: 'reports', label: 'Reports', icon: FileText }
+        { id: 'attendance', label: 'Attendance', icon: UserCheck },
+        { id: 'exams', label: 'Exams', icon: FileText },
+        { id: 'reports', label: 'Reports', icon: FileText },
+        { id: 'admin', label: 'Admin Panel', icon: Settings }
       ];
     } else if (user?.role === 'hod') {
       return [
         ...baseItems,
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
         { id: 'students', label: 'Department Students', icon: Users },
+        { id: 'attendance', label: 'Attendance', icon: UserCheck },
+        { id: 'exams', label: 'Exams', icon: FileText },
         { id: 'reports', label: 'Reports', icon: FileText }
       ];
     } else {

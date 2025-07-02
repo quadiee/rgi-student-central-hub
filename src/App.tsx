@@ -202,9 +202,9 @@ function App() {
               <Route path="/fees" element={<MainAppContent />} />
               <Route path="/admin" element={<MainAppContent />} />
               <Route path="/students" element={<MainAppContent />} />
-              <Route path="/reports" element={<MainAppContent />} />
               <Route path="/attendance" element={<MainAppContent />} />
               <Route path="/exams" element={<MainAppContent />} />
+              <Route path="/reports" element={<MainAppContent />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
