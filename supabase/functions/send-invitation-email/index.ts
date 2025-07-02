@@ -19,10 +19,10 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Fetch invitation data
+    // Get invite details from the request
     const { email, role, department, invitedBy, invitationId } = await req.json();
 
-    // Fetch the invitationToken automatically from the database
+    // Get token from the DB using invitationId
     const { data: invitationRecord, error: invitationRecordError } = await supabase
       .from('user_invitations')
       .select('token')
@@ -45,19 +45,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const invitationToken = invitationRecord.token;
 
-    if (!email || !role || !department || !invitedBy || !invitationId || !invitationToken) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Missing required field. Please provide email, role, department, invitedBy, and invitationId."
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders }
-        }
-      );
-    }
-
+    // Get inviter's name
     const { data: inviterData, error: inviterError } = await supabase
       .from("profiles")
       .select("name, email")
