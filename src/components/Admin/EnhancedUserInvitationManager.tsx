@@ -102,15 +102,16 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
         // 1. Create the invitation record in DB
         const { data, error } = await supabase
           .from('user_invitations')
-          .insert({
+          .insert([{
             email: invitation.email,
             role: invitation.role,
             department: invitation.department,
+            name: invitation.name || null,
             roll_number: invitation.rollNumber || null,
             employee_id: invitation.employeeId || null,
             is_active: true,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-          })
+          }])
           .select()
           .single();
 
