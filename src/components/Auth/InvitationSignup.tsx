@@ -230,9 +230,14 @@ const InvitationSignup: React.FC = () => {
         {resetSent ? (
           <p className="text-green-700 mb-4">Password reset link sent! Please check your email.</p>
         ) : (
-          <Button type="button" onClick={handleSendReset} loading={sendingReset} className="mb-4">
-            {sendingReset ? 'Sending...' : 'Send Password Setup Link'}
-          </Button>
+          <Button
+  type="button"
+  onClick={handleSendReset}
+  className="mb-4"
+  disabled={sendingReset}
+>
+  {sendingReset ? 'Sending...' : 'Send Password Setup Link'}
+</Button>
         )}
         <Button type="button" onClick={() => navigate("/login")} variant="outline" className="w-full">
           Back to Login
