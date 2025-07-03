@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Mail, Upload, Send, Download } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -96,30 +97,31 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
     setSendingInvitations(true);
     let successCount = 0;
     let errorCount = 0;
+    
     for (const invitation of invitations) {
       try {
-        // FIX: Insert expects an array of objects, not a single object!
+        // Insert a single invitation object
         const { data, error } = await supabase
           .from('user_invitations')
-          .insert([{
+          .insert({
             email: invitation.email,
-            role: invitation.role,
-            department: invitation.department,
-            name: invitation.name || null,
+            role: invitation.role as any,
+            department: invitation.department as any,
             roll_number: invitation.rollNumber || null,
             employee_id: invitation.employeeId || null,
             is_active: true,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-          }])
+          })
           .select()
           .single();
 
         if (error || !data) {
+          console.error('Error inserting invitation:', error);
           errorCount++;
           continue;
         }
 
-        // 2. Trigger email using the edge function, handles both single/bulk
+        // Trigger email using the edge function
         const { error: sendError } = await supabase.functions.invoke("send-invitation", {
           body: {
             email: invitation.email,
@@ -131,14 +133,17 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
         });
 
         if (sendError) {
+          console.error('Error sending invitation email:', sendError);
           errorCount++;
         } else {
           successCount++;
         }
-      } catch {
+      } catch (err) {
+        console.error('Exception in invitation process:', err);
         errorCount++;
       }
     }
+    
     toast({
       title: "Bulk Invitations Sent",
       description: `Successfully sent ${successCount} invitations. ${errorCount} failed.`,
