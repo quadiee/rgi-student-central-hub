@@ -98,10 +98,10 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
     let errorCount = 0;
     for (const invitation of invitations) {
       try {
-        // 1. Create the invitation record in DB (FIXED: object, not array)
+        // FIX: Insert expects an array of objects, not a single object!
         const { data, error } = await supabase
           .from('user_invitations')
-          .insert({
+          .insert([{
             email: invitation.email,
             role: invitation.role,
             department: invitation.department,
@@ -110,7 +110,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
             employee_id: invitation.employeeId || null,
             is_active: true,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-          })
+          }])
           .select()
           .single();
 
