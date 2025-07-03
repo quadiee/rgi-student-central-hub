@@ -42,9 +42,10 @@ const InvitationSignup: React.FC = () => {
       return;
     }
     loadInvitationDetails();
+    // eslint-disable-next-line
   }, [token]);
 
-  // Use the check-user-exists function to determine if the invited email is already in Supabase Auth
+  // Check if the invited email is already in Supabase Auth
   const checkUserExists = async (email: string) => {
     try {
       const { data } = await supabase.functions.invoke('check-user-exists', {
@@ -63,7 +64,7 @@ const InvitationSignup: React.FC = () => {
   const loadInvitationDetails = async () => {
     try {
       setLoadingInvitation(true);
-      // Query invitation by token
+      // Get invitation details by token
       const { data, error } = await supabase
         .from('user_invitations')
         .select('*')
@@ -76,7 +77,7 @@ const InvitationSignup: React.FC = () => {
         setLoadingInvitation(false);
         return;
       }
-      // Check if invitation has expired
+      // Check if invitation is expired
       const now = new Date();
       const expiresAt = new Date(data.expires_at);
       if (now > expiresAt) {
@@ -99,7 +100,7 @@ const InvitationSignup: React.FC = () => {
         employee_id: data.employee_id,
         is_valid: true
       });
-      // Now check if this email exists in Supabase Auth
+      // Check if this email is in Supabase Auth
       await checkUserExists(data.email);
       setInviteError(null);
       setLoadingInvitation(false);
@@ -141,9 +142,8 @@ const InvitationSignup: React.FC = () => {
 
     try {
       if (userExists) {
-        // Instead of trying to sign up again, offer password reset
         toast({
-          title: "Account Exists",
+          title: "Account Already Exists",
           description: "This account already exists. Please use the password reset option below.",
           variant: "destructive"
         });
@@ -182,7 +182,7 @@ const InvitationSignup: React.FC = () => {
         });
         navigate("/dashboard");
       }
-    } catch (err) {
+    } catch {
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
