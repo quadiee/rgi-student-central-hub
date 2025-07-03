@@ -27,7 +27,6 @@ const EnhancedUserInvitationManager: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Loads department list but is not strictly needed for core CSV flow
     const loadDepartments = async () => {
       const { data } = await supabase
         .from('departments')
@@ -99,10 +98,10 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
     let errorCount = 0;
     for (const invitation of invitations) {
       try {
-        // 1. Create the invitation record in DB
+        // 1. Create the invitation record in DB (FIXED: object, not array)
         const { data, error } = await supabase
           .from('user_invitations')
-          .insert([{
+          .insert({
             email: invitation.email,
             role: invitation.role,
             department: invitation.department,
@@ -111,7 +110,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
             employee_id: invitation.employeeId || null,
             is_active: true,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-          }])
+          })
           .select()
           .single();
 
@@ -126,7 +125,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
             email: invitation.email,
             role: invitation.role,
             department: invitation.department,
-            invitedBy: null, // Bulk import: no admin
+            invitedBy: null,
             invitationId: data.id
           }
         });
