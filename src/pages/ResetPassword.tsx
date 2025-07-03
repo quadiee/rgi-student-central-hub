@@ -1,17 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useToast } from '../components/ui/use-toast';
 import { Eye, EyeOff, GraduationCap } from 'lucide-react';
-
-const supabase = createClient(
-  "https://hsmavqldffsxetwyyhgj.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzbWF2cWxkZmZzeGV0d3l5aGdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDAyNDYsImV4cCI6MjA2NjMxNjI0Nn0.-IgvTTnQcoYd2Q1jIH9Nt3zTcrnUtMAxPe0UAFZguAE"
-);
+import { supabase } from '../integrations/supabase/client';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
