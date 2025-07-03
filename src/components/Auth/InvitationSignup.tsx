@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, GraduationCap } from 'lucide-react';
@@ -6,11 +7,12 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
+import { supabase } from '../../integrations/supabase/client';
 
 const InvitationSignup: React.FC = () => {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { signUp, getInvitationDetails } = useAuth();
+  const { signUp } = useAuth();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -29,27 +31,68 @@ const InvitationSignup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<any>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [loadingInvitation, setLoadingInvitation] = useState(true);
 
   useEffect(() => {
     if (!token) {
       setInviteError("Missing invitation token.");
+      setLoadingInvitation(false);
       return;
     }
     loadInvitationDetails();
-    // eslint-disable-next-line
   }, [token]);
 
   const loadInvitationDetails = async () => {
     try {
-      const { data, error } = await getInvitationDetails(token);
-      if (data && data.is_valid && (!data.expires_at || new Date(data.expires_at) > new Date())) {
-        setInvitationData(data);
-        setInviteError(null);
-      } else {
-        setInviteError("This invitation is invalid or has expired. Please contact your administrator to request a new invitation link.");
+      setLoadingInvitation(true);
+      
+      // Query invitation by token
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('token', token)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        console.error('Error fetching invitation:', error);
+        setInviteError("This invitation link is invalid or has been removed. Please contact your administrator for a new invitation.");
+        setLoadingInvitation(false);
+        return;
       }
+
+      // Check if invitation has expired
+      const now = new Date();
+      const expiresAt = new Date(data.expires_at);
+      
+      if (now > expiresAt) {
+        setInviteError("This invitation has expired. Please contact your administrator to request a new invitation link.");
+        setLoadingInvitation(false);
+        return;
+      }
+
+      // Check if invitation has already been used
+      if (data.used_at) {
+        setInviteError("This invitation has already been used. If you need assistance, please contact your administrator.");
+        setLoadingInvitation(false);
+        return;
+      }
+
+      setInvitationData({
+        id: data.id,
+        email: data.email,
+        role: data.role,
+        department: data.department,
+        roll_number: data.roll_number,
+        employee_id: data.employee_id,
+        is_valid: true
+      });
+      setInviteError(null);
+      setLoadingInvitation(false);
     } catch (err: any) {
+      console.error('Exception in loadInvitationDetails:', err);
       setInviteError("Something went wrong while verifying your invitation. Please contact support.");
+      setLoadingInvitation(false);
     }
   };
 
@@ -84,37 +127,63 @@ const InvitationSignup: React.FC = () => {
       return;
     }
 
-    const userData = {
-      name: formData.name,
-      role: invitationData.role,
-      department: invitationData.department,
-      phone: formData.phone,
-      roll_number: invitationData.role === 'student' ? (formData.rollNumber || invitationData.roll_number) : null,
-      employee_id: invitationData.role !== 'student' ? (formData.employeeId || invitationData.employee_id) : null,
-      guardian_name: invitationData.role === 'student' ? formData.guardianName : null,
-      guardian_phone: invitationData.role === 'student' ? formData.guardianPhone : null,
-      address: formData.address
-    };
+    try {
+      const userData = {
+        name: formData.name,
+        role: invitationData.role,
+        department: invitationData.department,
+        phone: formData.phone,
+        roll_number: invitationData.role === 'student' ? (formData.rollNumber || invitationData.roll_number) : null,
+        employee_id: invitationData.role !== 'student' ? (formData.employeeId || invitationData.employee_id) : null,
+        guardian_name: invitationData.role === 'student' ? formData.guardianName : null,
+        guardian_phone: invitationData.role === 'student' ? formData.guardianPhone : null,
+        address: formData.address
+      };
 
-    const { error } = await signUp(invitationData.email, formData.password, userData);
+      const { error } = await signUp(invitationData.email, formData.password, userData);
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        // Mark invitation as used
+        await supabase
+          .from('user_invitations')
+          .update({ used_at: new Date().toISOString() })
+          .eq('id', invitationData.id);
+
+        toast({
+          title: "Account Created",
+          description: "Your account has been created successfully. Please check your email for verification.",
+        });
+        
+        // Redirect to dashboard
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error('Error in handleSubmit:', err);
       toast({
-        title: "Signup Failed",
-        description: error.message,
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Account Created",
-        description: "Your account has been created successfully. Please check your email for verification.",
-      });
-      // Redirect to dashboard instead of login page for better UX
-      navigate("/dashboard");
     }
 
     setLoading(false);
   };
+
+  // Show loading state
+  if (loadingInvitation) {
+    return (
+      <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-gray-200 rounded shadow text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p>Validating invitation...</p>
+      </div>
+    );
+  }
 
   // Show friendly error if invitation is invalid/expired
   if (inviteError) {

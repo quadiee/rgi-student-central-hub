@@ -44,7 +44,6 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Accepts both with and without invitedBy (for bulk)
     const { email, role, department, invitedBy, invitationId } = await req.json();
 
     if (!email || !role || !department || !invitationId) {
@@ -60,19 +59,22 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch invitation token for the registration link
-    const { data: invitationRecord, error: invitationRecordError } = await supabase
+    // Generate a unique token if not exists and update the invitation
+    const invitationToken = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const { data: updatedInvitation, error: updateError } = await supabase
       .from('user_invitations')
-      .select('token')
+      .update({ token: invitationToken })
       .eq('id', invitationId)
+      .select()
       .single();
 
-    if (invitationRecordError || !invitationRecord?.token) {
+    if (updateError || !updatedInvitation) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Could not fetch invitation token.",
-          details: invitationRecordError || "No token found for this invitation."
+          error: "Could not update invitation token.",
+          details: updateError
         }),
         {
           status: 400,
@@ -80,7 +82,6 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
-    const invitationToken = invitationRecord.token;
 
     // Fetch inviter details if available, otherwise use "Administrator"
     let inviterName = "Administrator";
@@ -97,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Get the correct app URL from the request
     const appUrl = getAppUrl(req);
-    const invitationUrl = `${appUrl}/invite/${encodeURIComponent(invitationToken)}`;
+    const invitationUrl = `${appUrl}/invite/${invitationToken}`;
 
     const emailHtml = `
       <html>
@@ -140,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "no-reply@rgce.edu.in", // <--- Your verified domain!
+        from: "no-reply@rgce.edu.in",
         to: email,
         subject: "You're Invited to Join RGI Student Central Hub",
         html: emailHtml

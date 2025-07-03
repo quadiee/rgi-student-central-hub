@@ -27,3 +27,13 @@ export const isAppUrl = (url: string): boolean => {
     return false;
   }
 };
+
+// Get invitation URL with proper token
+export const getInvitationUrl = (token: string): string => {
+  return getAppUrlWithPath(`/invite/${token}`);
+};
+
+// Get password reset URL
+export const getPasswordResetUrl = (): string => {
+  return getAppUrlWithPath('/reset-password');
+};
