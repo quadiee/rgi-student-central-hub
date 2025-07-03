@@ -47,7 +47,7 @@ const InvitationSignup: React.FC = () => {
   // Use the check-user-exists function to determine if the invited email is already in Supabase Auth
   const checkUserExists = async (email: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('check-user-exists', {
+      const { data } = await supabase.functions.invoke('check-user-exists', {
         body: { email }
       });
       if (data && data.exists) {
@@ -140,6 +140,17 @@ const InvitationSignup: React.FC = () => {
     }
 
     try {
+      if (userExists) {
+        // Instead of trying to sign up again, offer password reset
+        toast({
+          title: "Account Exists",
+          description: "This account already exists. Please use the password reset option below.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
       const userData = {
         name: formData.name,
         role: invitationData.role,
@@ -231,13 +242,13 @@ const InvitationSignup: React.FC = () => {
           <p className="text-green-700 mb-4">Password reset link sent! Please check your email.</p>
         ) : (
           <Button
-  type="button"
-  onClick={handleSendReset}
-  className="mb-4"
-  disabled={sendingReset}
->
-  {sendingReset ? 'Sending...' : 'Send Password Setup Link'}
-</Button>
+            type="button"
+            onClick={handleSendReset}
+            className="mb-4"
+            disabled={sendingReset}
+          >
+            {sendingReset ? 'Sending...' : 'Send Password Setup Link'}
+          </Button>
         )}
         <Button type="button" onClick={() => navigate("/login")} variant="outline" className="w-full">
           Back to Login
