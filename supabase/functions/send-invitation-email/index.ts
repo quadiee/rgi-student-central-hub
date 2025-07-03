@@ -20,13 +20,14 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Accepts both with and without invitedBy (for bulk)
     const { email, role, department, invitedBy, invitationId } = await req.json();
 
-    if (!email || !role || !department || !invitedBy || !invitationId) {
+    if (!email || !role || !department || !invitationId) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required field. Please provide email, role, department, invitedBy, and invitationId."
+          error: "Missing required field. Please provide email, role, department, and invitationId."
         }),
         {
           status: 400,
@@ -57,29 +58,20 @@ const handler = async (req: Request): Promise<Response> => {
     }
     const invitationToken = invitationRecord.token;
 
-    // Fetch inviter details
-    const { data: inviterData, error: inviterError } = await supabase
-      .from("profiles")
-      .select("name, email")
-      .eq("id", invitedBy)
-      .single();
-
-    if (inviterError) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Could not fetch inviter details.",
-          details: inviterError
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders }
-        }
-      );
+    // Fetch inviter details if available, otherwise use "Administrator"
+    let inviterName = "Administrator";
+    if (invitedBy) {
+      const { data: inviterData, error: inviterError } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", invitedBy)
+        .single();
+      if (!inviterError && inviterData?.name) {
+        inviterName = inviterData.name;
+      }
     }
 
-    const inviterName = inviterData?.name || "Administrator";
-    // Your real registration page for invited users:
+    // Your registration page for invited users:
     const invitationUrl = `https://rgi-student-central-hub.lovable.app/invite/${encodeURIComponent(invitationToken)}`;
 
     const emailHtml = `
@@ -115,7 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // USE YOUR VERIFIED DOMAIN in "from", e.g. no-reply@rgce.edu.in
+    // Always use your verified sender domain
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -123,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "no-reply@rgce.edu.in", // <--- MUST be your verified domain!
+        from: "no-reply@rgce.edu.in", // <--- Your verified domain!
         to: email,
         subject: "You're Invited to Join RGI Student Central Hub",
         html: emailHtml
