@@ -31,7 +31,7 @@ const InvitationSignup: React.FC = () => {
   const [invitationData, setInvitationData] = useState<any>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
-  const [userExists, setUserExists] = useState(false);
+  const [userExists, setUserExists] = useState<boolean | null>(null);
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
@@ -48,14 +48,14 @@ const InvitationSignup: React.FC = () => {
   // Check if the invited email is already in Supabase Auth
   const checkUserExists = async (email: string) => {
     try {
-      const { data } = await supabase.functions.invoke('check-user-exists', {
-        body: { email }
+      // NOTE: use the correct path to your function endpoint here!
+      const res = await fetch('/functions/v1/check-user-exists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
       });
-      if (data && data.exists) {
-        setUserExists(true);
-      } else {
-        setUserExists(false);
-      }
+      const data = await res.json();
+      setUserExists(!!data.exists);
     } catch {
       setUserExists(false);
     }
@@ -196,10 +196,13 @@ const InvitationSignup: React.FC = () => {
   const handleSendReset = async () => {
     setSendingReset(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(invitationData.email, {
-        redirectTo: window.location.origin + "/reset-password"
+      // NOTE: use the correct path to your password reset function here!
+      const res = await fetch('/functions/v1/send-password-reset2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: invitationData.email })
       });
-      if (!error) setResetSent(true);
+      if (res.ok) setResetSent(true);
       else toast({ title: "Error", description: "Failed to send reset link.", variant: "destructive" });
     } catch {
       toast({ title: "Error", description: "Failed to send reset link.", variant: "destructive" });
