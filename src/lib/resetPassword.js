@@ -11,5 +11,29 @@ export async function resetPassword(email) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/reset-password`
   });
-  return error;
+  
+  if (error) {
+    console.error('Reset password error:', error);
+    return error;
+  }
+  
+  // Call our custom edge function to send the email
+  try {
+    const { error: functionError } = await supabase.functions.invoke('send-password-reset', {
+      body: {
+        email: email,
+        resetUrl: `${window.location.origin}/reset-password`
+      }
+    });
+    
+    if (functionError) {
+      console.error('Function error:', functionError);
+      return functionError;
+    }
+  } catch (err) {
+    console.error('Failed to call send-password-reset function:', err);
+    return { message: 'Failed to send reset email' };
+  }
+  
+  return null;
 }

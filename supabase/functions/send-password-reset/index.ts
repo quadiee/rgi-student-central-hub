@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -22,8 +23,30 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, resetUrl }: PasswordResetRequest = await req.json();
+    const { email }: PasswordResetRequest = await req.json();
     console.log('Sending password reset email to:', email);
+
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Generate password reset link using Supabase Auth
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: `${req.headers.get('origin') || 'http://localhost:5173'}/reset-password`
+      }
+    })
+
+    if (error) {
+      console.error('Error generating reset link:', error)
+      throw error
+    }
+
+    const resetUrl = data.properties?.action_link || data.properties?.hashed_token
+    console.log('Generated reset URL:', resetUrl)
 
     const emailResponse = await resend.emails.send({
       from: "RGCE Portal <noreply@rgce.edu.in>",

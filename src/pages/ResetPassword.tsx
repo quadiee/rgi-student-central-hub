@@ -31,19 +31,62 @@ const ResetPassword: React.FC = () => {
 
   // Check for valid reset token on component mount
   useEffect(() => {
-    const access_token = query.get("access_token") || query.get("token");
-    const type = query.get("type");
-    
-    if (access_token && type === "recovery") {
-      setValidToken(true);
-    } else {
-      toast({
-        title: "Invalid Reset Link",
-        description: "This password reset link is invalid or has expired. Please request a new one.",
-        variant: "destructive"
-      });
-      setTimeout(() => navigate('/'), 3000);
-    }
+    const checkTokenValidity = async () => {
+      const token_hash = query.get("token_hash") || query.get("token");
+      const type = query.get("type");
+      
+      console.log('URL params:', { token_hash, type });
+      
+      if (query.get("error")) {
+        toast({
+          title: "Invalid Reset Link",
+          description: query.get("error_description") || "This password reset link is invalid or has expired.",
+          variant: "destructive"
+        });
+        setTimeout(() => navigate('/'), 3000);
+        return;
+      }
+      
+      if (token_hash && type === "recovery") {
+        // Try to verify the session with Supabase
+        try {
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash,
+            type: 'recovery'
+          });
+          
+          if (error) {
+            console.error('Token verification error:', error);
+            toast({
+              title: "Invalid Reset Link",
+              description: "This password reset link is invalid or has expired. Please request a new one.",
+              variant: "destructive"
+            });
+            setTimeout(() => navigate('/'), 3000);
+          } else {
+            console.log('Token verified successfully:', data);
+            setValidToken(true);
+          }
+        } catch (err) {
+          console.error('Verification error:', err);
+          toast({
+            title: "Invalid Reset Link",
+            description: "This password reset link is invalid or has expired. Please request a new one.",
+            variant: "destructive"
+          });
+          setTimeout(() => navigate('/'), 3000);
+        }
+      } else {
+        toast({
+          title: "Invalid Reset Link",
+          description: "This password reset link is invalid or has expired. Please request a new one.",
+          variant: "destructive"
+        });
+        setTimeout(() => navigate('/'), 3000);
+      }
+    };
+
+    checkTokenValidity();
   }, [query, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,19 +131,6 @@ const ResetPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      const access_token = query.get("access_token") || query.get("token");
-      const refresh_token = query.get("refresh_token") || access_token;
-
-      // Set the session with the tokens from the URL
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: access_token!,
-        refresh_token: refresh_token!
-      });
-
-      if (sessionError) {
-        throw sessionError;
-      }
-
       // Update the user's password
       const { error: updateError } = await supabase.auth.updateUser({ 
         password: password 
@@ -130,7 +160,7 @@ const ResetPassword: React.FC = () => {
     }
   };
 
-  if (!validToken) {
+  if (!validToken && !done) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
