@@ -15,6 +15,29 @@ interface PasswordResetRequest {
   resetUrl: string;
 }
 
+// Get the correct app URL
+const getAppUrl = (req: Request): string => {
+  const origin = req.headers.get('origin');
+  const referer = req.headers.get('referer');
+  
+  // If origin is available, use it
+  if (origin) {
+    return origin;
+  }
+  
+  // If referer is available, extract origin from it
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch (e) {
+      console.log('Could not parse referer:', referer);
+    }
+  }
+  
+  // Default fallback - update this to your actual deployed URL
+  return 'https://rgi-student-central-hub.lovable.app';
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log('Password reset email function called');
   
@@ -31,12 +54,16 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Get the correct app URL
+    const appUrl = getAppUrl(req);
+    const redirectUrl = `${appUrl}/reset-password`;
+
     // Generate password reset link using Supabase Auth
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${req.headers.get('origin') || 'http://localhost:5173'}/reset-password`
+        redirectTo: redirectUrl
       }
     })
 

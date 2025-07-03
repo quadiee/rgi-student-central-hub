@@ -6,10 +6,22 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzbWF2cWxkZmZzeGV0d3l5aGdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDAyNDYsImV4cCI6MjA2NjMxNjI0Nn0.-IgvTTnQcoYd2Q1jIH9Nt3zTcrnUtMAxPe0UAFZguAE"
 );
 
+// Get the correct app URL based on environment
+const getAppUrl = () => {
+  // Check if we're in production (deployed app)
+  if (window.location.hostname.includes('lovable.app')) {
+    return window.location.origin;
+  }
+  // For development or other environments
+  return window.location.origin;
+};
+
 // Usage: await resetPassword(email)
 export async function resetPassword(email) {
+  const appUrl = getAppUrl();
+  
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`
+    redirectTo: `${appUrl}/reset-password`
   });
   
   if (error) {
@@ -22,7 +34,7 @@ export async function resetPassword(email) {
     const { error: functionError } = await supabase.functions.invoke('send-password-reset', {
       body: {
         email: email,
-        resetUrl: `${window.location.origin}/reset-password`
+        resetUrl: `${appUrl}/reset-password`
       }
     });
     

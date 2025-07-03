@@ -109,7 +109,8 @@ const InvitationSignup: React.FC = () => {
         title: "Account Created",
         description: "Your account has been created successfully. Please check your email for verification.",
       });
-      navigate("/login");
+      // Redirect to dashboard instead of login page for better UX
+      navigate("/dashboard");
     }
 
     setLoading(false);
@@ -122,8 +123,8 @@ const InvitationSignup: React.FC = () => {
         <h2 className="text-xl font-bold text-red-700 mb-3">Invitation Invalid or Expired</h2>
         <p className="mb-4">{inviteError}</p>
         <p className="text-gray-500">If you believe this is a mistake, please contact your administrator to request a new invitation link.</p>
-        <Button type="button" onClick={() => navigate("/login")} className="mt-4">
-          Back to Login
+        <Button type="button" onClick={() => navigate("/dashboard")} className="mt-4">
+          Go to Dashboard
         </Button>
       </div>
     );

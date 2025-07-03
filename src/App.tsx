@@ -201,9 +201,7 @@ function App() {
           <Router>
             <Routes>
               <Route path="/invite/:token" element={<InvitationSignup />} />
-              {/* --- ADD THIS ROUTE FOR PASSWORD RESET --- */}
               <Route path="/reset-password" element={<ResetPassword />} />
-              {/* ----------------------------------------- */}
               <Route path="/dashboard" element={<MainAppContent />} />
               <Route path="/fees" element={<MainAppContent />} />
               <Route path="/admin" element={<MainAppContent />} />

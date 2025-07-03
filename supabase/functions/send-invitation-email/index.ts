@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -7,6 +8,29 @@ const RESEND_API_KEY = "re_j9X6eXgU_By73fLLepM1s2qYZsaG1WqaL";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+};
+
+// Get the correct app URL
+const getAppUrl = (req: Request): string => {
+  const origin = req.headers.get('origin');
+  const referer = req.headers.get('referer');
+  
+  // If origin is available, use it
+  if (origin) {
+    return origin;
+  }
+  
+  // If referer is available, extract origin from it
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch (e) {
+      console.log('Could not parse referer:', referer);
+    }
+  }
+  
+  // Default fallback - update this to your actual deployed URL
+  return 'https://rgi-student-central-hub.lovable.app';
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -71,8 +95,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Your registration page for invited users:
-    const invitationUrl = `https://rgi-student-central-hub.lovable.app/invite/${encodeURIComponent(invitationToken)}`;
+    // Get the correct app URL from the request
+    const appUrl = getAppUrl(req);
+    const invitationUrl = `${appUrl}/invite/${encodeURIComponent(invitationToken)}`;
 
     const emailHtml = `
       <html>
