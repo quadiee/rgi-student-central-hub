@@ -48,19 +48,34 @@ const ResetPassword: React.FC = () => {
     }
     setLoading(true);
 
-    // Use the token from the URL to update password
-    const { error } = await supabase.auth.updateUser(
-      { password },
-      { accessToken: access_token }
-    );
+    // PATCH: Supabase's updateUser does not accept accessToken in options.
+    // Instead, set the user's session to the reset token (using setSession), then call updateUser.
+    // This is the new supported way as of Supabase JS v2+.
+    try {
+      // Set the session with the access token from the URL
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: access_token  // Supabase needs a refresh_token, so we just pass access_token again (it will work for password resets)
+      });
+      if (sessionError) {
+        setError(sessionError.message || "Failed to initialize password reset session.");
+        setLoading(false);
+        return;
+      }
 
-    setLoading(false);
+      // Now call updateUser to set new password
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      setLoading(false);
 
-    if (error) {
-      setError(error.message || "Failed to reset password. Please try again.");
-    } else {
-      setDone(true);
-      setTimeout(() => navigate('/login'), 3000);
+      if (updateError) {
+        setError(updateError.message || "Failed to reset password. Please try again.");
+      } else {
+        setDone(true);
+        setTimeout(() => navigate('/login'), 3000);
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setError("Something went wrong. Please try again.");
     }
   };
 
