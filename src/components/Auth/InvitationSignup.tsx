@@ -44,18 +44,18 @@ const InvitationSignup: React.FC = () => {
     loadInvitationDetails();
   }, [token]);
 
-  // Check if user already exists in Supabase Auth (via backend function)
+  // Use the check-user-exists function to determine if the invited email is already in Supabase Auth
   const checkUserExists = async (email: string) => {
     try {
-      // Call edge function to check if user exists (since you can't use admin sdk on frontend)
-      const { data, error } = await supabase.functions.invoke('check-user-exists', { body: { email } });
+      const { data, error } = await supabase.functions.invoke('check-user-exists', {
+        body: { email }
+      });
       if (data && data.exists) {
         setUserExists(true);
       } else {
         setUserExists(false);
       }
-    } catch (err) {
-      // If error, assume user does not exist
+    } catch {
       setUserExists(false);
     }
   };
@@ -99,7 +99,7 @@ const InvitationSignup: React.FC = () => {
         employee_id: data.employee_id,
         is_valid: true
       });
-      // Check if user exists in Supabase Auth
+      // Now check if this email exists in Supabase Auth
       await checkUserExists(data.email);
       setInviteError(null);
       setLoadingInvitation(false);
@@ -185,7 +185,6 @@ const InvitationSignup: React.FC = () => {
   const handleSendReset = async () => {
     setSendingReset(true);
     try {
-      // Use your custom password reset function or supabase.auth.resetPasswordForEmail
       const { error } = await supabase.auth.resetPasswordForEmail(invitationData.email, {
         redirectTo: window.location.origin + "/reset-password"
       });
@@ -226,13 +225,13 @@ const InvitationSignup: React.FC = () => {
         <h2 className="text-xl font-bold text-yellow-700 mb-3">Account Already Exists</h2>
         <p className="mb-4">
           An account is already registered for <b>{invitationData.email}</b>.<br />
-          You can reset your password to access your account.
+          You can set your password using the button below.
         </p>
         {resetSent ? (
           <p className="text-green-700 mb-4">Password reset link sent! Please check your email.</p>
         ) : (
           <Button type="button" onClick={handleSendReset} loading={sendingReset} className="mb-4">
-            {sendingReset ? 'Sending...' : 'Send Password Reset Link'}
+            {sendingReset ? 'Sending...' : 'Send Password Setup Link'}
           </Button>
         )}
         <Button type="button" onClick={() => navigate("/login")} variant="outline" className="w-full">
