@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, GraduationCap } from 'lucide-react';
@@ -32,6 +31,9 @@ const InvitationSignup: React.FC = () => {
   const [invitationData, setInvitationData] = useState<any>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
+  const [userExists, setUserExists] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -42,10 +44,25 @@ const InvitationSignup: React.FC = () => {
     loadInvitationDetails();
   }, [token]);
 
+  // Check if user already exists in Supabase Auth (via backend function)
+  const checkUserExists = async (email: string) => {
+    try {
+      // Call edge function to check if user exists (since you can't use admin sdk on frontend)
+      const { data, error } = await supabase.functions.invoke('check-user-exists', { body: { email } });
+      if (data && data.exists) {
+        setUserExists(true);
+      } else {
+        setUserExists(false);
+      }
+    } catch (err) {
+      // If error, assume user does not exist
+      setUserExists(false);
+    }
+  };
+
   const loadInvitationDetails = async () => {
     try {
       setLoadingInvitation(true);
-      
       // Query invitation by token
       const { data, error } = await supabase
         .from('user_invitations')
@@ -55,29 +72,24 @@ const InvitationSignup: React.FC = () => {
         .single();
 
       if (error || !data) {
-        console.error('Error fetching invitation:', error);
         setInviteError("This invitation link is invalid or has been removed. Please contact your administrator for a new invitation.");
         setLoadingInvitation(false);
         return;
       }
-
       // Check if invitation has expired
       const now = new Date();
       const expiresAt = new Date(data.expires_at);
-      
       if (now > expiresAt) {
         setInviteError("This invitation has expired. Please contact your administrator to request a new invitation link.");
         setLoadingInvitation(false);
         return;
       }
-
       // Check if invitation has already been used
       if (data.used_at) {
         setInviteError("This invitation has already been used. If you need assistance, please contact your administrator.");
         setLoadingInvitation(false);
         return;
       }
-
       setInvitationData({
         id: data.id,
         email: data.email,
@@ -87,10 +99,11 @@ const InvitationSignup: React.FC = () => {
         employee_id: data.employee_id,
         is_valid: true
       });
+      // Check if user exists in Supabase Auth
+      await checkUserExists(data.email);
       setInviteError(null);
       setLoadingInvitation(false);
     } catch (err: any) {
-      console.error('Exception in loadInvitationDetails:', err);
       setInviteError("Something went wrong while verifying your invitation. Please contact support.");
       setLoadingInvitation(false);
     }
@@ -116,7 +129,6 @@ const InvitationSignup: React.FC = () => {
       setLoading(false);
       return;
     }
-
     if (formData.password.length < 6) {
       toast({
         title: "Weak Password",
@@ -139,9 +151,7 @@ const InvitationSignup: React.FC = () => {
         guardian_phone: invitationData.role === 'student' ? formData.guardianPhone : null,
         address: formData.address
       };
-
       const { error } = await signUp(invitationData.email, formData.password, userData);
-
       if (error) {
         toast({
           title: "Signup Failed",
@@ -159,23 +169,35 @@ const InvitationSignup: React.FC = () => {
           title: "Account Created",
           description: "Your account has been created successfully. Please check your email for verification.",
         });
-        
-        // Redirect to dashboard
         navigate("/dashboard");
       }
     } catch (err) {
-      console.error('Error in handleSubmit:', err);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     }
-
     setLoading(false);
   };
 
-  // Show loading state
+  // Send password reset link if user exists
+  const handleSendReset = async () => {
+    setSendingReset(true);
+    try {
+      // Use your custom password reset function or supabase.auth.resetPasswordForEmail
+      const { error } = await supabase.auth.resetPasswordForEmail(invitationData.email, {
+        redirectTo: window.location.origin + "/reset-password"
+      });
+      if (!error) setResetSent(true);
+      else toast({ title: "Error", description: "Failed to send reset link.", variant: "destructive" });
+    } catch {
+      toast({ title: "Error", description: "Failed to send reset link.", variant: "destructive" });
+    }
+    setSendingReset(false);
+  };
+
+  // Loading state
   if (loadingInvitation) {
     return (
       <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-gray-200 rounded shadow text-center">
@@ -184,8 +206,7 @@ const InvitationSignup: React.FC = () => {
       </div>
     );
   }
-
-  // Show friendly error if invitation is invalid/expired
+  // Error state
   if (inviteError) {
     return (
       <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-red-200 rounded shadow text-center">
@@ -198,11 +219,32 @@ const InvitationSignup: React.FC = () => {
       </div>
     );
   }
-
+  // If user already exists, show reset password flow
+  if (userExists) {
+    return (
+      <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-yellow-200 rounded shadow text-center">
+        <h2 className="text-xl font-bold text-yellow-700 mb-3">Account Already Exists</h2>
+        <p className="mb-4">
+          An account is already registered for <b>{invitationData.email}</b>.<br />
+          You can reset your password to access your account.
+        </p>
+        {resetSent ? (
+          <p className="text-green-700 mb-4">Password reset link sent! Please check your email.</p>
+        ) : (
+          <Button type="button" onClick={handleSendReset} loading={sendingReset} className="mb-4">
+            {sendingReset ? 'Sending...' : 'Send Password Reset Link'}
+          </Button>
+        )}
+        <Button type="button" onClick={() => navigate("/login")} variant="outline" className="w-full">
+          Back to Login
+        </Button>
+      </div>
+    );
+  }
+  // Show normal registration form
   if (!invitationData) {
     return <div className="text-center">Loading invitation details...</div>;
   }
-
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
       <div className="text-center mb-8">
@@ -220,7 +262,6 @@ const InvitationSignup: React.FC = () => {
           </p>
         </div>
       </div>
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full Name *</Label>
@@ -238,7 +279,6 @@ const InvitationSignup: React.FC = () => {
             />
           </div>
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="phone">Phone Number</Label>
           <Input
@@ -250,7 +290,6 @@ const InvitationSignup: React.FC = () => {
             placeholder="Enter your phone number"
           />
         </div>
-
         {invitationData.role === 'student' && (
           <>
             <div className="space-y-2">
@@ -290,7 +329,6 @@ const InvitationSignup: React.FC = () => {
             </div>
           </>
         )}
-
         {invitationData.role !== 'student' && (
           <div className="space-y-2">
             <Label htmlFor="employeeId">Employee ID</Label>
@@ -304,7 +342,6 @@ const InvitationSignup: React.FC = () => {
             />
           </div>
         )}
-
         <div className="space-y-2">
           <Label htmlFor="password">Password *</Label>
           <div className="relative">
@@ -329,7 +366,6 @@ const InvitationSignup: React.FC = () => {
             </button>
           </div>
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm Password *</Label>
           <div className="relative">
@@ -354,7 +390,6 @@ const InvitationSignup: React.FC = () => {
             </button>
           </div>
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="address">Address</Label>
           <Input
@@ -366,7 +401,6 @@ const InvitationSignup: React.FC = () => {
             placeholder="Enter your address"
           />
         </div>
-
         <div className="space-y-3 pt-4">
           <Button
             type="submit"
@@ -375,7 +409,6 @@ const InvitationSignup: React.FC = () => {
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </Button>
-          
           <Button
             type="button"
             variant="outline"
@@ -390,5 +423,4 @@ const InvitationSignup: React.FC = () => {
     </div>
   );
 };
-
 export default InvitationSignup;
