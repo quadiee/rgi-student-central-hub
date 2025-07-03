@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -7,6 +8,8 @@ const supabase = createClient(
 
 // Usage: await resetPassword(email)
 export async function resetPassword(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`
+  });
   return error;
 }

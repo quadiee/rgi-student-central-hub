@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { useToast } from '../components/ui/use-toast';
+import { Eye, EyeOff, GraduationCap } from 'lucide-react';
 
-// PERSONALISE: use your Supabase credentials
 const supabase = createClient(
   "https://hsmavqldffsxetwyyhgj.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzbWF2cWxkZmZzeGV0d3l5aGdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDAyNDYsImV4cCI6MjA2NjMxNjI0Nn0.-IgvTTnQcoYd2Q1jIH9Nt3zTcrnUtMAxPe0UAFZguAE"
@@ -18,109 +20,208 @@ function useQuery() {
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [error, setError] = useState('');
+  const [validToken, setValidToken] = useState(false);
   const navigate = useNavigate();
   const query = useQuery();
+  const { toast } = useToast();
 
-  // Supabase will redirect here with access_token in the URL
-  const access_token = query.get("access_token") || query.get("token"); // Support both formats
+  // Check for valid reset token on component mount
+  useEffect(() => {
+    const access_token = query.get("access_token") || query.get("token");
+    const type = query.get("type");
+    
+    if (access_token && type === "recovery") {
+      setValidToken(true);
+    } else {
+      toast({
+        title: "Invalid Reset Link",
+        description: "This password reset link is invalid or has expired. Please request a new one.",
+        variant: "destructive"
+      });
+      setTimeout(() => navigate('/'), 3000);
+    }
+  }, [query, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    
+    if (!validToken) {
+      toast({
+        title: "Invalid Session",
+        description: "Please use a valid password reset link.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!password || !confirmPassword) {
-      setError("Please enter and confirm your new password.");
+      toast({
+        title: "Missing Information",
+        description: "Please enter and confirm your new password.",
+        variant: "destructive"
+      });
       return;
     }
+    
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match. Please try again.",
+        variant: "destructive"
+      });
       return;
     }
+    
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive"
+      });
       return;
     }
-    if (!access_token) {
-      setError("Invalid or missing reset token.");
-      return;
-    }
+
     setLoading(true);
 
-    // PATCH: Supabase's updateUser does not accept accessToken in options.
-    // Instead, set the user's session to the reset token (using setSession), then call updateUser.
-    // This is the new supported way as of Supabase JS v2+.
     try {
-      // Set the session with the access token from the URL
+      const access_token = query.get("access_token") || query.get("token");
+      const refresh_token = query.get("refresh_token") || access_token;
+
+      // Set the session with the tokens from the URL
       const { error: sessionError } = await supabase.auth.setSession({
-        access_token,
-        refresh_token: access_token  // Supabase needs a refresh_token, so we just pass access_token again (it will work for password resets)
+        access_token: access_token!,
+        refresh_token: refresh_token!
       });
+
       if (sessionError) {
-        setError(sessionError.message || "Failed to initialize password reset session.");
-        setLoading(false);
-        return;
+        throw sessionError;
       }
 
-      // Now call updateUser to set new password
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      setLoading(false);
+      // Update the user's password
+      const { error: updateError } = await supabase.auth.updateUser({ 
+        password: password 
+      });
 
       if (updateError) {
-        setError(updateError.message || "Failed to reset password. Please try again.");
-      } else {
-        setDone(true);
-        setTimeout(() => navigate('/login'), 3000);
+        throw updateError;
       }
-    } catch (err: any) {
+      
+      toast({
+        title: "Password Updated",
+        description: "Your password has been successfully updated.",
+      });
+      
+      setDone(true);
+      setTimeout(() => navigate('/'), 3000);
+      
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update password. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setLoading(false);
-      setError("Something went wrong. Please try again.");
     }
   };
 
+  if (!validToken) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-red-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-red-700 mb-3">Invalid Reset Link</h2>
+          <p className="text-gray-600 mb-4">This password reset link is invalid or has expired.</p>
+          <Button onClick={() => navigate('/')} className="w-full">
+            Return to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (done) {
     return (
-      <div className="max-w-md mx-auto mt-12 p-8 bg-white rounded shadow text-center">
-        <h2 className="text-xl font-bold text-green-700 mb-3">Password Updated!</h2>
-        <p>Your password has been changed. Redirecting to login...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-green-700 mb-3">Password Updated!</h2>
+          <p className="text-gray-600">Your password has been changed successfully. Redirecting to login...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto mt-12 p-8 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-4 text-center">Set a New Password</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="password">New Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            autoComplete="new-password"
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Enter new password"
-            required
-          />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Set New Password</h2>
+          <p className="text-gray-600">Enter your new password below</p>
         </div>
-        <div>
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            autoComplete="new-password"
-            onChange={e => setConfirmPassword(e.target.value)}
-            placeholder="Confirm new password"
-            required
-          />
-        </div>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Setting Password..." : "Reset Password"}
-        </Button>
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="password">New Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Updating Password..." : "Update Password"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 };
