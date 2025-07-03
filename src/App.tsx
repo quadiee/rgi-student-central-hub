@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Toaster } from "./components/ui/toaster";
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
@@ -19,6 +18,10 @@ import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Student } from './types/user-student-fees';
 import { supabase } from './integrations/supabase/client';
+
+// --- ADD THIS IMPORT ---
+import ResetPassword from './pages/ResetPassword';
+// -----------------------
 
 const queryClient = new QueryClient();
 
@@ -198,6 +201,9 @@ function App() {
           <Router>
             <Routes>
               <Route path="/invite/:token" element={<InvitationSignup />} />
+              {/* --- ADD THIS ROUTE FOR PASSWORD RESET --- */}
+              <Route path="/reset-password" element={<ResetPassword />} />
+              {/* ----------------------------------------- */}
               <Route path="/dashboard" element={<MainAppContent />} />
               <Route path="/fees" element={<MainAppContent />} />
               <Route path="/admin" element={<MainAppContent />} />
