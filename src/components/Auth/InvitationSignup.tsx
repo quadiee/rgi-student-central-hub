@@ -31,7 +31,7 @@ const InvitationSignup: React.FC = () => {
   const [invitationData, setInvitationData] = useState<any>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
-  const [userExists, setUserExists] = useState<boolean | null>(null);
+  const [userExists, setUserExists] = useState<boolean>(false);
 
   useEffect(() => {
     if (!token) {
@@ -40,7 +40,6 @@ const InvitationSignup: React.FC = () => {
       return;
     }
     loadInvitationDetails();
-    // eslint-disable-next-line
   }, [token]);
 
   // Check if the invited email is already in Supabase Auth
@@ -49,10 +48,14 @@ const InvitationSignup: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('check-user-exists', {
         body: { email }
       });
-      if (error) throw error;
-      setUserExists(!!data.exists);
-    } catch {
-      setUserExists(false);
+      if (error) {
+        console.error('Error checking user exists:', error);
+        return false;
+      }
+      return !!data?.exists;
+    } catch (error) {
+      console.error('Error in checkUserExists:', error);
+      return false;
     }
   };
 
@@ -72,6 +75,7 @@ const InvitationSignup: React.FC = () => {
         setLoadingInvitation(false);
         return;
       }
+
       // Check if invitation is expired
       const now = new Date();
       const expiresAt = new Date(data.expires_at);
@@ -80,12 +84,14 @@ const InvitationSignup: React.FC = () => {
         setLoadingInvitation(false);
         return;
       }
+
       // Check if invitation has already been used
       if (data.used_at) {
         setInviteError("This invitation has already been used. If you need assistance, please contact your administrator.");
         setLoadingInvitation(false);
         return;
       }
+
       setInvitationData({
         id: data.id,
         email: data.email,
@@ -95,11 +101,14 @@ const InvitationSignup: React.FC = () => {
         employee_id: data.employee_id,
         is_valid: true
       });
+
       // Check if this email is in Supabase Auth
-      await checkUserExists(data.email);
+      const exists = await checkUserExists(data.email);
+      setUserExists(exists);
       setInviteError(null);
       setLoadingInvitation(false);
     } catch (err: any) {
+      console.error('Error loading invitation details:', err);
       setInviteError("Something went wrong while verifying your invitation. Please contact support.");
       setLoadingInvitation(false);
     }
@@ -125,6 +134,7 @@ const InvitationSignup: React.FC = () => {
       setLoading(false);
       return;
     }
+    
     if (formData.password.length < 6) {
       toast({
         title: "Weak Password",
@@ -137,15 +147,38 @@ const InvitationSignup: React.FC = () => {
 
     try {
       if (userExists) {
+        // For existing users, we need to handle password setup differently
         toast({
           title: "Account Already Exists",
-          description: "This account already exists. Please use the password reset option below.",
+          description: "This account already exists. Redirecting you to password setup...",
           variant: "destructive"
         });
+        
+        // Send password reset email for existing user
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          invitationData.email,
+          { 
+            redirectTo: `${window.location.origin}/reset-password?invitation=true&token=${token}` 
+          }
+        );
+        
+        if (resetError) {
+          toast({
+            title: "Error",
+            description: "Failed to send password setup email. Please try again.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Password Setup Email Sent",
+            description: "Please check your email to set up your password.",
+          });
+        }
         setLoading(false);
         return;
       }
 
+      // For new users, proceed with normal signup
       const userData = {
         name: formData.name,
         role: invitationData.role,
@@ -157,13 +190,25 @@ const InvitationSignup: React.FC = () => {
         guardian_phone: invitationData.role === 'student' ? formData.guardianPhone : null,
         address: formData.address
       };
+
       const { error } = await signUp(invitationData.email, formData.password, userData);
+      
       if (error) {
-        toast({
-          title: "Signup Failed",
-          description: error.message,
-          variant: "destructive"
-        });
+        if (error.message?.includes('already registered')) {
+          // Handle the case where user was created between our check and signup
+          setUserExists(true);
+          toast({
+            title: "Account Already Exists",
+            description: "This account already exists. Please use the password reset option.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Signup Failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
       } else {
         // Mark invitation as used
         await supabase
@@ -177,7 +222,8 @@ const InvitationSignup: React.FC = () => {
         });
         navigate("/dashboard");
       }
-    } catch {
+    } catch (error: any) {
+      console.error('Signup error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -226,6 +272,7 @@ const InvitationSignup: React.FC = () => {
       </div>
     );
   }
+
   // Error state
   if (inviteError) {
     return (
@@ -239,6 +286,7 @@ const InvitationSignup: React.FC = () => {
       </div>
     );
   }
+
   // If user already exists, show password setup flow
   if (userExists) {
     return (
@@ -272,10 +320,12 @@ const InvitationSignup: React.FC = () => {
       </div>
     );
   }
-  // Show normal registration form
+
+  // Show normal registration form for new users
   if (!invitationData) {
     return <div className="text-center">Loading invitation details...</div>;
   }
+
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
       <div className="text-center mb-8">
@@ -293,6 +343,7 @@ const InvitationSignup: React.FC = () => {
           </p>
         </div>
       </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full Name *</Label>
@@ -310,6 +361,7 @@ const InvitationSignup: React.FC = () => {
             />
           </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="phone">Phone Number</Label>
           <Input
@@ -321,6 +373,7 @@ const InvitationSignup: React.FC = () => {
             placeholder="Enter your phone number"
           />
         </div>
+
         {invitationData.role === 'student' && (
           <>
             <div className="space-y-2">
@@ -360,6 +413,7 @@ const InvitationSignup: React.FC = () => {
             </div>
           </>
         )}
+
         {invitationData.role !== 'student' && (
           <div className="space-y-2">
             <Label htmlFor="employeeId">Employee ID</Label>
@@ -373,6 +427,7 @@ const InvitationSignup: React.FC = () => {
             />
           </div>
         )}
+
         <div className="space-y-2">
           <Label htmlFor="password">Password *</Label>
           <div className="relative">
@@ -397,6 +452,7 @@ const InvitationSignup: React.FC = () => {
             </button>
           </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm Password *</Label>
           <div className="relative">
@@ -421,6 +477,7 @@ const InvitationSignup: React.FC = () => {
             </button>
           </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="address">Address</Label>
           <Input
@@ -432,6 +489,7 @@ const InvitationSignup: React.FC = () => {
             placeholder="Enter your address"
           />
         </div>
+
         <div className="space-y-3 pt-4">
           <Button
             type="submit"
@@ -454,4 +512,5 @@ const InvitationSignup: React.FC = () => {
     </div>
   );
 };
+
 export default InvitationSignup;
