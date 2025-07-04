@@ -32,8 +32,6 @@ const InvitationSignup: React.FC = () => {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
   const [userExists, setUserExists] = useState<boolean | null>(null);
-  const [sendingReset, setSendingReset] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -48,13 +46,10 @@ const InvitationSignup: React.FC = () => {
   // Check if the invited email is already in Supabase Auth
   const checkUserExists = async (email: string) => {
     try {
-      // NOTE: use the correct path to your function endpoint here!
-      const res = await fetch('/functions/v1/check-user-exists', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+      const { data, error } = await supabase.functions.invoke('check-user-exists', {
+        body: { email }
       });
-      const data = await res.json();
+      if (error) throw error;
       setUserExists(!!data.exists);
     } catch {
       setUserExists(false);
@@ -192,22 +187,34 @@ const InvitationSignup: React.FC = () => {
     setLoading(false);
   };
 
-  // Send password reset link if user exists
-  const handleSendReset = async () => {
-    setSendingReset(true);
+  // Handle password setup for existing users
+  const handlePasswordSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
-      // NOTE: use the correct path to your password reset function here!
-      const res = await fetch('/functions/v1/send-password-reset2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: invitationData.email })
+      // Send password reset email with invitation context
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        invitationData.email,
+        { 
+          redirectTo: `${window.location.origin}/reset-password?invitation=true&token=${token}` 
+        }
+      );
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Password Setup Email Sent",
+        description: "Please check your email to set up your password and complete the invitation process.",
       });
-      if (res.ok) setResetSent(true);
-      else toast({ title: "Error", description: "Failed to send reset link.", variant: "destructive" });
-    } catch {
-      toast({ title: "Error", description: "Failed to send reset link.", variant: "destructive" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password setup email. Please try again.",
+        variant: "destructive"
+      });
     }
-    setSendingReset(false);
+    setLoading(false);
   };
 
   // Loading state
@@ -232,30 +239,36 @@ const InvitationSignup: React.FC = () => {
       </div>
     );
   }
-  // If user already exists, show reset password flow
+  // If user already exists, show password setup flow
   if (userExists) {
     return (
-      <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-yellow-200 rounded shadow text-center">
-        <h2 className="text-xl font-bold text-yellow-700 mb-3">Account Already Exists</h2>
-        <p className="mb-4">
-          An account is already registered for <b>{invitationData.email}</b>.<br />
-          You can set your password using the button below.
-        </p>
-        {resetSent ? (
-          <p className="text-green-700 mb-4">Password reset link sent! Please check your email.</p>
-        ) : (
+      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Complete Your Setup</h2>
+          <p className="text-gray-600">Account exists for <strong>{invitationData.email}</strong></p>
+          <p className="text-gray-600 mb-6">Click the button below to receive a password setup link</p>
+        </div>
+        <div className="space-y-3">
+          <Button
+            onClick={handlePasswordSetup}
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? 'Sending Setup Link...' : 'Send Password Setup Link'}
+          </Button>
           <Button
             type="button"
-            onClick={handleSendReset}
-            className="mb-4"
-            disabled={sendingReset}
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate("/login")}
+            disabled={loading}
           >
-            {sendingReset ? 'Sending...' : 'Send Password Setup Link'}
+            Back to Login
           </Button>
-        )}
-        <Button type="button" onClick={() => navigate("/login")} variant="outline" className="w-full">
-          Back to Login
-        </Button>
+        </div>
       </div>
     );
   }
