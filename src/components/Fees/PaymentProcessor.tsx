@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -186,7 +185,9 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         academicYear: feeRecord.academic_year,
         amount: outstandingAmount,
         dueDate: feeRecord.due_date,
-        status: feeRecord.status
+        status: (feeRecord.status === 'Paid' || feeRecord.status === 'Pending' || feeRecord.status === 'Overdue') 
+          ? feeRecord.status as "Paid" | "Pending" | "Overdue"
+          : "Pending" as const
       };
 
       return (
