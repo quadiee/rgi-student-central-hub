@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -8,6 +9,11 @@ import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { CreditCard, CheckCircle, AlertCircle } from 'lucide-react';
 import PaymentGateway from './PaymentGateway';
+import type { Database } from '../../integrations/supabase/types';
+
+type PaymentMethod = Database['public']['Enums']['payment_method'];
+type PaymentStatus = Database['public']['Enums']['payment_status'];
+type FeeStatus = Database['public']['Enums']['fee_status'];
 
 interface PendingPayment {
   id: string;
@@ -116,27 +122,27 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       const payment = pendingPayments.find(p => p.id === selectedPayment);
       if (!payment) return;
 
-      // Create payment transaction
+      // Create payment transaction with proper enum types
       const { error: transactionError } = await supabase
         .from('payment_transactions')
         .insert({
           fee_record_id: selectedPayment,
           amount: payment.amount,
-          payment_method: paymentMethod as any,
+          payment_method: paymentMethod as PaymentMethod,
           transaction_id: transactionId || `MANUAL-${Date.now()}`,
-          status: 'Success',
+          status: 'Success' as PaymentStatus,
           receipt_number: `RCP-${Date.now()}`,
           processed_by: user!.id
         });
 
       if (transactionError) throw transactionError;
 
-      // Update fee record
+      // Update fee record with proper enum type
       const { error: updateError } = await supabase
         .from('fee_records')
         .update({
           paid_amount: payment.amount,
-          status: 'Paid',
+          status: 'Paid' as FeeStatus,
           last_payment_date: new Date().toISOString()
         })
         .eq('id', selectedPayment);
