@@ -1,1 +1,2 @@
-export { default } from './EnhancedFeeManagement';
+
+export { default } from './FeeManagementHub';

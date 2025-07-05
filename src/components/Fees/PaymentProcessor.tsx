@@ -1,195 +1,265 @@
 
-import React, { useState } from 'react';
-import { CreditCard, Smartphone, Building, Receipt, Loader2 } from 'lucide-react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { useFeeManagement } from '../../hooks/useFeeManagement';
-import { useToast } from '../ui/use-toast';
-import { Button } from '../ui/button';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { formatCurrency } from '../../utils/feeValidation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useToast } from '../ui/use-toast';
+import { supabase } from '../../integrations/supabase/client';
+import { CreditCard, CheckCircle, AlertCircle } from 'lucide-react';
 
-interface PaymentProcessorProps {
-  feeRecord: any;
-  onPaymentSuccess?: () => void;
+interface PendingPayment {
+  id: string;
+  student_name: string;
+  roll_number: string;
+  amount: number;
+  due_date: string;
+  semester: number;
+  academic_year: string;
 }
 
-const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ 
-  feeRecord, 
-  onPaymentSuccess 
-}) => {
+const PaymentProcessor: React.FC = () => {
   const { user } = useAuth();
-  const { processPayment, loading } = useFeeManagement();
   const { toast } = useToast();
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
-  const [amount, setAmount] = useState<string>('');
-  const [processing, setProcessing] = useState(false);
+  const [transactionId, setTransactionId] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const outstandingAmount = feeRecord.final_amount - (feeRecord.paid_amount || 0);
+  useEffect(() => {
+    fetchPendingPayments();
+  }, []);
 
-  const paymentMethods = [
-    { value: 'Online', label: 'Online Payment', icon: CreditCard },
-    { value: 'UPI', label: 'UPI Payment', icon: Smartphone },
-    { value: 'Cash', label: 'Cash Payment', icon: Building },
-    { value: 'Cheque', label: 'Cheque Payment', icon: Receipt }
-  ];
-
-  const handlePayment = async () => {
-    if (!paymentMethod || !amount || parseFloat(amount) <= 0) {
-      toast({
-        title: "Invalid Input",
-        description: "Please select payment method and enter valid amount",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const paymentAmount = parseFloat(amount);
-    if (paymentAmount > outstandingAmount) {
-      toast({
-        title: "Invalid Amount",
-        description: "Payment amount cannot exceed outstanding balance",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setProcessing(true);
+  const fetchPendingPayments = async () => {
     try {
-      const success = await processPayment({
-        feeRecordId: feeRecord.id,
-        studentId: feeRecord.student_id,
-        amount: paymentAmount,
-        paymentMethod: paymentMethod as any
-      });
+      const { data, error } = await supabase
+        .from('fee_records')
+        .select(`
+          id,
+          final_amount,
+          due_date,
+          semester,
+          academic_year,
+          profiles!student_id (
+            name,
+            roll_number
+          )
+        `)
+        .in('status', ['Pending', 'Overdue', 'Partial'])
+        .limit(50);
 
-      if (success) {
-        toast({
-          title: "Payment Successful",
-          description: `Payment of ${formatCurrency(paymentAmount)} processed successfully`,
-        });
-        
-        // Reset form
-        setAmount('');
-        setPaymentMethod('');
-        
-        // Callback for parent component
-        onPaymentSuccess?.();
-      }
+      if (error) throw error;
+
+      const payments = data?.map(record => ({
+        id: record.id,
+        student_name: (record.profiles as any)?.name || 'Unknown',
+        roll_number: (record.profiles as any)?.roll_number || 'Unknown',
+        amount: Number(record.final_amount),
+        due_date: record.due_date,
+        semester: record.semester,
+        academic_year: record.academic_year
+      })) || [];
+
+      setPendingPayments(payments);
     } catch (error) {
-      console.error('Payment processing error:', error);
-    } finally {
-      setProcessing(false);
+      console.error('Error fetching pending payments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch pending payments",
+        variant: "destructive"
+      });
     }
   };
 
-  const setFullAmount = () => {
-    setAmount(outstandingAmount.toString());
+  const processPayment = async () => {
+    if (!selectedPayment || !paymentMethod) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a payment and payment method",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payment = pendingPayments.find(p => p.id === selectedPayment);
+      if (!payment) return;
+
+      // Create payment transaction
+      const { error: transactionError } = await supabase
+        .from('payment_transactions')
+        .insert({
+          fee_record_id: selectedPayment,
+          amount: payment.amount,
+          payment_method: paymentMethod as any,
+          transaction_id: transactionId || `MANUAL-${Date.now()}`,
+          status: 'Success',
+          receipt_number: `RCP-${Date.now()}`,
+          processed_by: user!.id
+        });
+
+      if (transactionError) throw transactionError;
+
+      // Update fee record
+      const { error: updateError } = await supabase
+        .from('fee_records')
+        .update({
+          paid_amount: payment.amount,
+          status: 'Paid',
+          last_payment_date: new Date().toISOString()
+        })
+        .eq('id', selectedPayment);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Payment Processed",
+        description: `Payment of ₹${payment.amount.toLocaleString()} processed successfully`,
+      });
+
+      // Reset form and refresh data
+      setSelectedPayment('');
+      setPaymentMethod('');
+      setTransactionId('');
+      fetchPendingPayments();
+
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast({
+        title: "Payment Failed",
+        description: "Failed to process payment",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (!user || !['admin', 'principal'].includes(user.role)) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Access Denied</h3>
+          <p className="text-gray-600">Only administrators can process payments manually.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <CreditCard className="w-5 h-5" />
-          <span>Process Payment</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Outstanding Balance */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-blue-800">Outstanding Balance:</span>
-            <span className="text-lg font-bold text-blue-900">
-              {formatCurrency(outstandingAmount)}
-            </span>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CreditCard className="w-5 h-5" />
+            <span>Manual Payment Processing</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Pending Payment
+              </label>
+              <Select value={selectedPayment} onValueChange={setSelectedPayment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a payment to process" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pendingPayments.map(payment => (
+                    <SelectItem key={payment.id} value={payment.id}>
+                      {payment.student_name} ({payment.roll_number}) - ₹{payment.amount.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Payment Method
+              </label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="DD">Demand Draft</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Online">Online Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
 
-        {/* Payment Method Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Payment Method
-          </label>
-          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select payment method" />
-            </SelectTrigger>
-            <SelectContent>
-              {paymentMethods.map(method => {
-                const Icon = method.icon;
-                return (
-                  <SelectItem key={method.value} value={method.value}>
-                    <div className="flex items-center space-x-2">
-                      <Icon className="w-4 h-4" />
-                      <span>{method.label}</span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Amount Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Payment Amount
-          </label>
-          <div className="flex space-x-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Transaction ID (Optional)
+            </label>
             <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter amount"
-              min="1"
-              max={outstandingAmount}
+              value={transactionId}
+              onChange={(e) => setTransactionId(e.target.value)}
+              placeholder="Enter transaction ID if available"
             />
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={setFullAmount}
-              disabled={outstandingAmount <= 0}
-            >
-              Full Amount
-            </Button>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Maximum: {formatCurrency(outstandingAmount)}
-          </p>
-        </div>
 
-        {/* Payment Simulation Notice */}
-        {paymentMethod === 'Online' && (
-          <div className="bg-yellow-50 p-3 rounded-lg">
-            <p className="text-xs text-yellow-800">
-              <strong>Demo Mode:</strong> Online payments are simulated. 
-              In production, this would integrate with actual payment gateways.
-            </p>
+          <Button
+            onClick={processPayment}
+            disabled={loading || !selectedPayment || !paymentMethod}
+            className="w-full"
+          >
+            {loading ? (
+              'Processing...'
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Process Payment
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Pending Payments Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Payments Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {pendingPayments.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No pending payments found</p>
+            ) : (
+              <div className="space-y-2">
+                {pendingPayments.slice(0, 10).map(payment => (
+                  <div key={payment.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium">{payment.student_name}</span>
+                      <span className="text-gray-500 ml-2">({payment.roll_number})</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">₹{payment.amount.toLocaleString()}</div>
+                      <div className="text-sm text-gray-500">Due: {new Date(payment.due_date).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                ))}
+                {pendingPayments.length > 10 && (
+                  <p className="text-sm text-gray-500 text-center">
+                    And {pendingPayments.length - 10} more pending payments...
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Process Payment Button */}
-        <Button
-          onClick={handlePayment}
-          disabled={processing || loading || !paymentMethod || !amount || parseFloat(amount) <= 0}
-          className="w-full"
-        >
-          {processing ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Processing Payment...
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Process Payment of {amount ? formatCurrency(parseFloat(amount)) : '₹0'}
-            </>
-          )}
-        </Button>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
