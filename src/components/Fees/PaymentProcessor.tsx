@@ -181,7 +181,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         id: feeRecord.id,
         studentId: user?.id || '',
         feeType: `${feeRecord.academic_year} - Semester ${feeRecord.semester}`,
-        semester: feeRecord.semester.toString(),
+        semester: feeRecord.semester,
         academicYear: feeRecord.academic_year,
         amount: outstandingAmount,
         dueDate: feeRecord.due_date,
