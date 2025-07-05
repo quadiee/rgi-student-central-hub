@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
+import UserRemovalManager from './UserRemovalManager';
 // Import auth helpers
 import { sendMagicLink } from '../../lib/sendMagicLink';
 import { changeEmail } from '../../lib/changeEmail';
@@ -202,7 +203,10 @@ const EnhancedUserManagement: React.FC = () => {
     return dept ? dept.name : deptId;
   };
 
-  // ===== Per-user Auth Action Handlers =====
+  const handleUserRemoved = () => {
+    loadUsers(); // Refresh the users list after removal
+  };
+
   const handleAuthAction = async () => {
     if (!modal) return;
     setActionStatus('Processing...');
@@ -225,7 +229,6 @@ const EnhancedUserManagement: React.FC = () => {
     }
   };
 
-  // ===== Render =====
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -351,44 +354,55 @@ const EnhancedUserManagement: React.FC = () => {
                       {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex flex-col gap-2">
-                    {/* Admin action buttons */}
-                    <div className="flex gap-1 flex-wrap">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                        className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
-                      >
-                        {user.is_active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setModal({ type: 'magic-link', user }); setActionStatus(''); }}
-                        title="Send Magic Link"
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <Mail className="w-4 h-4 mr-1" /> Magic Link
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setModal({ type: 'change-email', user }); setActionStatus(''); setNewEmail(''); }}
-                        title="Change Email"
-                        className="text-purple-600 hover:text-purple-800"
-                      >
-                        <MailPlus className="w-4 h-4 mr-1" /> Change Email
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setModal({ type: 'reset-password', user }); setActionStatus(''); }}
-                        title="Reset Password"
-                        className="text-yellow-600 hover:text-yellow-800"
-                      >
-                        <KeyRound className="w-4 h-4 mr-1" /> Reset Password
-                      </Button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex flex-col gap-2">
+                      {/* Admin action buttons */}
+                      <div className="flex gap-1 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleUserStatus(user.id, user.is_active)}
+                          className={user.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
+                        >
+                          {user.is_active ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setModal({ type: 'magic-link', user }); setActionStatus(''); }}
+                          title="Send Magic Link"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Mail className="w-4 h-4 mr-1" /> Magic Link
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setModal({ type: 'change-email', user }); setActionStatus(''); setNewEmail(''); }}
+                          title="Change Email"
+                          className="text-purple-600 hover:text-purple-800"
+                        >
+                          <MailPlus className="w-4 h-4 mr-1" /> Change Email
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setModal({ type: 'reset-password', user }); setActionStatus(''); }}
+                          title="Reset Password"
+                          className="text-yellow-600 hover:text-yellow-800"
+                        >
+                          <KeyRound className="w-4 h-4 mr-1" /> Reset Password
+                        </Button>
+                      </div>
+                      {/* User Removal Manager Component */}
+                      <div className="mt-2">
+                        <UserRemovalManager
+                          userId={user.id}
+                          userName={user.name || user.email}
+                          userEmail={user.email}
+                          onUserRemoved={handleUserRemoved}
+                        />
+                      </div>
                     </div>
                   </td>
                 </tr>
