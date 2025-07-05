@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -29,6 +28,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
   useEffect(() => {
     fetchStudents();
     fetchDepartments();
+    // eslint-disable-next-line
   }, [user]);
 
   const fetchDepartments = async () => {
@@ -47,7 +47,6 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
 
   const fetchStudents = async () => {
     if (!user) return;
-    
     try {
       setLoading(true);
       let query = supabase
@@ -76,7 +75,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
           due_amount,
           fee_status,
           is_active,
-          departments!inner(name, code)
+          departments:departments!profiles_department_id_fkey(name, code)
         `)
         .eq('role', 'student')
         .eq('is_active', true);
@@ -282,7 +281,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
               />
             </div>
 
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <Select value={selectedDepartment || ''} onValueChange={setSelectedDepartment}>
               <SelectTrigger>
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
@@ -294,7 +293,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
               </SelectContent>
             </Select>
 
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <Select value={selectedYear || ''} onValueChange={setSelectedYear}>
               <SelectTrigger>
                 <SelectValue placeholder="All Years" />
               </SelectTrigger>
