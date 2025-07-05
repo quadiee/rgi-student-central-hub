@@ -180,10 +180,13 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       const outstandingAmount = feeRecord.final_amount - (feeRecord.paid_amount || 0);
       const paymentFeeRecord = {
         id: feeRecord.id,
+        studentId: user?.id || '',
         feeType: `${feeRecord.academic_year} - Semester ${feeRecord.semester}`,
         semester: feeRecord.semester.toString(),
         academicYear: feeRecord.academic_year,
-        amount: outstandingAmount
+        amount: outstandingAmount,
+        dueDate: feeRecord.due_date,
+        status: feeRecord.status
       };
 
       return (
