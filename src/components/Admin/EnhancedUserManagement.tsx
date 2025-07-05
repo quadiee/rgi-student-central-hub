@@ -5,6 +5,7 @@ import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import UserRemovalManager from './UserRemovalManager';
+import ProfileFixer from './ProfileFixer';
 // Import auth helpers
 import { sendMagicLink } from '../../lib/sendMagicLink';
 import { changeEmail } from '../../lib/changeEmail';
@@ -247,6 +248,9 @@ const EnhancedUserManagement: React.FC = () => {
           <span>Inactive: {stats.inactive}</span>
         </div>
       </div>
+
+      {/* Profile Fixer Component */}
+      <ProfileFixer />
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
