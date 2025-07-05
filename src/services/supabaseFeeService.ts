@@ -9,6 +9,7 @@ type DbPaymentTransaction = Database['public']['Tables']['payment_transactions']
 type Department = Database['public']['Enums']['department'];
 type PaymentMethod = Database['public']['Enums']['payment_method'];
 type PaymentStatus = Database['public']['Enums']['payment_status'];
+type FeeStatus = Database['public']['Enums']['fee_status'];
 
 export class SupabaseFeeService {
   static getFeePermissions(user: User): FeePermissions {
@@ -138,13 +139,22 @@ export class SupabaseFeeService {
       // Generate receipt number
       const receiptNumber = `RCP-${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
+      // Ensure status is always a valid enum
+      const validStatuses: FeeStatus[] = ['Pending', 'Paid', 'Overdue', 'Partial'];
+      const validPaymentStatuses: PaymentStatus[] = ['Pending', 'Success', 'Failed', 'Cancelled'];
+
+      // When inserting, always cast the status explicitly (even if TS types are correct)
+      const transactionStatus: PaymentStatus = validPaymentStatuses.includes(payment.status as PaymentStatus)
+        ? (payment.status as PaymentStatus)
+        : (Math.random() > 0.05 ? 'Success' : 'Failed');
+
       const transactionData = {
         fee_record_id: payment.feeRecordId!,
         student_id: payment.studentId!,
         amount: payment.amount!,
         payment_method: payment.paymentMethod! as PaymentMethod,
         transaction_id: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
-        status: (Math.random() > 0.05 ? 'Success' : 'Failed') as PaymentStatus,
+        status: transactionStatus, // Always the enum
         receipt_number: receiptNumber,
         processed_by: user.id,
         gateway: payment.paymentMethod === 'Online' ? 'RGCE_Gateway' : undefined,
@@ -171,7 +181,7 @@ export class SupabaseFeeService {
           const newPaidAmount = Number(feeRecord.paid_amount || 0) + Number(payment.amount!);
           const finalAmount = Number(feeRecord.final_amount);
           
-          let newStatus: Database['public']['Enums']['fee_status'] = 'Pending';
+          let newStatus: FeeStatus = 'Pending';
           if (newPaidAmount >= finalAmount) {
             newStatus = 'Paid';
           } else if (newPaidAmount > 0) {
@@ -183,7 +193,7 @@ export class SupabaseFeeService {
             .update({
               paid_amount: newPaidAmount,
               last_payment_date: new Date().toISOString(),
-              status: newStatus
+              status: newStatus // Always the enum
             })
             .eq('id', payment.feeRecordId!);
         }
@@ -221,7 +231,7 @@ export class SupabaseFeeService {
       const { data: outstandingData, error: outstandingError } = await supabase
         .from('fee_records')
         .select('final_amount, paid_amount')
-        .in('status', ['Pending', 'Overdue', 'Partial'])
+        .in('status', ['Pending', 'Overdue', 'Partial'] as FeeStatus[])
         .limit(1000);
 
       if (outstandingError) throw outstandingError;
@@ -260,7 +270,7 @@ export class SupabaseFeeService {
       amount: Number(dbRecord.final_amount),
       dueDate: dbRecord.due_date,
       paidDate: dbRecord.last_payment_date,
-      status: dbRecord.status === 'Paid' ? 'Paid' : dbRecord.status === 'Overdue' ? 'Overdue' : 'Pending',
+      status: dbRecord.status,
       semester: dbRecord.semester,
       academicYear: dbRecord.academic_year,
       paymentMethod: undefined,
