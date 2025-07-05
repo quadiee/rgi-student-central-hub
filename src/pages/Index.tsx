@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/SupabaseAuthContext';
-import { supabase } from '../integrations/supabase/client';
 import MobileSidebar from '../components/Layout/MobileSidebar';
 import Header from '../components/Layout/Header';
 import Dashboard from '../components/Dashboard/Dashboard';
-import EnhancedFeeManagement from '../components/Fees/EnhancedFeeManagement';
+import FeeManagementHub from '../components/Fees/FeeManagementHub';
 import AdminPanel from '../components/Admin/AdminPanel';
 import AttendanceManagement from '../components/Attendance/AttendanceManagement';
 import ExamManagement from '../components/Exams/ExamManagement';
 import ReportGenerator from '../components/Reports/ReportGenerator';
+import StudentManagement from '../components/Students/StudentManagement';
 import ProtectedRoute from '../components/Auth/ProtectedRoute';
 import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
 import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
-import StudentList from '../components/StudentList';
 import { Student } from '../types/user-student-fees';
 
 const AppContent = () => {
@@ -23,7 +23,6 @@ const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
 
@@ -35,83 +34,16 @@ const AppContent = () => {
     setSidebarOpen(false); // Close mobile sidebar after navigation
   };
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select(`
-            id, 
-            name, 
-            email, 
-            roll_number,
-            course,
-            year,
-            semester,
-            phone,
-            profile_photo_url,
-            admission_date,
-            guardian_name,
-            guardian_phone,
-            address,
-            blood_group,
-            emergency_contact,
-            department_id,
-            year_section,
-            section,
-            total_fees,
-            paid_amount,
-            due_amount,
-            fee_status
-          `)
-          .eq('role', 'student')
-          .eq('is_active', true);
-
-        if (error) {
-          setStudents([]);
-        } else {
-          const studentsData: Student[] = (data || []).map((profile: any) => ({
-            id: profile.id,
-            name: profile.name || 'Unknown',
-            rollNumber: profile.roll_number || '',
-            course: profile.course || '',
-            year: profile.year || 0,
-            semester: profile.semester || 0,
-            email: profile.email,
-            phone: profile.phone || '',
-            profileImage: profile.profile_photo_url || '',
-            admissionDate: profile.admission_date || '',
-            guardianName: profile.guardian_name || '',
-            guardianPhone: profile.guardian_phone || '',
-            address: profile.address || '',
-            bloodGroup: profile.blood_group || '',
-            emergencyContact: profile.emergency_contact || '',
-            department: profile.department_id || '',
-            yearSection: profile.year_section || '',
-            section: profile.section || '',
-            totalFees: profile.total_fees || 0,
-            paidAmount: profile.paid_amount || 0,
-            dueAmount: profile.due_amount || 0,
-            feeStatus: profile.fee_status || ''
-          }));
-          setStudents(studentsData);
-        }
-      } catch (error) {
-        setStudents([]);
-      }
-    };
-
-    fetchStudents();
-  }, [user]);
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
       case 'fees':
-        return <EnhancedFeeManagement />;
+        return <FeeManagementHub />;
       case 'admin':
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal']}>
@@ -123,10 +55,7 @@ const AppContent = () => {
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
             <div className="px-4">
               {!selectedStudent ? (
-                <StudentList
-                  students={students}
-                  onViewStudent={(s) => setSelectedStudent(s)}
-                />
+                <StudentManagement onViewStudent={handleViewStudent} />
               ) : (
                 <div>
                   <button
@@ -144,6 +73,10 @@ const AppContent = () => {
                       <div><strong>Roll Number:</strong> {selectedStudent.rollNumber}</div>
                       <div><strong>Year & Section:</strong> {selectedStudent.yearSection}</div>
                       <div><strong>Course:</strong> {selectedStudent.course}</div>
+                      <div><strong>Total Fees:</strong> ₹{selectedStudent.totalFees?.toLocaleString() || 0}</div>
+                      <div><strong>Paid Amount:</strong> ₹{selectedStudent.paidAmount?.toLocaleString() || 0}</div>
+                      <div><strong>Due Amount:</strong> ₹{selectedStudent.dueAmount?.toLocaleString() || 0}</div>
+                      <div><strong>Fee Status:</strong> {selectedStudent.feeStatus}</div>
                     </div>
                   </div>
                 </div>
@@ -227,7 +160,8 @@ const AppContent = () => {
                     <span>{INSTITUTION.shortName} Student Portal</span>
                     <span>/</span>
                     <span className="text-blue-600 font-medium capitalize">
-                      {activeTab === 'fees' ? 'Fee Management' : activeTab}
+                      {activeTab === 'fees' ? 'Fee Management' : 
+                       activeTab === 'students' ? 'Student Management' : activeTab}
                     </span>
                   </div>
                 </nav>

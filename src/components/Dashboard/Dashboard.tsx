@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import StudentDashboard from './StudentDashboard';
 import HODDashboard from './HODDashboard';
 import PrincipalDashboard from './PrincipalDashboard';
+import RealTimeStats from './RealTimeStats';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -11,14 +12,34 @@ const Dashboard: React.FC = () => {
   const renderDashboard = () => {
     switch (user?.role) {
       case 'student':
-        return <StudentDashboard />;
+        return (
+          <div className="space-y-6">
+            <RealTimeStats />
+            <StudentDashboard />
+          </div>
+        );
       case 'hod':
-        return <HODDashboard />;
+        return (
+          <div className="space-y-6">
+            <RealTimeStats />
+            <HODDashboard />
+          </div>
+        );
       case 'principal':
       case 'admin':
-        return <PrincipalDashboard />;
+        return (
+          <div className="space-y-6">
+            <RealTimeStats />
+            <PrincipalDashboard />
+          </div>
+        );
       default:
-        return <StudentDashboard />;
+        return (
+          <div className="space-y-6">
+            <RealTimeStats />
+            <StudentDashboard />
+          </div>
+        );
     }
   };
 

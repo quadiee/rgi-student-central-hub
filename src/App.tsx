@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Toaster } from "./components/ui/toaster";
 import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
@@ -6,9 +7,9 @@ import SupabaseAuthPage from './components/Auth/SupabaseAuthPage';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import Dashboard from './components/Dashboard/Dashboard';
-import FeeManagement from './components/Fees/FeeManagement';
+import FeeManagementHub from './components/Fees/FeeManagementHub';
 import AdminPanel from './components/Admin/AdminPanel';
-import StudentList from './components/StudentList';
+import StudentManagement from './components/Students/StudentManagement';
 import ReportGenerator from './components/Reports/ReportGenerator';
 import AttendanceManagement from './components/Attendance/AttendanceManagement';
 import ExamManagement from './components/Exams/ExamManagement';
@@ -17,104 +18,23 @@ import InvitationSignup from './components/Auth/InvitationSignup';
 import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Student } from './types/user-student-fees';
-import { supabase } from './integrations/supabase/client';
-
-// --- ADD THIS IMPORT ---
 import ResetPassword from './pages/ResetPassword';
-// -----------------------
 
 const queryClient = new QueryClient();
 
 function MainAppContent() {
   const { user, session, loading } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loadingStudents, setLoadingStudents] = useState(true);
 
   // Get active tab from current route
   const location = window.location.pathname;
   const activeTab = location.slice(1) || 'dashboard';
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      setLoadingStudents(true);
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            name,
-            roll_number,
-            course,
-            year,
-            semester,
-            email,
-            phone,
-            profile_photo_url,
-            admission_date,
-            guardian_name,
-            guardian_phone,
-            address,
-            blood_group,
-            emergency_contact,
-            department_id,
-            year_section,
-            section,
-            total_fees,
-            paid_amount,
-            due_amount,
-            fee_status
-          `)
-          .eq('role', 'student');
-
-        if (error) {
-          console.error('Error fetching students:', error);
-          setStudents([]);
-        } else {
-          // Map the data to match Student interface
-          const mappedStudents: Student[] = (data || []).map((profile: any) => ({
-            id: profile.id,
-            name: profile.name || 'Unknown',
-            rollNumber: profile.roll_number || '',
-            course: profile.course || 'Not specified',
-            year: profile.year || 1,
-            semester: profile.semester || 1,
-            email: profile.email || '',
-            phone: profile.phone || '',
-            profileImage: profile.profile_photo_url,
-            admissionDate: profile.admission_date || new Date().toISOString(),
-            guardianName: profile.guardian_name || '',
-            guardianPhone: profile.guardian_phone || '',
-            address: profile.address || '',
-            bloodGroup: profile.blood_group,
-            emergencyContact: profile.emergency_contact || '',
-            department: profile.department_id || 'Unknown',
-            yearSection: profile.year_section || '',
-            section: profile.section,
-            totalFees: profile.total_fees,
-            paidAmount: profile.paid_amount,
-            dueAmount: profile.due_amount,
-            feeStatus: profile.fee_status
-          }));
-          setStudents(mappedStudents);
-        }
-      } catch (err) {
-        console.error('Error in fetchStudents:', err);
-        setStudents([]);
-      }
-      setLoadingStudents(false);
-    };
-    
-    if (session) {
-      fetchStudents();
-    }
-  }, [session]);
-
   const handleViewStudent = (student: Student) => {
     setSelectedStudent(student);
   };
 
-  if (loading || loadingStudents) {
+  if (loading) {
     return <SupabaseAuthPage />;
   }
 
@@ -127,12 +47,12 @@ function MainAppContent() {
       case 'dashboard':
         return <Dashboard />;
       case 'fees':
-        return <FeeManagement />;
+        return <FeeManagementHub />;
       case 'admin':
         return <AdminPanel />;
       case 'students':
         return !selectedStudent ? (
-          <StudentList students={students} onViewStudent={handleViewStudent} />
+          <StudentManagement onViewStudent={handleViewStudent} />
         ) : (
           <div className="p-6">
             <button
@@ -164,6 +84,15 @@ function MainAppContent() {
                 </div>
                 <div>
                   <strong>Fee Status:</strong> {selectedStudent.feeStatus}
+                </div>
+                <div>
+                  <strong>Total Fees:</strong> ₹{selectedStudent.totalFees?.toLocaleString() || 0}
+                </div>
+                <div>
+                  <strong>Paid Amount:</strong> ₹{selectedStudent.paidAmount?.toLocaleString() || 0}
+                </div>
+                <div>
+                  <strong>Due Amount:</strong> ₹{selectedStudent.dueAmount?.toLocaleString() || 0}
                 </div>
               </div>
             </div>
