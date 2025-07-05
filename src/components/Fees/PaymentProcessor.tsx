@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { CreditCard, CheckCircle, AlertCircle } from 'lucide-react';
+import PaymentGateway from './PaymentGateway';
 
 interface PendingPayment {
   id: string;
@@ -19,7 +20,29 @@ interface PendingPayment {
   academic_year: string;
 }
 
-const PaymentProcessor: React.FC = () => {
+interface StudentFeeRecord {
+  id: string;
+  academic_year: string;
+  semester: number;
+  original_amount: number;
+  discount_amount: number;
+  penalty_amount: number;
+  final_amount: number;
+  paid_amount: number;
+  due_date: string;
+  status: string;
+  last_payment_date: string;
+}
+
+interface PaymentProcessorProps {
+  feeRecord?: StudentFeeRecord;
+  onPaymentSuccess?: () => void;
+}
+
+const PaymentProcessor: React.FC<PaymentProcessorProps> = ({ 
+  feeRecord, 
+  onPaymentSuccess 
+}) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
@@ -27,10 +50,16 @@ const PaymentProcessor: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [transactionId, setTransactionId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
+
+  // If this is for student payment (feeRecord provided), show payment gateway
+  const isStudentPayment = !!feeRecord;
 
   useEffect(() => {
-    fetchPendingPayments();
-  }, []);
+    if (!isStudentPayment) {
+      fetchPendingPayments();
+    }
+  }, [isStudentPayment]);
 
   const fetchPendingPayments = async () => {
     try {
@@ -138,6 +167,97 @@ const PaymentProcessor: React.FC = () => {
     }
   };
 
+  const handleStudentPaymentSuccess = () => {
+    setShowPaymentGateway(false);
+    if (onPaymentSuccess) {
+      onPaymentSuccess();
+    }
+  };
+
+  // Student payment view
+  if (isStudentPayment) {
+    if (showPaymentGateway && feeRecord) {
+      const outstandingAmount = feeRecord.final_amount - (feeRecord.paid_amount || 0);
+      const paymentFeeRecord = {
+        id: feeRecord.id,
+        feeType: `${feeRecord.academic_year} - Semester ${feeRecord.semester}`,
+        semester: feeRecord.semester.toString(),
+        academicYear: feeRecord.academic_year,
+        amount: outstandingAmount
+      };
+
+      return (
+        <PaymentGateway
+          feeRecord={paymentFeeRecord}
+          onPaymentSuccess={handleStudentPaymentSuccess}
+          onPaymentCancel={() => setShowPaymentGateway(false)}
+        />
+      );
+    }
+
+    if (!feeRecord) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Fee Record</h3>
+            <p className="text-gray-600">Fee record not found.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const outstandingAmount = feeRecord.final_amount - (feeRecord.paid_amount || 0);
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CreditCard className="w-5 h-5" />
+            <span>Make Payment</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-semibold mb-2">Payment Details</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Academic Year:</span>
+                <span>{feeRecord.academic_year}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Semester:</span>
+                <span>{feeRecord.semester}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Fee:</span>
+                <span>₹{feeRecord.final_amount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Paid Amount:</span>
+                <span className="text-green-600">₹{(feeRecord.paid_amount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-semibold border-t pt-2">
+                <span>Outstanding:</span>
+                <span className="text-red-600">₹{outstandingAmount.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowPaymentGateway(true)}
+            className="w-full"
+            disabled={outstandingAmount <= 0}
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            Pay ₹{outstandingAmount.toLocaleString()}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Admin payment view
   if (!user || !['admin', 'principal'].includes(user.role)) {
     return (
       <Card>
