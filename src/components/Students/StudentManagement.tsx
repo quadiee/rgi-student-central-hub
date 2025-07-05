@@ -51,33 +51,33 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
     try {
       setLoading(true);
       let query = supabase
-  .from('profiles')
-  .select(`
-    id, 
-    name, 
-    email, 
-    roll_number,
-    course,
-    year,
-    semester,
-    phone,
-    profile_photo_url,
-    admission_date,
-    guardian_name,
-    guardian_phone,
-    address,
-    blood_group,
-    emergency_contact,
-    department_id,
-    year_section,
-    section,
-    total_fees,
-    paid_amount,
-    due_amount,
-    fee_status,
-    is_active,
-    departments:departments!profiles_department_id_fkey(name, code)
-  `)
+        .from('profiles')
+        .select(`
+          id, 
+          name, 
+          email, 
+          roll_number,
+          course,
+          year,
+          semester,
+          phone,
+          profile_photo_url,
+          admission_date,
+          guardian_name,
+          guardian_phone,
+          address,
+          blood_group,
+          emergency_contact,
+          department_id,
+          year_section,
+          section,
+          total_fees,
+          paid_amount,
+          due_amount,
+          fee_status,
+          is_active,
+         departments:departments!profiles_department_id_fkey(name, code)
+        `)
         .eq('role', 'student')
         .eq('is_active', true);
 
