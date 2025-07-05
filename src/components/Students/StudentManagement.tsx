@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -29,6 +28,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
   useEffect(() => {
     fetchStudents();
     fetchDepartments();
+    // eslint-disable-next-line
   }, [user]);
 
   const fetchDepartments = async () => {
@@ -47,7 +47,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
 
   const fetchStudents = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       let query = supabase
@@ -76,7 +76,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
           due_amount,
           fee_status,
           is_active,
-          departments!inner(name, code)
+          departments:departments!profiles_department_id_fkey(name, code)
         `)
         .eq('role', 'student')
         .eq('is_active', true);
@@ -269,50 +269,50 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
 
       {/* Filters */}
       <Card>
-  <CardContent className="p-6">
-    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          type="text"
-          placeholder="Search students..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+        <CardContent className="p-6">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search students..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-      <Select value={selectedDepartment || ""} onValueChange={setSelectedDepartment}>
-        <SelectTrigger>
-          <SelectValue placeholder="All Departments" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">All Departments</SelectItem>
-          {departments.map(dept => (
-            <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            <Select value={selectedDepartment || ""} onValueChange={setSelectedDepartment}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Departments</SelectItem>
+                {departments.map(dept => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      <Select value={selectedYear || ""} onValueChange={setSelectedYear}>
-        <SelectTrigger>
-          <SelectValue placeholder="All Years" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">All Years</SelectItem>
-          {[1, 2, 3, 4].map(year => (
-            <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            <Select value={selectedYear || ""} onValueChange={setSelectedYear}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Years</SelectItem>
+                {[1, 2, 3, 4].map(year => (
+                  <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      <Button variant="outline" className="flex items-center space-x-2">
-        <Filter className="w-4 h-4" />
-        <span>More Filters</span>
-      </Button>
-    </div>
-  </CardContent>
-</Card>
+            <Button variant="outline" className="flex items-center space-x-2">
+              <Filter className="w-4 h-4" />
+              <span>More Filters</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Student List */}
       <Card>
