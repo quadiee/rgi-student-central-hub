@@ -64,7 +64,7 @@ const AdminFeeAssignment: React.FC = () => {
 
     setLoading(true);
     try {
-      // Create fee records for selected students
+      // Create fee records for selected students with proper typing
       const feeRecords = selectedStudents.map(studentId => ({
         student_id: studentId,
         academic_year: academicYear,
@@ -72,7 +72,7 @@ const AdminFeeAssignment: React.FC = () => {
         original_amount: parseFloat(feeAmount),
         final_amount: parseFloat(feeAmount),
         due_date: dueDate,
-        status: 'Pending'
+        status: 'Pending' as const // Fix: Use proper enum type
       }));
 
       const { error } = await supabase

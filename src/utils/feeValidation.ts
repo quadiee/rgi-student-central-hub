@@ -32,3 +32,17 @@ export const calculateLateFee = (originalAmount: number, dueDate: string, penalt
   
   return (originalAmount * penaltyPercentage / 100) * monthsOverdue;
 };
+
+export const getDueDateStatus = (dueDate: string): 'upcoming' | 'due' | 'overdue' => {
+  const due = new Date(dueDate);
+  const today = new Date();
+  const diffDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return 'overdue';
+  } else if (diffDays <= 7) {
+    return 'due';
+  } else {
+    return 'upcoming';
+  }
+};
