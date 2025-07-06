@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 
@@ -29,11 +28,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Get the current user to check if they have admin privileges
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -45,10 +39,29 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify the requesting user is an admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+    const token = authHeader.replace("Bearer ", "");
+
+    // 1. Client for verifying who is making the request
+    const supabaseUser = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
     );
+
+    // 2. Admin client to perform user deletion
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Validate requesting user
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
 
     if (authError || !user) {
       return new Response(
@@ -60,8 +73,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if requesting user has admin role
-    const { data: profile, error: profileError } = await supabase
+    // Check user's role
+    const { data: profile, error: profileError } = await supabaseUser
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -77,8 +90,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Remove user from auth.users (this will cascade to profiles via foreign key)
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+    // Delete the target user
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
       console.error('Error deleting user:', deleteError);
@@ -91,11 +104,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Also deactivate any related invitations
-    await supabase
-      .from('user_invitations')
-      .update({ is_active: false })
-      .eq('email', (await supabase.auth.admin.getUserById(userId)).data.user?.email);
+    // Deactivate invitations
+    const { data: targetUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const userEmail = targetUserData?.user?.email;
+
+    if (userEmail) {
+      await supabaseAdmin
+        .from('user_invitations')
+        .update({ is_active: false })
+        .eq('email', userEmail);
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: "User removed successfully" }),
@@ -110,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ error: error.message }),
       {
-      status: 500,
+        status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
