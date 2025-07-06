@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -21,14 +22,15 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
   const [departments, setDepartments] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchStudents();
-    fetchDepartments();
-    // eslint-disable-next-line
+    if (user) {
+      fetchStudents();
+      fetchDepartments();
+    }
   }, [user]);
 
   const fetchDepartments = async () => {
@@ -171,7 +173,16 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
     return { label: 'Pending', color: 'bg-red-100 text-red-800' };
   };
 
-  if (!user || !['admin', 'principal', 'hod'].includes(user.role)) {
+  // Check authentication and authorization
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">Please log in to access this page.</p>
+      </div>
+    );
+  }
+
+  if (!['admin', 'principal', 'hod'].includes(user.role || '')) {
     return (
       <div className="text-center py-8">
         <p className="text-gray-600">Access denied. Insufficient privileges.</p>
@@ -196,7 +207,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
           Student Management
         </h2>
-        {['admin', 'principal'].includes(user.role) && (
+        {['admin', 'principal'].includes(user.role || '') && (
           <Button className="flex items-center space-x-2" size={isMobile ? 'sm' : 'default'}>
             <UserPlus className="w-4 h-4" />
             <span>Invite Student</span>
@@ -282,24 +293,24 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
               />
             </div>
 
-            <Select value={selectedDepartment || ""} onValueChange={setSelectedDepartment}>
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger>
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Departments</SelectItem>
+                <SelectItem value="all">All Departments</SelectItem>
                 {departments.map(dept => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={selectedYear || ""} onValueChange={setSelectedYear}>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger>
                 <SelectValue placeholder="All Years" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Years</SelectItem>
+                <SelectItem value="all">All Years</SelectItem>
                 {[1, 2, 3, 4].map(year => (
                   <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
                 ))}
@@ -349,7 +360,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                             <Eye className="w-3 h-3" />
                           </Button>
                         )}
-                        {['admin', 'principal'].includes(user.role) && (
+                        {['admin', 'principal'].includes(user.role || '') && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -465,7 +476,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                             <Button size="sm" variant="outline">
                               <Edit className="w-3 h-3" />
                             </Button>
-                            {['admin', 'principal'].includes(user.role) && (
+                            {['admin', 'principal'].includes(user.role || '') && (
                               <Button 
                                 size="sm" 
                                 variant="outline" 
