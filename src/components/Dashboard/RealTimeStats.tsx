@@ -1,148 +1,111 @@
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, IndianRupee, AlertTriangle, Eye } from 'lucide-react';
+import { Users, DollarSign, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
-import { useToast } from '../ui/use-toast';
-import { Card, CardContent } from '../ui/card';
-import { formatCurrency } from '../../utils/feeValidation';
-import { usePaymentBreakdown } from '../../hooks/usePaymentBreakdown';
-import PaymentBreakdown from '../Fees/PaymentBreakdown';
 
 interface DashboardStats {
   totalStudents: number;
   totalRevenue: number;
-  totalOutstanding: number;
-  overdueStudents: number;
-  recentPaymentIds: string[];
-  outstandingFeeRecords: string[];
+  pendingPayments: number;
+  paidStudents: number;
+  departmentStats?: {
+    totalStudents: number;
+    totalRevenue: number;
+    pendingPayments: number;
+  };
 }
 
 const RealTimeStats: React.FC = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStudents: 0,
+    totalRevenue: 0,
+    pendingPayments: 0,
+    paidStudents: 0
+  });
   const [loading, setLoading] = useState(true);
-  const { 
-    selectedPaymentId, 
-    isShowingBreakdown, 
-    showPaymentBreakdown, 
-    hidePaymentBreakdown,
-    breadcrumbItems 
-  } = usePaymentBreakdown();
 
   useEffect(() => {
-    if (user) {
-      loadStats();
-    }
+    fetchStats();
   }, [user]);
 
-  const loadStats = async () => {
+  const fetchStats = async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
 
-      // Get basic statistics
-      const { data: feeRecords, error: feeError } = await supabase
-        .from('fee_records')
-        .select(`
-          *,
-          profiles!student_id (
-            name,
-            roll_number,
-            departments:department_id (name)
-          )
-        `);
+      if (user.role === 'student') {
+        // For students, show their personal stats
+        const { data: feeRecords } = await supabase
+          .from('fee_records')
+          .select('*')
+          .eq('student_id', user.id);
 
-      if (feeError) throw feeError;
+        const totalFees = feeRecords?.reduce((sum, record) => sum + record.final_amount, 0) || 0;
+        const paidAmount = feeRecords?.reduce((sum, record) => sum + (record.paid_amount || 0), 0) || 0;
+        const pendingAmount = totalFees - paidAmount;
 
-      // Get recent payments
-      const { data: recentPayments, error: paymentsError } = await supabase
-        .from('payment_transactions')
-        .select('id')
-        .eq('status', 'Success')
-        .order('processed_at', { ascending: false })
-        .limit(5);
+        setStats({
+          totalStudents: 1,
+          totalRevenue: paidAmount,
+          pendingPayments: pendingAmount,
+          paidStudents: pendingAmount === 0 ? 1 : 0
+        });
+      } else {
+        // For admin/principal/hod, show institutional stats
+        let query = supabase
+          .from('profiles')
+          .select(`
+            id,
+            total_fees,
+            paid_amount,
+            due_amount,
+            department_id
+          `)
+          .eq('role', 'student')
+          .eq('is_active', true);
 
-      if (paymentsError) throw paymentsError;
+        // Filter by department for HOD
+        if (user.role === 'hod') {
+          query = query.eq('department_id', user.department_id);
+        }
 
-      const uniqueStudentIds = new Set(feeRecords?.map(record => record.student_id).filter(Boolean));
-      const totalStudents = uniqueStudentIds.size;
+        const { data: students } = await query;
 
-      const { data: payments } = await supabase
-        .from('payment_transactions')
-        .select('*')
-        .eq('status', 'Success');
+        if (students) {
+          const totalStudents = students.length;
+          const totalRevenue = students.reduce((sum, student) => sum + (student.paid_amount || 0), 0);
+          const pendingPayments = students.reduce((sum, student) => sum + (student.due_amount || 0), 0);
+          const paidStudents = students.filter(student => (student.due_amount || 0) === 0).length;
 
-      const totalRevenue = payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
-      const totalOutstanding = feeRecords?.reduce((sum, record) => 
-        sum + (Number(record.final_amount) - Number(record.paid_amount || 0)), 0) || 0;
-
-      // Count overdue students
-      const overdueCount = feeRecords?.filter(record => 
-        record.status === 'Overdue' || 
-        (new Date(record.due_date) < new Date() && record.status !== 'Paid')
-      ).length || 0;
-
-      // Get outstanding fee records for breakdown
-      const outstandingRecords = feeRecords?.filter(record => 
-        Number(record.final_amount) > Number(record.paid_amount || 0)
-      ).map(record => record.id) || [];
-
-      setStats({
-        totalStudents,
-        totalRevenue,
-        totalOutstanding,
-        overdueStudents: overdueCount,
-        recentPaymentIds: recentPayments?.map(p => p.id) || [],
-        outstandingFeeRecords: outstandingRecords
-      });
+          setStats({
+            totalStudents,
+            totalRevenue,
+            pendingPayments,
+            paidStudents
+          });
+        }
+      }
     } catch (error) {
-      console.error('Error loading dashboard stats:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard statistics",
-        variant: "destructive"
-      });
+      console.error('Error fetching dashboard stats:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatClick = async (statType: string) => {
-    if (statType === 'revenue' && stats?.recentPaymentIds.length) {
-      // Show breakdown for most recent payment
-      const paymentId = stats.recentPaymentIds[0];
-      showPaymentBreakdown(paymentId, [
-        { label: 'Dashboard' },
-        { label: 'Revenue Breakdown' }
-      ]);
-    } else if (statType === 'outstanding' && stats?.outstandingFeeRecords.length) {
-      // Show breakdown for most recent outstanding fee record
-      const feeRecordId = stats.outstandingFeeRecords[0];
-      showPaymentBreakdown(feeRecordId, [
-        { label: 'Dashboard' },
-        { label: 'Outstanding Fees Breakdown' }
-      ]);
-    }
-  };
-
-  if (isShowingBreakdown && selectedPaymentId) {
-    return (
-      <PaymentBreakdown
-        paymentId={selectedPaymentId}
-        onBack={hidePaymentBreakdown}
-        breadcrumbItems={breadcrumbItems}
-      />
-    );
-  }
-
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="animate-pulse">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map(i => (
+          <Card key={i}>
             <CardContent className="p-6">
-              <div className="h-16 bg-gray-200 rounded"></div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded"></div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -150,74 +113,71 @@ const RealTimeStats: React.FC = () => {
     );
   }
 
-  if (!stats) return null;
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {/* Total Students */}
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.totalStudents}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {user?.role === 'student' ? 'My Profile' : 'Total Students'}
+              </p>
+              <p className="text-2xl font-bold text-blue-600">
+                {stats.totalStudents.toLocaleString()}
+              </p>
             </div>
-            <Users className="w-8 h-8 text-blue-500" />
+            <Users className="w-8 h-8 text-blue-600" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Total Revenue - Clickable */}
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer group"
-        onClick={() => handleStatClick('revenue')}
-      >
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Total Revenue
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+              <p className="text-sm font-medium text-gray-600">
+                {user?.role === 'student' ? 'Amount Paid' : 'Total Revenue'}
               </p>
               <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(stats.totalRevenue)}
+                ₹{stats.totalRevenue.toLocaleString()}
               </p>
             </div>
-            <TrendingUp className="w-8 h-8 text-green-500" />
+            <DollarSign className="w-8 h-8 text-green-600" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Outstanding Amount - Clickable */}
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer group"
-        onClick={() => handleStatClick('outstanding')}
-      >
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Outstanding
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+              <p className="text-sm font-medium text-gray-600">
+                {user?.role === 'student' ? 'Amount Due' : 'Pending Collections'}
               </p>
-              <p className="text-2xl font-bold text-orange-600">
-                {formatCurrency(stats.totalOutstanding)}
+              <p className="text-2xl font-bold text-red-600">
+                ₹{stats.pendingPayments.toLocaleString()}
               </p>
             </div>
-            <IndianRupee className="w-8 h-8 text-orange-500" />
+            <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Overdue Students */}
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Overdue</p>
-              <p className="text-2xl font-bold text-red-600">{stats.overdueStudents}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {user?.role === 'student' ? 'Payment Status' : 'Completed Payments'}
+              </p>
+              <p className="text-2xl font-bold text-purple-600">
+                {user?.role === 'student' 
+                  ? (stats.pendingPayments === 0 ? 'Paid' : 'Pending')
+                  : stats.paidStudents.toLocaleString()
+                }
+              </p>
             </div>
-            <AlertTriangle className="w-8 h-8 text-red-500" />
+            <CheckCircle className="w-8 h-8 text-purple-600" />
           </div>
         </CardContent>
       </Card>

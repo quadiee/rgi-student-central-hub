@@ -1,74 +1,33 @@
 
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw, Eye, Receipt } from 'lucide-react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { CreditCard, Download, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
-import { supabase } from '../../integrations/supabase/client';
-import { formatCurrency } from '../../utils/feeValidation';
-import { usePaymentBreakdown } from '../../hooks/usePaymentBreakdown';
-import PaymentBreakdown from './PaymentBreakdown';
-
-interface FeeRecord {
-  id: string;
-  academic_year: string;
-  semester: number;
-  original_amount: number;
-  final_amount: number;
-  paid_amount: number;
-  status: string;
-  due_date: string;
-  payment_transactions: Array<{
-    id: string;
-    amount: number;
-    processed_at: string;
-    payment_method: string;
-    status: string;
-  }>;
-}
+import { SupabaseFeeService } from '../../services/supabaseFeeService';
+import { FeeRecord } from '../../types';
+import { useIsMobile } from '../../hooks/use-mobile';
 
 const StudentFeeDashboard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [feeRecords, setFeeRecords] = useState<FeeRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const { 
-    selectedPaymentId, 
-    isShowingBreakdown, 
-    showPaymentBreakdown, 
-    hidePaymentBreakdown,
-    breadcrumbItems 
-  } = usePaymentBreakdown();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedFee, setSelectedFee] = useState<FeeRecord | null>(null);
 
   useEffect(() => {
-    if (user) {
-      loadFeeRecords();
-    }
-  }, [user]);
+    loadFeeRecords();
+  }, []);
 
   const loadFeeRecords = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('fee_records')
-        .select(`
-          *,
-          payment_transactions (
-            id,
-            amount,
-            processed_at,
-            payment_method,
-            status
-          )
-        `)
-        .eq('student_id', user?.id)
-        .order('academic_year', { ascending: false })
-        .order('semester', { ascending: false });
-
-      if (error) throw error;
-
-      setFeeRecords(data || []);
+      const records = await SupabaseFeeService.getFeeRecords(user);
+      setFeeRecords(records);
     } catch (error) {
       console.error('Error loading fee records:', error);
       toast({
@@ -81,220 +40,246 @@ const StudentFeeDashboard: React.FC = () => {
     }
   };
 
-  const handlePaymentClick = (paymentId: string, feeRecord: FeeRecord) => {
-    showPaymentBreakdown(paymentId, [
-      { label: 'Student Dashboard' },
-      { label: 'Fee Records' },
-      { label: `${feeRecord.academic_year} - Sem ${feeRecord.semester}` }
-    ]);
-  };
+  const handlePayment = async (feeRecord: FeeRecord, paymentMethod: string) => {
+    if (!user) return;
 
-  const handleAmountClick = (feeRecord: FeeRecord) => {
-    // If there are payments, show the most recent one
-    const recentPayment = feeRecord.payment_transactions
-      ?.filter(p => p.status === 'Success')
-      ?.sort((a, b) => new Date(b.processed_at).getTime() - new Date(a.processed_at).getTime())[0];
-    
-    if (recentPayment) {
-      handlePaymentClick(recentPayment.id, feeRecord);
-    } else {
+    try {
+      const pendingAmount = feeRecord.amount - (feeRecord.amount * 0.7); // Mock calculation
+      
+      await SupabaseFeeService.processPayment(user, {
+        studentId: user.id,
+        feeRecordId: feeRecord.id,
+        amount: pendingAmount,
+        paymentMethod: paymentMethod as any
+      });
+
       toast({
-        title: "No Payment Found",
-        description: "No successful payments found for this fee record",
+        title: "Payment Successful",
+        description: `Payment of ₹${pendingAmount.toLocaleString()} processed successfully`
+      });
+
+      setShowPaymentModal(false);
+      loadFeeRecords();
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Payment Failed",
+        description: "Payment processing failed. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  const handleOutstandingClick = () => {
-    // Show breakdown of outstanding fees
-    const outstandingRecords = feeRecords.filter(record => 
-      record.final_amount > (record.paid_amount || 0)
-    );
-    
-    if (outstandingRecords.length > 0) {
-      // Show the most recent outstanding record
-      const recentOutstanding = outstandingRecords[0];
-      showPaymentBreakdown(recentOutstanding.id, [
-        { label: 'Student Dashboard' },
-        { label: 'Outstanding Fees' },
-        { label: `${recentOutstanding.academic_year} - Sem ${recentOutstanding.semester}` }
-      ]);
-    } else {
-      toast({
-        title: "No Outstanding Fees",
-        description: "You have no pending fee payments",
-      });
-    }
-  };
-
-  if (isShowingBreakdown && selectedPaymentId) {
-    return (
-      <PaymentBreakdown
-        paymentId={selectedPaymentId}
-        onBack={hidePaymentBreakdown}
-        breadcrumbItems={breadcrumbItems}
-      />
-    );
-  }
+  const totalDue = feeRecords.filter(f => f.status === 'Pending').reduce((sum, f) => sum + f.amount, 0);
+  const totalPaid = feeRecords.filter(f => f.status === 'Paid').reduce((sum, f) => sum + f.amount, 0);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  const totalFees = feeRecords.reduce((sum, record) => sum + record.final_amount, 0);
-  const totalPaid = feeRecords.reduce((sum, record) => sum + (record.paid_amount || 0), 0);
-  const totalPending = totalFees - totalPaid;
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">My Fee Dashboard</h2>
-        <Button onClick={loadFeeRecords} disabled={loading} variant="outline">
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
+          My Fee Dashboard
+        </h2>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group">
+      {/* Fee Summary Cards */}
+      <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'} gap-4`}>
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Total Fees
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-              </p>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalFees)}</p>
+              <p className="text-green-100">Total Paid</p>
+              <p className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold`}>₹{totalPaid.toLocaleString()}</p>
             </div>
-            <Receipt className="w-8 h-8 text-blue-500" />
+            <CheckCircle className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} text-green-100`} />
           </div>
         </div>
 
-        <div 
-          className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group"
-          onClick={() => feeRecords.length > 0 && handleAmountClick(feeRecords[0])}
-        >
+        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Total Paid
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-              </p>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
+              <p className="text-yellow-100">Pending Dues</p>
+              <p className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold`}>₹{totalDue.toLocaleString()}</p>
             </div>
-            <TrendingUp className="w-8 h-8 text-green-500" />
+            <Clock className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} text-yellow-100`} />
           </div>
         </div>
 
-        <div 
-          className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group"
-          onClick={handleOutstandingClick}
-        >
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Pending
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-              </p>
-              <p className="text-2xl font-bold text-orange-600">{formatCurrency(totalPending)}</p>
+              <p className="text-blue-100">Total Fees</p>
+              <p className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold`}>₹{(totalPaid + totalDue).toLocaleString()}</p>
             </div>
-            <IndianRupee className="w-8 h-8 text-orange-500" />
+            <CreditCard className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} text-blue-100`} />
           </div>
         </div>
       </div>
 
-      {/* Fee Records List */}
+      {/* Fee Records */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">Fee Records</h3>
-        <div className="space-y-4">
-          {feeRecords.map((record) => (
-            <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h4 className="font-medium">{record.academic_year} - Semester {record.semester}</h4>
-                  <p className="text-sm text-gray-600">Due: {new Date(record.due_date).toLocaleDateString()}</p>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  record.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                  record.status === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-                  record.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {record.status}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div 
-                  className="cursor-pointer hover:text-blue-600 transition-colors group"
-                  onClick={() => handleAmountClick(record)}
-                >
-                  <span className="text-gray-600">Total: </span>
-                  <span className="font-medium flex items-center gap-1">
-                    {formatCurrency(record.final_amount)}
-                    <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />
-                  </span>
-                </div>
-                <div 
-                  className="cursor-pointer hover:text-green-600 transition-colors group"
-                  onClick={() => handleAmountClick(record)}
-                >
-                  <span className="text-gray-600">Paid: </span>
-                  <span className="font-medium flex items-center gap-1">
-                    {formatCurrency(record.paid_amount || 0)}
-                    <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Pending: </span>
-                  <span className="font-medium text-orange-600">
-                    {formatCurrency(record.final_amount - (record.paid_amount || 0))}
-                  </span>
-                </div>
-              </div>
-
-              {/* Payment History */}
-              {record.payment_transactions && record.payment_transactions.length > 0 && (
-                <div className="mt-3 pt-3 border-t">
-                  <p className="text-xs text-gray-600 mb-2">Recent Payments:</p>
-                  <div className="space-y-1">
-                    {record.payment_transactions
-                      .filter(p => p.status === 'Success')
-                      .slice(0, 3)
-                      .map((payment) => (
-                      <div 
-                        key={payment.id} 
-                        className="flex justify-between text-xs cursor-pointer hover:text-blue-600 transition-colors group"
-                        onClick={() => handlePaymentClick(payment.id, record)}
-                      >
-                        <span className="flex items-center gap-1">
-                          {formatCurrency(payment.amount)} via {payment.payment_method}
-                          <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />
-                        </span>
-                        <span className="text-gray-500">
-                          {new Date(payment.processed_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {feeRecords.length === 0 && (
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Fee Details</h3>
+        
+        {feeRecords.length === 0 ? (
           <div className="text-center py-8">
-            <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">No fee records found</p>
           </div>
+        ) : (
+          <>
+            {isMobile ? (
+              <div className="space-y-4">
+                {feeRecords.map(record => (
+                  <div key={record.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-900">{record.feeType}</h4>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        record.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                        record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {record.status}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Amount:</span>
+                        <p className="font-medium">₹{record.amount.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Due Date:</span>
+                        <p className="font-medium">{record.dueDate}</p>
+                      </div>
+                    </div>
+                    
+                    {record.status === 'Pending' && (
+                      <Button 
+                        className="w-full mt-3" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedFee(record);
+                          setShowPaymentModal(true);
+                        }}
+                      >
+                        Pay Now
+                      </Button>
+                    )}
+                    
+                    {record.receiptNumber && (
+                      <Button variant="outline" className="w-full mt-2" size="sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Receipt
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fee Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {feeRecords.map(record => (
+                      <tr key={record.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{record.feeType}</div>
+                          <div className="text-sm text-gray-500">Semester {record.semester}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{record.amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.dueDate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            record.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                            record.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            {record.status === 'Pending' && (
+                              <Button 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedFee(record);
+                                  setShowPaymentModal(true);
+                                }}
+                              >
+                                Pay Now
+                              </Button>
+                            )}
+                            {record.receiptNumber && (
+                              <Button variant="outline" size="sm">
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedFee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Pay {selectedFee.feeType}</h3>
+            <div className="mb-4">
+              <p className="text-gray-600">Amount: ₹{selectedFee.amount.toLocaleString()}</p>
+              <p className="text-gray-600">Due Date: {selectedFee.dueDate}</p>
+            </div>
+            
+            <div className="space-y-3">
+              <Button 
+                className="w-full" 
+                onClick={() => handlePayment(selectedFee, 'Online')}
+              >
+                Pay Online (UPI/Card)
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => handlePayment(selectedFee, 'Cash')}
+              >
+                Pay at Office
+              </Button>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              className="w-full mt-4"
+              onClick={() => setShowPaymentModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

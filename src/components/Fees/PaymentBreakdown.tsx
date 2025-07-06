@@ -12,11 +12,11 @@ import { formatCurrency } from '../../utils/feeValidation';
 interface PaymentDetails {
   id: string;
   amount: number;
-  payment_method?: string;
+  payment_method: string;
   status: string;
-  receipt_number?: string;
-  transaction_id?: string;
-  processed_at?: string;
+  receipt_number: string;
+  transaction_id: string;
+  processed_at: string;
   gateway?: string;
   student_name: string;
   student_roll: string;
@@ -29,8 +29,6 @@ interface PaymentDetails {
   discount_amount: number;
   penalty_amount: number;
   final_amount: number;
-  due_date: string;
-  paid_amount: number;
 }
 
 interface PaymentBreakdownProps {
@@ -48,7 +46,6 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
   const { toast } = useToast();
   const [payment, setPayment] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isPaymentTransaction, setIsPaymentTransaction] = useState(true);
 
   useEffect(() => {
     if (paymentId) {
@@ -60,8 +57,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
     try {
       setLoading(true);
       
-      // First try to fetch as payment transaction
-      let { data: paymentData, error: paymentError } = await supabase
+      const { data, error } = await supabase
         .from('payment_transactions')
         .select(`
           *,
@@ -76,75 +72,33 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
           )
         `)
         .eq('id', paymentId)
-        .maybeSingle();
+        .single();
 
-      if (paymentError || !paymentData) {
-        // If not found as payment transaction, try as fee record
-        const { data: feeData, error: feeError } = await supabase
-          .from('fee_records')
-          .select(`
-            *,
-            fee_structures(fee_categories),
-            profiles!inner(
-              name,
-              roll_number,
-              departments(name)
-            )
-          `)
-          .eq('id', paymentId)
-          .single();
+      if (error) throw error;
 
-        if (feeError) throw feeError;
+      const paymentDetails: PaymentDetails = {
+        id: data.id,
+        amount: data.amount,
+        payment_method: data.payment_method,
+        status: data.status,
+        receipt_number: data.receipt_number,
+        transaction_id: data.transaction_id,
+        processed_at: data.processed_at,
+        gateway: data.gateway,
+        student_name: data.fee_records.profiles.name,
+        student_roll: data.fee_records.profiles.roll_number,
+        department_name: data.fee_records.profiles.departments.name,
+        fee_record_id: data.fee_records.id,
+        academic_year: data.fee_records.academic_year,
+        semester: data.fee_records.semester,
+        fee_categories: data.fee_records.fee_structures?.fee_categories || {},
+        original_amount: data.fee_records.original_amount,
+        discount_amount: data.fee_records.discount_amount || 0,
+        penalty_amount: data.fee_records.penalty_amount || 0,
+        final_amount: data.fee_records.final_amount
+      };
 
-        setIsPaymentTransaction(false);
-        const paymentDetails: PaymentDetails = {
-          id: feeData.id,
-          amount: feeData.paid_amount || 0,
-          status: feeData.status || 'Pending',
-          student_name: feeData.profiles.name,
-          student_roll: feeData.profiles.roll_number,
-          department_name: feeData.profiles.departments.name,
-          fee_record_id: feeData.id,
-          academic_year: feeData.academic_year,
-          semester: feeData.semester,
-          fee_categories: feeData.fee_structures?.fee_categories || {},
-          original_amount: feeData.original_amount,
-          discount_amount: feeData.discount_amount || 0,
-          penalty_amount: feeData.penalty_amount || 0,
-          final_amount: feeData.final_amount,
-          due_date: feeData.due_date,
-          paid_amount: feeData.paid_amount || 0
-        };
-
-        setPayment(paymentDetails);
-      } else {
-        setIsPaymentTransaction(true);
-        const paymentDetails: PaymentDetails = {
-          id: paymentData.id,
-          amount: paymentData.amount,
-          payment_method: paymentData.payment_method,
-          status: paymentData.status,
-          receipt_number: paymentData.receipt_number,
-          transaction_id: paymentData.transaction_id,
-          processed_at: paymentData.processed_at,
-          gateway: paymentData.gateway,
-          student_name: paymentData.fee_records.profiles.name,
-          student_roll: paymentData.fee_records.profiles.roll_number,
-          department_name: paymentData.fee_records.profiles.departments.name,
-          fee_record_id: paymentData.fee_records.id,
-          academic_year: paymentData.fee_records.academic_year,
-          semester: paymentData.fee_records.semester,
-          fee_categories: paymentData.fee_records.fee_structures?.fee_categories || {},
-          original_amount: paymentData.fee_records.original_amount,
-          discount_amount: paymentData.fee_records.discount_amount || 0,
-          penalty_amount: paymentData.fee_records.penalty_amount || 0,
-          final_amount: paymentData.fee_records.final_amount,
-          due_date: paymentData.fee_records.due_date,
-          paid_amount: paymentData.fee_records.paid_amount || 0
-        };
-
-        setPayment(paymentDetails);
-      }
+      setPayment(paymentDetails);
     } catch (error) {
       console.error('Error fetching payment details:', error);
       toast({
@@ -159,19 +113,14 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'success': 
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': 
-      case 'partial': return 'bg-yellow-100 text-yellow-800';
-      case 'failed': 
-      case 'overdue': return 'bg-red-100 text-red-800';
+      case 'success': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'failed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getPaymentMethodIcon = (method?: string) => {
-    if (!method) return <Receipt className="w-5 h-5 text-gray-600" />;
-    
+  const getPaymentMethodIcon = (method: string) => {
     switch (method.toLowerCase()) {
       case 'online':
       case 'upi':
@@ -188,7 +137,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading details...</p>
+          <p className="text-gray-600">Loading payment details...</p>
         </div>
       </div>
     );
@@ -198,7 +147,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
     return (
       <div className="text-center py-8">
         <Receipt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">Details not found</p>
+        <p className="text-gray-500">Payment details not found</p>
         <Button onClick={onBack} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Go Back
@@ -209,7 +158,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
 
   const allBreadcrumbItems = [
     ...breadcrumbItems,
-    { label: isPaymentTransaction ? 'Payment Details' : 'Fee Details' }
+    { label: 'Payment Details' }
   ];
 
   return (
@@ -245,19 +194,15 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
         </Button>
       </div>
 
-      {/* Header */}
+      {/* Payment Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {getPaymentMethodIcon(payment.payment_method)}
               <div>
-                <CardTitle className="text-xl">
-                  {isPaymentTransaction ? 'Payment Receipt' : 'Fee Record Details'}
-                </CardTitle>
-                <p className="text-sm text-gray-600">
-                  {payment.receipt_number ? `#${payment.receipt_number}` : `ID: ${payment.id.slice(0, 8)}`}
-                </p>
+                <CardTitle className="text-xl">Payment Receipt</CardTitle>
+                <p className="text-sm text-gray-600">#{payment.receipt_number}</p>
               </div>
             </div>
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(payment.status)}`}>
@@ -302,49 +247,33 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
                   <span className="text-gray-600">Semester:</span>
                   <span className="font-medium ml-2">{payment.semester}</span>
                 </div>
-                {payment.due_date && (
-                  <div>
-                    <span className="text-gray-600">Due Date:</span>
-                    <span className="font-medium ml-2">
-                      {new Date(payment.due_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
+                <div>
+                  <span className="text-gray-600">Transaction ID:</span>
+                  <span className="font-medium ml-2">{payment.transaction_id || 'N/A'}</span>
+                </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <h4 className="font-medium text-gray-900 flex items-center">
                 <CreditCard className="w-4 h-4 mr-2" />
-                {isPaymentTransaction ? 'Payment Details' : 'Fee Details'}
+                Payment Details
               </h4>
               <div className="space-y-2 text-sm">
-                {payment.payment_method && (
-                  <div>
-                    <span className="text-gray-600">Method:</span>
-                    <span className="font-medium ml-2">{payment.payment_method}</span>
-                  </div>
-                )}
-                {payment.gateway && (
-                  <div>
-                    <span className="text-gray-600">Gateway:</span>
-                    <span className="font-medium ml-2">{payment.gateway}</span>
-                  </div>
-                )}
-                {payment.processed_at && (
-                  <div>
-                    <span className="text-gray-600">Date:</span>
-                    <span className="font-medium ml-2">
-                      {new Date(payment.processed_at).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {payment.transaction_id && (
-                  <div>
-                    <span className="text-gray-600">Transaction ID:</span>
-                    <span className="font-medium ml-2">{payment.transaction_id}</span>
-                  </div>
-                )}
+                <div>
+                  <span className="text-gray-600">Method:</span>
+                  <span className="font-medium ml-2">{payment.payment_method}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Gateway:</span>
+                  <span className="font-medium ml-2">{payment.gateway || 'Manual'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Date:</span>
+                  <span className="font-medium ml-2">
+                    {new Date(payment.processed_at).toLocaleString()}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -385,15 +314,8 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
               
               <div className="flex justify-between py-2 bg-blue-50 px-3 rounded text-blue-800">
                 <span className="font-medium">Amount Paid</span>
-                <span className="font-bold">{formatCurrency(payment.paid_amount)}</span>
+                <span className="font-bold">{formatCurrency(payment.amount)}</span>
               </div>
-
-              {(payment.final_amount - payment.paid_amount) > 0 && (
-                <div className="flex justify-between py-2 bg-orange-50 px-3 rounded text-orange-800">
-                  <span className="font-medium">Outstanding</span>
-                  <span className="font-bold">{formatCurrency(payment.final_amount - payment.paid_amount)}</span>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -424,18 +346,16 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
       </div>
 
       {/* Actions */}
-      {isPaymentTransaction && (
-        <div className="flex justify-end space-x-4">
-          <Button variant="outline" onClick={() => window.print()}>
-            <Receipt className="w-4 h-4 mr-2" />
-            Print Receipt
-          </Button>
-          <Button>
-            <Receipt className="w-4 h-4 mr-2" />
-            Download PDF
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end space-x-4">
+        <Button variant="outline" onClick={() => window.print()}>
+          <Receipt className="w-4 h-4 mr-2" />
+          Print Receipt
+        </Button>
+        <Button>
+          <Receipt className="w-4 h-4 mr-2" />
+          Download PDF
+        </Button>
+      </div>
     </div>
   );
 };
