@@ -58,6 +58,10 @@ const RealTimeFeeDashboard: React.FC = () => {
 
       if (feeError) throw feeError;
 
+      // Get unique students count instead of fee records count
+      const uniqueStudentIds = new Set(feeRecords?.map(record => record.student_id).filter(Boolean));
+      const totalStudents = uniqueStudentIds.size;
+
       // Get payment transactions
       const { data: payments, error: paymentError } = await supabase
         .from('payment_transactions')
@@ -66,15 +70,33 @@ const RealTimeFeeDashboard: React.FC = () => {
 
       if (paymentError) throw paymentError;
 
-      // Calculate statistics
-      const totalStudents = feeRecords?.length || 0;
       const totalRevenue = payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
       const totalOutstanding = feeRecords?.reduce((sum, record) => 
         sum + (Number(record.final_amount) - Number(record.paid_amount || 0)), 0) || 0;
 
-      const paidStudents = feeRecords?.filter(r => r.status === 'Paid').length || 0;
-      const partialStudents = feeRecords?.filter(r => r.status === 'Partial').length || 0;
-      const overdueStudents = feeRecords?.filter(r => r.status === 'Overdue').length || 0;
+      // Count unique students by status, not fee records
+      const studentStatusMap = new Map();
+      feeRecords?.forEach(record => {
+        if (record.student_id) {
+          const currentStatus = studentStatusMap.get(record.student_id);
+          // Priority: Paid > Partial > Overdue > Pending
+          if (!currentStatus || 
+              (record.status === 'Paid' && currentStatus !== 'Paid') ||
+              (record.status === 'Partial' && !['Paid'].includes(currentStatus)) ||
+              (record.status === 'Overdue' && !['Paid', 'Partial'].includes(currentStatus))) {
+            studentStatusMap.set(record.student_id, record.status);
+          }
+        }
+      });
+
+      const statusCounts = Array.from(studentStatusMap.values()).reduce((acc, status) => {
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const paidStudents = statusCounts['Paid'] || 0;
+      const partialStudents = statusCounts['Partial'] || 0;
+      const overdueStudents = statusCounts['Overdue'] || 0;
 
       // Department-wise statistics
       const deptMap = new Map();
@@ -83,16 +105,26 @@ const RealTimeFeeDashboard: React.FC = () => {
         if (!deptMap.has(dept)) {
           deptMap.set(dept, {
             department: dept,
-            total_students: 0,
+            total_students: new Set(),
             collected: 0,
             outstanding: 0
           });
         }
         const deptStat = deptMap.get(dept);
-        deptStat.total_students += 1;
+        if (record.student_id) {
+          deptStat.total_students.add(record.student_id);
+        }
         deptStat.collected += Number(record.paid_amount || 0);
         deptStat.outstanding += Number(record.final_amount) - Number(record.paid_amount || 0);
       });
+
+      // Convert Set to count for department stats
+      const departmentStats = Array.from(deptMap.values()).map(dept => ({
+        department: dept.department,
+        total_students: dept.total_students.size,
+        collected: dept.collected,
+        outstanding: dept.outstanding
+      }));
 
       // Payment method statistics
       const methodMap = new Map();
@@ -113,7 +145,7 @@ const RealTimeFeeDashboard: React.FC = () => {
         paidStudents,
         partialStudents,
         overdueStudents,
-        departmentStats: Array.from(deptMap.values()),
+        departmentStats,
         paymentMethodStats: Array.from(methodMap.values())
       });
 
