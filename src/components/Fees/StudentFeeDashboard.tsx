@@ -24,6 +24,7 @@ interface FeeRecord {
     amount: number;
     processed_at: string;
     payment_method: string;
+    status: string;
   }>;
 }
 
@@ -105,6 +106,28 @@ const StudentFeeDashboard: React.FC = () => {
     }
   };
 
+  const handleOutstandingClick = () => {
+    // Show breakdown of outstanding fees
+    const outstandingRecords = feeRecords.filter(record => 
+      record.final_amount > (record.paid_amount || 0)
+    );
+    
+    if (outstandingRecords.length > 0) {
+      // Show the most recent outstanding record
+      const recentOutstanding = outstandingRecords[0];
+      showPaymentBreakdown(recentOutstanding.id, [
+        { label: 'Student Dashboard' },
+        { label: 'Outstanding Fees' },
+        { label: `${recentOutstanding.academic_year} - Sem ${recentOutstanding.semester}` }
+      ]);
+    } else {
+      toast({
+        title: "No Outstanding Fees",
+        description: "You have no pending fee payments",
+      });
+    }
+  };
+
   if (isShowingBreakdown && selectedPaymentId) {
     return (
       <PaymentBreakdown
@@ -168,7 +191,10 @@ const StudentFeeDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group">
+        <div 
+          className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group"
+          onClick={handleOutstandingClick}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 flex items-center gap-2">

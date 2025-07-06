@@ -15,6 +15,7 @@ interface DashboardStats {
   totalOutstanding: number;
   overdueStudents: number;
   recentPaymentIds: string[];
+  outstandingFeeRecords: string[];
 }
 
 const RealTimeStats: React.FC = () => {
@@ -82,12 +83,18 @@ const RealTimeStats: React.FC = () => {
         (new Date(record.due_date) < new Date() && record.status !== 'Paid')
       ).length || 0;
 
+      // Get outstanding fee records for breakdown
+      const outstandingRecords = feeRecords?.filter(record => 
+        Number(record.final_amount) > Number(record.paid_amount || 0)
+      ).map(record => record.id) || [];
+
       setStats({
         totalStudents,
         totalRevenue,
         totalOutstanding,
         overdueStudents: overdueCount,
-        recentPaymentIds: recentPayments?.map(p => p.id) || []
+        recentPaymentIds: recentPayments?.map(p => p.id) || [],
+        outstandingFeeRecords: outstandingRecords
       });
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
@@ -109,12 +116,13 @@ const RealTimeStats: React.FC = () => {
         { label: 'Dashboard' },
         { label: 'Revenue Breakdown' }
       ]);
-    } else if (statType === 'outstanding') {
-      // For outstanding, we could show a different breakdown or list
-      toast({
-        title: "Outstanding Fees",
-        description: "Detailed breakdown coming soon",
-      });
+    } else if (statType === 'outstanding' && stats?.outstandingFeeRecords.length) {
+      // Show breakdown for most recent outstanding fee record
+      const feeRecordId = stats.outstandingFeeRecords[0];
+      showPaymentBreakdown(feeRecordId, [
+        { label: 'Dashboard' },
+        { label: 'Outstanding Fees Breakdown' }
+      ]);
     }
   };
 
