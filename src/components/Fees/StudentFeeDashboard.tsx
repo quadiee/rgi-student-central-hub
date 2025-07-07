@@ -24,6 +24,7 @@ interface FeeRecord {
     amount: number;
     processed_at: string;
     payment_method: string;
+    status: string;
   }>;
 }
 
