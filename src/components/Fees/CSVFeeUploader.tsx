@@ -9,6 +9,9 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../ui/use-toast';
+import { Database } from '../../integrations/supabase/types';
+
+type Department = Database['public']['Enums']['department'];
 
 interface FeeType {
   id: string;
@@ -24,7 +27,7 @@ const CSVFeeUploader: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [academicYear, setAcademicYear] = useState('2024-25');
   const [semester, setSemester] = useState('');
-  const [department, setDepartment] = useState('');
+  const [department, setDepartment] = useState<Department | ''>('');
   const [defaultFeeType, setDefaultFeeType] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
@@ -147,7 +150,7 @@ const CSVFeeUploader: React.FC = () => {
       const { data, error } = await supabase.rpc('process_fee_csv_upload_with_types', {
         p_academic_year: academicYear,
         p_semester: parseInt(semester),
-        p_department: department,
+        p_department: department as Department,
         p_csv_data: csvData,
         p_uploaded_by: user.id
       });
@@ -262,7 +265,7 @@ const CSVFeeUploader: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Department *
               </label>
-              <Select value={department} onValueChange={setDepartment}>
+              <Select value={department} onValueChange={(value: Department) => setDepartment(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>

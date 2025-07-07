@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
+import { Database } from '../../integrations/supabase/types';
+
+type FeeStatus = Database['public']['Enums']['fee_status'];
 
 interface FeeRecord {
   id: string;
@@ -52,7 +55,7 @@ const FeeRecordEditDialog: React.FC<FeeRecordEditDialogProps> = ({
     original_amount: record.original_amount,
     final_amount: record.final_amount,
     paid_amount: record.paid_amount,
-    status: record.status,
+    status: record.status as FeeStatus,
     due_date: record.due_date.split('T')[0], // Convert to YYYY-MM-DD format
     fee_type_id: '', // Will be populated from current fee type
   });
@@ -193,7 +196,7 @@ const FeeRecordEditDialog: React.FC<FeeRecordEditDialogProps> = ({
                 <Label htmlFor="status">Status</Label>
                 <Select 
                   value={formData.status} 
-                  onValueChange={(value) => setFormData({...formData, status: value})}
+                  onValueChange={(value: FeeStatus) => setFormData({...formData, status: value})}
                   disabled={!canEdit}
                 >
                   <SelectTrigger>

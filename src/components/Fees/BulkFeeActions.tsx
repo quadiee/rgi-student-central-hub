@@ -8,6 +8,9 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { Users, Calendar, CheckCircle } from 'lucide-react';
+import { Database } from '../../integrations/supabase/types';
+
+type FeeStatus = Database['public']['Enums']['fee_status'];
 
 interface BulkFeeActionsProps {
   selectedRecords: string[];
@@ -23,7 +26,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkStatus, setBulkStatus] = useState<FeeStatus | ''>('');
   const [bulkDueDate, setBulkDueDate] = useState('');
 
   const handleBulkUpdate = async () => {
@@ -109,7 +112,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
 
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-blue-600" />
-            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <Select value={bulkStatus} onValueChange={(value: FeeStatus | '') => setBulkStatus(value)}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Update Status" />
               </SelectTrigger>
