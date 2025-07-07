@@ -26,7 +26,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState<FeeStatus | ''>('');
+  const [bulkStatus, setBulkStatus] = useState<FeeStatus | 'no_change'>('no_change');
   const [bulkDueDate, setBulkDueDate] = useState('');
 
   const handleBulkUpdate = async () => {
@@ -39,7 +39,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
       return;
     }
 
-    if (!bulkStatus && !bulkDueDate) {
+    if (bulkStatus === 'no_change' && !bulkDueDate) {
       toast({
         title: "No Changes",
         description: "Please select a status or due date to update",
@@ -53,7 +53,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
       const { data, error } = await supabase.rpc('bulk_update_fee_records', {
         p_user_id: user.id,
         p_record_ids: selectedRecords,
-        p_status: bulkStatus || null,
+        p_status: bulkStatus === 'no_change' ? null : bulkStatus,
         p_due_date: bulkDueDate || null
       });
 
@@ -68,7 +68,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
         });
         onBulkUpdate();
         onClear();
-        setBulkStatus('');
+        setBulkStatus('no_change');
         setBulkDueDate('');
       } else {
         throw new Error(result.error || 'Bulk update failed');
@@ -112,12 +112,12 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
 
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-blue-600" />
-            <Select value={bulkStatus} onValueChange={(value: FeeStatus | '') => setBulkStatus(value)}>
+            <Select value={bulkStatus} onValueChange={(value: FeeStatus | 'no_change') => setBulkStatus(value)}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Update Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No Change</SelectItem>
+                <SelectItem value="no_change">No Change</SelectItem>
                 <SelectItem value="Paid">Paid</SelectItem>
                 <SelectItem value="Partial">Partial</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
@@ -140,7 +140,7 @@ const BulkFeeActions: React.FC<BulkFeeActionsProps> = ({
           <div className="flex gap-2">
             <Button
               onClick={handleBulkUpdate}
-              disabled={loading || (!bulkStatus && !bulkDueDate)}
+              disabled={loading || (bulkStatus === 'no_change' && !bulkDueDate)}
               size="sm"
             >
               {loading ? 'Updating...' : 'Apply Changes'}
