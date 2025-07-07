@@ -169,8 +169,8 @@ const CSVFeeUploader: React.FC = () => {
 
       if (error) throw error;
 
-      // Type cast the response to our expected interface
-      const result = data as CSVUploadResult;
+      // Type cast the response safely
+      const result = data as unknown as CSVUploadResult;
       setUploadResult(result);
       
       if (result.success) {
