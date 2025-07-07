@@ -57,13 +57,13 @@ const FeeRecordEditDialog: React.FC<FeeRecordEditDialogProps> = ({
     paid_amount: record.paid_amount,
     status: record.status as FeeStatus,
     due_date: record.due_date.split('T')[0], // Convert to YYYY-MM-DD format
-    fee_type_id: '', // Will be populated from current fee type
+    fee_type_id: 'default', // Will be populated from current fee type
   });
 
   React.useEffect(() => {
     // Find the fee type ID from the name
     const feeType = feeTypes.find(ft => ft.name === record.fee_type_name);
-    if (feeType) {
+    if (feeType?.id) {
       setFormData(prev => ({ ...prev, fee_type_id: feeType.id }));
     }
   }, [feeTypes, record.fee_type_name]);
@@ -88,7 +88,7 @@ const FeeRecordEditDialog: React.FC<FeeRecordEditDialogProps> = ({
           paid_amount: formData.paid_amount,
           status: formData.status,
           due_date: formData.due_date,
-          fee_type_id: formData.fee_type_id,
+          fee_type_id: formData.fee_type_id === 'default' ? null : formData.fee_type_id,
           updated_at: new Date().toISOString()
         })
         .eq('id', record.id);
@@ -151,6 +151,7 @@ const FeeRecordEditDialog: React.FC<FeeRecordEditDialogProps> = ({
                   <SelectValue placeholder="Select fee type" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="default">Select fee type</SelectItem>
                   {feeTypes.map(type => (
                     <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                   ))}

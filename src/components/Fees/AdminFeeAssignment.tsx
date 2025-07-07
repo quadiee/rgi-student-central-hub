@@ -31,8 +31,8 @@ const AdminFeeAssignment: React.FC = () => {
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [feeAmount, setFeeAmount] = useState('');
-  const [selectedFeeType, setSelectedFeeType] = useState('');
-  const [semester, setSemester] = useState('');
+  const [selectedFeeType, setSelectedFeeType] = useState('default');
+  const [semester, setSemester] = useState('default');
   const [academicYear, setAcademicYear] = useState('2024-25');
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ const AdminFeeAssignment: React.FC = () => {
   };
 
   const assignFeesToStudents = async () => {
-    if (!feeAmount || !semester || !dueDate || !selectedFeeType || selectedStudents.length === 0) {
+    if (!feeAmount || semester === 'default' || !dueDate || selectedFeeType === 'default' || selectedStudents.length === 0) {
       toast({
         title: "Validation Error",
         description: "Please fill all required fields and select at least one student",
@@ -125,8 +125,8 @@ const AdminFeeAssignment: React.FC = () => {
       // Reset form
       setSelectedStudents([]);
       setFeeAmount('');
-      setSelectedFeeType('');
-      setSemester('');
+      setSelectedFeeType('default');
+      setSemester('default');
       setDueDate('');
 
     } catch (error) {
@@ -178,6 +178,7 @@ const AdminFeeAssignment: React.FC = () => {
                   <SelectValue placeholder="Select fee type" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="default">Select fee type</SelectItem>
                   {feeTypes.map(feeType => (
                     <SelectItem key={feeType.id} value={feeType.id}>
                       <div>
@@ -213,6 +214,7 @@ const AdminFeeAssignment: React.FC = () => {
                   <SelectValue placeholder="Select semester" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="default">Select semester</SelectItem>
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
                     <SelectItem key={sem} value={sem.toString()}>
                       Semester {sem}
@@ -316,7 +318,7 @@ const AdminFeeAssignment: React.FC = () => {
           {/* Submit Button */}
           <Button
             onClick={assignFeesToStudents}
-            disabled={loading || selectedStudents.length === 0 || !selectedFeeType}
+            disabled={loading || selectedStudents.length === 0 || selectedFeeType === 'default'}
             className="w-full"
           >
             {loading ? (
@@ -324,7 +326,7 @@ const AdminFeeAssignment: React.FC = () => {
             ) : (
               <>
                 <UserPlus className="w-4 h-4 mr-2" />
-                Assign {selectedFeeType ? feeTypes.find(ft => ft.id === selectedFeeType)?.name : 'Fee'} to {selectedStudents.length} Students
+                Assign {selectedFeeType !== 'default' ? feeTypes.find(ft => ft.id === selectedFeeType)?.name : 'Fee'} to {selectedStudents.length} Students
               </>
             )}
           </Button>
