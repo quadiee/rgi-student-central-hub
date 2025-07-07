@@ -19,6 +19,13 @@ interface FeeType {
   description: string;
 }
 
+interface CSVUploadResult {
+  success: boolean;
+  processed_count?: number;
+  error?: string;
+  message?: string;
+}
+
 const CSVFeeUploader: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -30,7 +37,7 @@ const CSVFeeUploader: React.FC = () => {
   const [department, setDepartment] = useState<Department | 'none'>('none');
   const [defaultFeeType, setDefaultFeeType] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<CSVUploadResult | null>(null);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
 
   // Load fee types
@@ -162,17 +169,19 @@ const CSVFeeUploader: React.FC = () => {
 
       if (error) throw error;
 
-      setUploadResult(data);
+      // Type cast the response to our expected interface
+      const result = data as CSVUploadResult;
+      setUploadResult(result);
       
-      if (data.success) {
+      if (result.success) {
         toast({
           title: "Upload Successful",
-          description: `Processed ${data.processed_count} fee records`,
+          description: `Processed ${result.processed_count || 0} fee records`,
         });
       } else {
         toast({
           title: "Upload Failed",
-          description: data.error || "Unknown error occurred",
+          description: result.error || "Unknown error occurred",
           variant: "destructive"
         });
       }
@@ -367,7 +376,7 @@ const CSVFeeUploader: React.FC = () => {
             <Alert className={uploadResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
               <AlertDescription>
                 {uploadResult.success ? (
-                  `Successfully processed ${uploadResult.processed_count} fee records.`
+                  `Successfully processed ${uploadResult.processed_count || 0} fee records.`
                 ) : (
                   uploadResult.error || 'An error occurred during upload.'
                 )}
