@@ -205,6 +205,42 @@ export type Database = {
           },
         ]
       }
+      fee_record_types: {
+        Row: {
+          created_at: string
+          fee_record_id: string
+          fee_type_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_record_id: string
+          fee_type_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          fee_record_id?: string
+          fee_type_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_record_types_fee_record_id_fkey"
+            columns: ["fee_record_id"]
+            isOneToOne: false
+            referencedRelation: "fee_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_record_types_fee_type_id_fkey"
+            columns: ["fee_type_id"]
+            isOneToOne: false
+            referencedRelation: "fee_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_records: {
         Row: {
           academic_year: string
@@ -212,6 +248,7 @@ export type Database = {
           discount_amount: number | null
           due_date: string
           fee_structure_id: string | null
+          fee_type_id: string | null
           final_amount: number
           id: string
           last_payment_date: string | null
@@ -229,6 +266,7 @@ export type Database = {
           discount_amount?: number | null
           due_date: string
           fee_structure_id?: string | null
+          fee_type_id?: string | null
           final_amount: number
           id?: string
           last_payment_date?: string | null
@@ -246,6 +284,7 @@ export type Database = {
           discount_amount?: number | null
           due_date?: string
           fee_structure_id?: string | null
+          fee_type_id?: string | null
           final_amount?: number
           id?: string
           last_payment_date?: string | null
@@ -263,6 +302,13 @@ export type Database = {
             columns: ["fee_structure_id"]
             isOneToOne: false
             referencedRelation: "fee_structures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_records_fee_type_id_fkey"
+            columns: ["fee_type_id"]
+            isOneToOne: false
+            referencedRelation: "fee_types"
             referencedColumns: ["id"]
           },
           {
@@ -955,6 +1001,15 @@ export type Database = {
       }
     }
     Functions: {
+      bulk_update_fee_records: {
+        Args: {
+          p_user_id: string
+          p_record_ids: string[]
+          p_status?: Database["public"]["Enums"]["fee_status"]
+          p_due_date?: string
+        }
+        Returns: Json
+      }
       calculate_penalty_amount: {
         Args: {
           due_date: string
@@ -987,6 +1042,34 @@ export type Database = {
       generate_receipt_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_fee_records_with_filters: {
+        Args: {
+          p_user_id: string
+          p_department?: string
+          p_year?: number
+          p_fee_type?: string
+          p_status?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          id: string
+          student_id: string
+          student_name: string
+          roll_number: string
+          department_name: string
+          year: number
+          semester: number
+          fee_type_name: string
+          academic_year: string
+          original_amount: number
+          final_amount: number
+          paid_amount: number
+          status: Database["public"]["Enums"]["fee_status"]
+          due_date: string
+          created_at: string
+        }[]
       }
       get_invitation_details: {
         Args: { invitation_email: string }
@@ -1021,6 +1104,16 @@ export type Database = {
         Returns: undefined
       }
       process_fee_csv_upload: {
+        Args: {
+          p_academic_year: string
+          p_semester: number
+          p_department: Database["public"]["Enums"]["department"]
+          p_csv_data: Json
+          p_uploaded_by: string
+        }
+        Returns: Json
+      }
+      process_fee_csv_upload_with_types: {
         Args: {
           p_academic_year: string
           p_semester: number

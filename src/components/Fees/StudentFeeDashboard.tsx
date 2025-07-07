@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw, Eye, Receipt } from 'lucide-react';
+import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw, Eye, Receipt, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
@@ -106,6 +106,58 @@ const StudentFeeDashboard: React.FC = () => {
     }
   };
 
+  const handleEditPayment = async (feeRecord: FeeRecord) => {
+    // For students, this would typically redirect to a payment portal
+    // or show available payment methods
+    toast({
+      title: "Payment Portal",
+      description: "Redirecting to payment options...",
+    });
+  };
+
+  const handleMakePayment = async (feeRecord: FeeRecord) => {
+    const pendingAmount = feeRecord.final_amount - (feeRecord.paid_amount || 0);
+    
+    if (pendingAmount <= 0) {
+      toast({
+        title: "No Payment Required",
+        description: "This fee has been fully paid",
+      });
+      return;
+    }
+
+    // Create a mock payment transaction for demonstration
+    try {
+      const { error } = await supabase
+        .from('payment_transactions')
+        .insert({
+          fee_record_id: feeRecord.id,
+          student_id: user?.id,
+          amount: pendingAmount,
+          payment_method: 'Online',
+          status: 'Success',
+          receipt_number: `RCP-${Date.now()}`,
+          processed_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Successful",
+        description: `Payment of ${formatCurrency(pendingAmount)} processed successfully`,
+      });
+
+      loadFeeRecords();
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast({
+        title: "Payment Failed",
+        description: "Failed to process payment. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isShowingBreakdown && selectedPaymentId) {
     return (
       <PaymentBreakdown
@@ -194,14 +246,37 @@ const StudentFeeDashboard: React.FC = () => {
                   <h4 className="font-medium">{record.academic_year} - Semester {record.semester}</h4>
                   <p className="text-sm text-gray-600">Due: {new Date(record.due_date).toLocaleDateString()}</p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  record.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                  record.status === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-                  record.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {record.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    record.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                    record.status === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+                    record.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {record.status}
+                  </span>
+                  
+                  {/* Action buttons for students */}
+                  <div className="flex gap-1">
+                    {record.status !== 'Paid' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMakePayment(record)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        Pay Now
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditPayment(record)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
               
               <div className="grid grid-cols-3 gap-4 text-sm">

@@ -17,28 +17,41 @@ interface Student {
   department_id: string;
 }
 
+interface FeeType {
+  id: string;
+  name: string;
+  description: string;
+  is_mandatory: boolean;
+}
+
 const AdminFeeAssignment: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
+  const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [feeAmount, setFeeAmount] = useState('');
+  const [selectedFeeType, setSelectedFeeType] = useState('');
   const [semester, setSemester] = useState('');
   const [academicYear, setAcademicYear] = useState('2024-25');
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
 
   useEffect(() => {
     loadStudents();
+    loadFeeTypes();
   }, []);
 
   const loadStudents = async () => {
     try {
+      setStudentsLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, roll_number, email, department_id')
         .eq('role', 'student')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('name');
 
       if (error) throw error;
       setStudents(data || []);
@@ -49,14 +62,36 @@ const AdminFeeAssignment: React.FC = () => {
         description: "Failed to load students",
         variant: "destructive"
       });
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const loadFeeTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fee_types')
+        .select('id, name, description, is_mandatory')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setFeeTypes(data || []);
+    } catch (error) {
+      console.error('Error loading fee types:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load fee types",
+        variant: "destructive"
+      });
     }
   };
 
   const assignFeesToStudents = async () => {
-    if (!feeAmount || !semester || !dueDate || selectedStudents.length === 0) {
+    if (!feeAmount || !semester || !dueDate || !selectedFeeType || selectedStudents.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill all fields and select at least one student",
+        description: "Please fill all required fields and select at least one student",
         variant: "destructive"
       });
       return;
@@ -64,15 +99,16 @@ const AdminFeeAssignment: React.FC = () => {
 
     setLoading(true);
     try {
-      // Create fee records for selected students with proper typing
+      // Create fee records for selected students
       const feeRecords = selectedStudents.map(studentId => ({
         student_id: studentId,
         academic_year: academicYear,
         semester: parseInt(semester),
+        fee_type_id: selectedFeeType,
         original_amount: parseFloat(feeAmount),
         final_amount: parseFloat(feeAmount),
         due_date: dueDate,
-        status: 'Pending' as const // Fix: Use proper enum type
+        status: 'Pending' as const
       }));
 
       const { error } = await supabase
@@ -89,6 +125,7 @@ const AdminFeeAssignment: React.FC = () => {
       // Reset form
       setSelectedStudents([]);
       setFeeAmount('');
+      setSelectedFeeType('');
       setSemester('');
       setDueDate('');
 
@@ -131,10 +168,33 @@ const AdminFeeAssignment: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Fee Details */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fee Amount (₹)
+                Fee Type *
+              </label>
+              <Select value={selectedFeeType} onValueChange={setSelectedFeeType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fee type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {feeTypes.map(feeType => (
+                    <SelectItem key={feeType.id} value={feeType.id}>
+                      <div>
+                        <div className="font-medium">{feeType.name}</div>
+                        {feeType.description && (
+                          <div className="text-xs text-gray-500">{feeType.description}</div>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fee Amount (₹) *
               </label>
               <Input
                 type="number"
@@ -143,9 +203,10 @@ const AdminFeeAssignment: React.FC = () => {
                 placeholder="Enter fee amount"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Semester
+                Semester *
               </label>
               <Select value={semester} onValueChange={setSemester}>
                 <SelectTrigger>
@@ -160,9 +221,10 @@ const AdminFeeAssignment: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date
+                Due Date *
               </label>
               <Input
                 type="date"
@@ -170,6 +232,17 @@ const AdminFeeAssignment: React.FC = () => {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Academic Year
+            </label>
+            <Input
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              placeholder="e.g., 2024-25"
+            />
           </div>
 
           {/* Student Selection */}
@@ -181,6 +254,7 @@ const AdminFeeAssignment: React.FC = () => {
                   variant="outline" 
                   size="sm"
                   onClick={selectAllStudents}
+                  disabled={studentsLoading}
                 >
                   <Users className="w-4 h-4 mr-2" />
                   Select All ({students.length})
@@ -196,29 +270,40 @@ const AdminFeeAssignment: React.FC = () => {
             </div>
 
             <div className="border rounded-lg max-h-96 overflow-y-auto">
-              {students.map(student => (
-                <div key={student.id} className="flex items-center p-3 border-b last:border-b-0">
-                  <input
-                    type="checkbox"
-                    id={student.id}
-                    checked={selectedStudents.includes(student.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedStudents([...selectedStudents, student.id]);
-                      } else {
-                        setSelectedStudents(selectedStudents.filter(id => id !== student.id));
-                      }
-                    }}
-                    className="mr-3"
-                  />
-                  <label htmlFor={student.id} className="flex-1 cursor-pointer">
-                    <div className="font-medium">{student.name}</div>
-                    <div className="text-sm text-gray-600">
-                      {student.roll_number} - {student.email}
-                    </div>
-                  </label>
+              {studentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2">Loading students...</span>
                 </div>
-              ))}
+              ) : students.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No students found
+                </div>
+              ) : (
+                students.map(student => (
+                  <div key={student.id} className="flex items-center p-3 border-b last:border-b-0 hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      id={student.id}
+                      checked={selectedStudents.includes(student.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedStudents([...selectedStudents, student.id]);
+                        } else {
+                          setSelectedStudents(selectedStudents.filter(id => id !== student.id));
+                        }
+                      }}
+                      className="mr-3"
+                    />
+                    <label htmlFor={student.id} className="flex-1 cursor-pointer">
+                      <div className="font-medium">{student.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {student.roll_number} - {student.email}
+                      </div>
+                    </label>
+                  </div>
+                ))
+              )}
             </div>
 
             {selectedStudents.length > 0 && (
@@ -231,7 +316,7 @@ const AdminFeeAssignment: React.FC = () => {
           {/* Submit Button */}
           <Button
             onClick={assignFeesToStudents}
-            disabled={loading || selectedStudents.length === 0}
+            disabled={loading || selectedStudents.length === 0 || !selectedFeeType}
             className="w-full"
           >
             {loading ? (
@@ -239,7 +324,7 @@ const AdminFeeAssignment: React.FC = () => {
             ) : (
               <>
                 <UserPlus className="w-4 h-4 mr-2" />
-                Assign Fees to {selectedStudents.length} Students
+                Assign {selectedFeeType ? feeTypes.find(ft => ft.id === selectedFeeType)?.name : 'Fee'} to {selectedStudents.length} Students
               </>
             )}
           </Button>
