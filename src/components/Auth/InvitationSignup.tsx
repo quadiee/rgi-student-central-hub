@@ -19,6 +19,17 @@ interface InvitationData {
   error_message?: string;
 }
 
+interface ValidateInvitationResponse {
+  id: string;
+  email: string;
+  role: string;
+  department: string;
+  roll_number: string | null;
+  employee_id: string | null;
+  is_valid: boolean;
+  error_message: string | null;
+}
+
 const InvitationSignup: React.FC = () => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -74,7 +85,7 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      const inviteData = data[0];
+      const inviteData = data[0] as ValidateInvitationResponse;
       if (!inviteData.is_valid) {
         setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
         setLoadingInvitation(false);
@@ -86,10 +97,10 @@ const InvitationSignup: React.FC = () => {
         email: inviteData.email,
         role: inviteData.role,
         department: inviteData.department,
-        roll_number: inviteData.roll_number,
-        employee_id: inviteData.employee_id,
+        roll_number: inviteData.roll_number || undefined,
+        employee_id: inviteData.employee_id || undefined,
         is_valid: inviteData.is_valid,
-        error_message: inviteData.error_message
+        error_message: inviteData.error_message || undefined
       });
 
       // Check if user already exists in auth.users
