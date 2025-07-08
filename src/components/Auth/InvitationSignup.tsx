@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, GraduationCap, Mail } from 'lucide-react';
@@ -62,20 +61,36 @@ const InvitationSignup: React.FC = () => {
         p_token: token!
       });
       
-      if (error || !data || data.length === 0) {
+      if (error) {
+        console.error('RPC Error:', error);
         setInviteError("Failed to validate invitation token.");
         setLoadingInvitation(false);
         return;
       }
 
-      const inviteData = data[0] as InvitationData;
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        setInviteError("Invalid invitation token.");
+        setLoadingInvitation(false);
+        return;
+      }
+
+      const inviteData = data[0];
       if (!inviteData.is_valid) {
         setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
         setLoadingInvitation(false);
         return;
       }
 
-      setInvitationData(inviteData);
+      setInvitationData({
+        id: inviteData.id,
+        email: inviteData.email,
+        role: inviteData.role,
+        department: inviteData.department,
+        roll_number: inviteData.roll_number,
+        employee_id: inviteData.employee_id,
+        is_valid: inviteData.is_valid,
+        error_message: inviteData.error_message
+      });
 
       // Check if user already exists in auth.users
       const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
