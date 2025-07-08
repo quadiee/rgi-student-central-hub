@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PasswordSetupForm from '../components/Auth/PasswordSetupForm';
@@ -12,31 +11,27 @@ const ResetPassword: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
-  const isInvitation = searchParams.get('invitation') === 'true';
-  const token = searchParams.get('token');
+  const isInvitation   = searchParams.get('invitation') === 'true';
+  const accessToken    = searchParams.get('access_token');
+  const type           = searchParams.get('type');
 
   useEffect(() => {
-    // Check if user is authenticated (from password reset link)
-    if (user) {
-      setLoading(false);
-    } else {
-      // If no user but has token, they might need to authenticate first
-      setLoading(false);
-      if (!token) {
-        toast({
-          title: "Invalid Reset Link",
-          description: "This password reset link is invalid or has expired.",
-          variant: "destructive"
-        });
-        navigate('/auth');
-      }
+    // We’re done loading whether or not user is already signed in
+    setLoading(false);
+
+    // If there's no access_token or it's not a recovery link, bounce to login
+    if (!accessToken || type !== 'recovery') {
+      toast({
+        title: "Invalid Reset Link",
+        description: "This password reset link is invalid or has expired.",
+        variant: "destructive"
+      });
+      navigate('/auth');
     }
-  }, [user, token, navigate, toast]);
+  }, [accessToken, type, navigate, toast]);
 
   const handlePasswordSetupSuccess = () => {
-    if (isInvitation && token) {
-      // Mark invitation as used if this was from an invitation
-      // This would typically be handled by the backend
+    if (isInvitation && accessToken) {
       toast({
         title: "Setup Complete",
         description: "Your account has been activated successfully!",
@@ -69,6 +64,7 @@ const ResetPassword: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <PasswordSetupForm 
         email={user?.email}
+        token={accessToken!}            // pass the real recovery token here
         onSuccess={handlePasswordSetupSuccess}
         onCancel={handleCancel}
       />
