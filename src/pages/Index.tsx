@@ -154,6 +154,7 @@ const Index = () => {
             onTabChange={handleTabChange}
             isOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
+            isDesktop={false}
           />
           <div className="flex flex-col min-h-screen">
             <Header onMenuClick={() => setSidebarOpen(true)} />
@@ -163,14 +164,15 @@ const Index = () => {
           </div>
         </>
       ) : (
-        <div className="flex w-full">
+        <div className="flex w-full min-h-screen">
           <MobileSidebar 
             activeTab={activeTab} 
             onTabChange={handleTabChange}
             isOpen={desktopSidebarOpen}
-            onClose={() => {}}
+            onClose={toggleDesktopSidebar}
+            isDesktop={true}
           />
-          <div className={`flex-1 transition-all duration-300 ${desktopSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 transition-all duration-300 ${desktopSidebarOpen ? 'ml-0' : 'ml-0'}`}>
             <Header onMenuClick={toggleDesktopSidebar} />
             <main className="p-6 pt-8">
               <div className="mb-4">

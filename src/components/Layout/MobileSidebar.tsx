@@ -10,13 +10,15 @@ interface MobileSidebarProps {
   onTabChange: (tab: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  isDesktop?: boolean;
 }
 
 const MobileSidebar: React.FC<MobileSidebarProps> = ({
   activeTab,
   onTabChange,
   isOpen,
-  onClose
+  onClose,
+  isDesktop = false
 }) => {
   const { user, signOut } = useAuth();
 
@@ -65,7 +67,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   return (
     <>
       {/* Mobile Overlay */}
-      {isOpen && (
+      {isOpen && !isDesktop && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={onClose}
@@ -74,8 +76,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
       
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 h-full w-72 bg-gradient-to-br from-white to-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out z-50
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${isDesktop ? 'relative' : 'fixed'} top-0 left-0 h-full w-72 bg-gradient-to-br from-white to-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out
+        ${isDesktop ? 'z-30' : 'z-50'}
+        ${isOpen ? 'translate-x-0' : isDesktop ? '-translate-x-full' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
           {/* Header with Gradient */}
@@ -92,7 +95,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
               </div>
               <button 
                 onClick={onClose}
-                className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+                className={`${isDesktop ? '' : 'lg:hidden'} p-2 rounded-lg hover:bg-white/10 transition-colors`}
               >
                 <X className="w-5 h-5" />
               </button>
