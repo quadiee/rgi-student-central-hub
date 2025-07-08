@@ -97,28 +97,15 @@ export const secureAdminSetup = async (): Promise<AdminSetupResult> => {
     if (signUpError) {
       console.error('Error creating admin user:', signUpError);
       
-      // If user already exists, try to sign in
+      // If user already exists, don't auto sign-in
       if (signUpError.message?.includes('already registered')) {
-        console.log('Admin user already exists, attempting sign in...');
+        console.log('Admin user already exists');
         
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: 'praveen@rgce.edu.in',
-          password: adminPassword
-        });
-        
-        if (signInError) {
-          return {
-            success: false,
-            message: 'Admin account exists but sign-in failed. Please sign in manually with praveen@rgce.edu.in',
-            error: signInError,
-            requiresManualAuth: true
-          };
-        } else {
-          return {
-            success: true,
-            message: 'Successfully signed in as admin!'
-          };
-        }
+        return {
+          success: true,
+          message: 'Admin account already exists. Please sign in manually with praveen@rgce.edu.in',
+          requiresManualAuth: true
+        };
       }
       
       return {
@@ -143,28 +130,15 @@ export const secureAdminSetup = async (): Promise<AdminSetupResult> => {
       console.error('Warning: Exception marking invitation as used:', markInvitationError);
     }
 
-    // Step 6: Auto sign-in if user was created successfully
+    // Admin account created successfully - require manual sign-in
     if (signUpData.user && !signUpError) {
-      console.log('Auto-signing in admin user...');
+      console.log('Admin user created successfully');
       
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: 'praveen@rgce.edu.in',
-        password: adminPassword
-      });
-      
-      if (signInError) {
-        console.error('Warning: Could not auto sign-in:', signInError);
-        return {
-          success: true,
-          message: 'Admin account created! Please sign in with:\nEmail: praveen@rgce.edu.in\nPassword: Admin@123!RGCE',
-          requiresManualAuth: true
-        };
-      } else {
-        return {
-          success: true,
-          message: 'Admin account created and signed in successfully!'
-        };
-      }
+      return {
+        success: true,
+        message: 'Admin account created! Please sign in with:\nEmail: praveen@rgce.edu.in\nPassword: Admin@123!RGCE',
+        requiresManualAuth: true
+      };
     }
 
     return {
