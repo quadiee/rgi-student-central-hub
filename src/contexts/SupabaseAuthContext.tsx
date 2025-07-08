@@ -51,13 +51,43 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Debounced profile fetch to prevent race conditions
+  const [profileFetchTimeout, setProfileFetchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log('Fetching profile for user:', userId);
+      
+      // Clear any existing timeout
+      if (profileFetchTimeout) {
+        clearTimeout(profileFetchTimeout);
+      }
+
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          id,
+          name,
+          email,
+          role,
+          department_id,
+          phone,
+          address,
+          profile_photo_url,
+          roll_number,
+          employee_id,
+          year,
+          year_section,
+          is_active,
+          last_login,
+          created_at,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
         .eq('id', userId)
         .single();
 
@@ -67,12 +97,14 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
       }
 
       console.log('Profile fetched successfully:', profile);
+      
       return {
         id: userId,
         name: profile.name || profile.email,
         email: profile.email,
         role: profile.role,
         department_id: profile.department_id,
+        department_name: profile.departments?.name,
         avatar: profile.profile_photo_url || '',
         rollNumber: profile.roll_number,
         employeeId: profile.employee_id,
@@ -95,12 +127,29 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
     }
   };
 
+  const debouncedFetchProfile = (userId: string) => {
+    // Clear any existing timeout
+    if (profileFetchTimeout) {
+      clearTimeout(profileFetchTimeout);
+    }
+
+    // Set a new timeout to fetch profile after 100ms
+    const timeout = setTimeout(async () => {
+      setProfileLoading(true);
+      const profile = await fetchUserProfile(userId);
+      setUser(profile);
+      setProfileLoading(false);
+    }, 100);
+
+    setProfileFetchTimeout(timeout);
+  };
+
   useEffect(() => {
     let mounted = true;
     
     console.log('Setting up auth state listener');
     
-    // Get initial session
+    // Initialize auth state
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -111,45 +160,35 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
         setSession(session);
         
         if (session?.user) {
-          setProfileLoading(true);
-          const profile = await fetchUserProfile(session.user.id);
-          if (mounted) {
-            setUser(profile);
-            setProfileLoading(false);
-          }
+          debouncedFetchProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfileLoading(false);
         }
         
         if (mounted) {
           setLoading(false);
+          setIsInitialized(true);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
           setLoading(false);
+          setIsInitialized(true);
         }
       }
     };
 
-    // Listen for auth changes
+    // Listen for auth changes with proper debouncing
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, { session: !!session });
       
-      if (!mounted) return;
+      if (!mounted || !isInitialized) return;
       
       setSession(session);
       
       if (session?.user) {
-        setProfileLoading(true);
-        // Use setTimeout to avoid blocking the auth state change
-        setTimeout(async () => {
-          if (mounted) {
-            const profile = await fetchUserProfile(session.user.id);
-            if (mounted) {
-              setUser(profile);
-              setProfileLoading(false);
-            }
-          }
-        }, 0);
+        debouncedFetchProfile(session.user.id);
       } else {
         setUser(null);
         setProfileLoading(false);
@@ -160,14 +199,20 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
       }
     });
 
-    initializeAuth();
+    // Initialize only once
+    if (!isInitialized) {
+      initializeAuth();
+    }
 
     return () => {
       mounted = false;
+      if (profileFetchTimeout) {
+        clearTimeout(profileFetchTimeout);
+      }
       console.log('Cleaning up auth listener');
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isInitialized]);
 
   const signIn = async (email: string, password: string) => {
     console.log('Sign in attempt for:', email);
@@ -195,8 +240,12 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear state immediately
       setUser(null);
       setSession(null);
+      setProfileLoading(false);
+      
       return { error: null };
     } catch (error: any) {
       console.error('Error signing out:', error);
@@ -210,6 +259,7 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             ...userData,
           },

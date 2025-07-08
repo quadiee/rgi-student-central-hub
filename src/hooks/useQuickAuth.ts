@@ -27,7 +27,7 @@ export const useQuickAuth = () => {
       }
     };
 
-    // Listen for auth changes
+    // Listen for auth changes with minimal overhead
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (mounted) {
         setSession(session);

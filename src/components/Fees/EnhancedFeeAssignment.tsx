@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Upload, Filter, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -84,6 +85,7 @@ const EnhancedFeeAssignment: React.FC = () => {
           roll_number,
           year,
           semester,
+          department_id,
           departments:department_id (
             id,
             name,
@@ -107,7 +109,10 @@ const EnhancedFeeAssignment: React.FC = () => {
 
       const { data, error } = await query.order('roll_number');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching students:', error);
+        throw error;
+      }
 
       // Map the data to match the Student interface
       const mappedData: Student[] = (data || []).map(item => ({
@@ -117,7 +122,7 @@ const EnhancedFeeAssignment: React.FC = () => {
         roll_number: item.roll_number,
         year: item.year,
         semester: item.semester,
-        department: item.departments
+        department: item.departments || { id: '', name: '', code: '' }
       }));
 
       setStudents(mappedData);
@@ -125,7 +130,7 @@ const EnhancedFeeAssignment: React.FC = () => {
       console.error('Error fetching students:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch students",
+        description: "Failed to fetch students. Please try again.",
         variant: "destructive"
       });
     } finally {
