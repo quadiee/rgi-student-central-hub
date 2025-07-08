@@ -1,8 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Session, useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
-import { Database } from '../integrations/supabase/types';
-import { User } from '../types';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../integrations/supabase/client';
 
 interface SupabaseAuthContextProps {
   children: ReactNode;
@@ -48,76 +47,118 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ children }) => {
-  const [user, setUser] = useState<AuthContextType['user']>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const session = useSession();
-  const supabaseClient = useSupabaseClient<Database>();
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      console.log('Fetching profile for user:', userId);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      console.log('Profile fetched:', profile);
+      return {
+        id: userId,
+        name: profile.name || profile.email,
+        email: profile.email,
+        role: profile.role,
+        department_id: profile.department_id,
+        department_name: profile.department_name,
+        avatar: profile.profile_photo_url || '',
+        rollNumber: profile.roll_number,
+        employeeId: profile.employee_id,
+        yearSection: profile.year_section,
+        studentId: userId,
+        facultyId: userId,
+        isActive: profile.is_active,
+        lastLogin: profile.last_login,
+        createdAt: profile.created_at,
+        phone: profile.phone,
+        address: profile.address,
+        profile_photo_url: profile.profile_photo_url,
+        roll_number: profile.roll_number,
+        employee_id: profile.employee_id,
+        created_at: profile.created_at,
+      };
+    } catch (error) {
+      console.error('Unexpected error fetching profile:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      setLoading(true);
+    console.log('Setting up auth state listener');
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('Initial session check:', { session: !!session, error });
+      setSession(session);
+      
       if (session?.user) {
-        try {
-          const { data: profile, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching profile:', error);
-            setUser(null);
-          } else if (profile) {
-            setUser({
-              id: session.user.id,
-              name: profile.name,
-              email: profile.email,
-              role: profile.role,
-              department_id: profile.department_id,
-              department_name: profile.department_id,
-              avatar: profile.profile_photo_url || '',
-              rollNumber: profile.roll_number,
-              employeeId: profile.employee_id,
-              yearSection: profile.year_section,
-              studentId: session.user.id,
-              facultyId: session.user.id,
-              isActive: profile.is_active,
-              lastLogin: profile.last_login,
-              createdAt: profile.created_at,
-              phone: profile.phone,
-              address: profile.address,
-              profile_photo_url: profile.profile_photo_url,
-              roll_number: profile.roll_number,
-              employee_id: profile.employee_id,
-              created_at: profile.created_at,
-            });
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Unexpected error fetching profile:', error);
-          setUser(null);
-        } finally {
+        setProfileLoading(true);
+        fetchUserProfile(session.user.id).then((profile) => {
+          setUser(profile);
+          setProfileLoading(false);
           setLoading(false);
-        }
+        });
       } else {
         setUser(null);
         setLoading(false);
       }
-    };
+    });
 
-    fetchUser();
-  }, [session, supabaseClient]);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, { session: !!session });
+      setSession(session);
+      
+      if (session?.user) {
+        setProfileLoading(true);
+        const profile = await fetchUserProfile(session.user.id);
+        setUser(profile);
+        setProfileLoading(false);
+      } else {
+        setUser(null);
+        setProfileLoading(false);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      console.log('Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('Sign in attempt for:', email);
     setLoading(true);
     try {
-      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
+      
+      console.log('Sign in response:', { data: !!data, error });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        return { error };
+      }
+      
       return { error: null };
     } catch (error: any) {
-      console.error('Error signing in:', error);
+      console.error('Sign in exception:', error);
       return { error };
     } finally {
       setLoading(false);
@@ -127,9 +168,10 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   const signOut = async () => {
     setLoading(true);
     try {
-      const { error } = await supabaseClient.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
+      setSession(null);
       return { error: null };
     } catch (error: any) {
       console.error('Error signing out:', error);
@@ -142,7 +184,7 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   const signUp = async (email: string, password: string, userData: any = {}) => {
     setLoading(true);
     try {
-      const { data, error } = await supabaseClient.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -157,22 +199,6 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
         return { error };
       }
 
-      if (data.user) {
-        const { error: profileError } = await supabaseClient
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              ...userData,
-            },
-          ]);
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          return { error: profileError };
-        }
-      }
       return { error: null };
     } catch (error: any) {
       console.error('Error during sign-up:', error);
@@ -185,7 +211,7 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   const updateProfile = async (updates: any) => {
     setLoading(true);
     try {
-      const { error } = await supabaseClient
+      const { error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', session?.user.id);
@@ -206,51 +232,17 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   };
 
   const refreshUser = async () => {
-    setProfileLoading(true);
-    try {
-      if (session?.user) {
-        const { data: profile, error } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (!error && profile) {
-          setUser({
-            id: session.user.id,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role,
-            department_id: profile.department_id,
-            department_name: profile.department_id,
-            avatar: profile.profile_photo_url || '',
-            rollNumber: profile.roll_number,
-            employeeId: profile.employee_id,
-            yearSection: profile.year_section,
-            studentId: session.user.id,
-            facultyId: session.user.id,
-            isActive: profile.is_active,
-            lastLogin: profile.last_login,
-            createdAt: profile.created_at,
-            phone: profile.phone,
-            address: profile.address,
-            profile_photo_url: profile.profile_photo_url,
-            roll_number: profile.roll_number,
-            employee_id: profile.employee_id,
-            created_at: profile.created_at,
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing user:', error);
-    } finally {
+    if (session?.user) {
+      setProfileLoading(true);
+      const profile = await fetchUserProfile(session.user.id);
+      setUser(profile);
       setProfileLoading(false);
     }
   };
 
   const getInvitationDetails = async (email: string) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('user_invitations')
         .select('*')
         .eq('email', email)

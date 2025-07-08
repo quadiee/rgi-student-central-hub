@@ -29,6 +29,8 @@ function MainAppContent() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
 
+  console.log('Auth state:', { user: !!user, session: !!session, loading });
+
   // Get active tab from current route
   const location = window.location.pathname;
   const activeTab = location.slice(1) || 'dashboard';
@@ -38,12 +40,24 @@ function MainAppContent() {
   };
 
   if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <div className="w-8 h-8 bg-white rounded-full"></div>
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || !user) {
+    console.log('No session or user, showing auth page');
     return <SupabaseAuthPage />;
   }
 
-  if (!session) {
-    return <SupabaseAuthPage />;
-  }
+  console.log('User authenticated, showing main app');
 
   const renderContent = () => {
     switch (activeTab) {

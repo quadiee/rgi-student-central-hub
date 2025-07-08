@@ -11,16 +11,17 @@ import { useToast } from '../ui/use-toast';
 import SecureAdminButton from './SecureAdminButton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ProfileLoadingSkeleton, ProgressiveLoader } from './LoadingStates';
-import { supabase } from '../../integrations/supabase/client';
 
 const SupabaseAuthPage = () => {
   const { isAuthenticated, loading: quickAuthLoading } = useQuickAuth();
-  const { profileLoading } = useAuth();
+  const { profileLoading, signIn } = useAuth();
   const { toast } = useToast();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
+
+  console.log('Auth page state:', { isAuthenticated, quickAuthLoading, profileLoading });
 
   // Show progressive loading for authenticated users while profile loads
   if (isAuthenticated && profileLoading) {
@@ -64,6 +65,8 @@ const SupabaseAuthPage = () => {
     e.preventDefault();
     setLoginLoading(true);
     
+    console.log('Attempting login with:', loginEmail);
+    
     try {
       if (!loginEmail.endsWith('@rgce.edu.in')) {
         toast({
@@ -71,24 +74,30 @@ const SupabaseAuthPage = () => {
           description: "Please use your RGCE email address (@rgce.edu.in)",
           variant: "destructive"
         });
+        setLoginLoading(false);
         return;
       }
       
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword
-      });
+      const result = await signIn(loginEmail, loginPassword);
+      console.log('Login result:', result);
       
-      if (error) {
+      if (result.error) {
+        console.error('Login error:', result.error);
         toast({
           title: "Login Failed",
-          description: error.message,
+          description: result.error.message || "Invalid email or password",
           variant: "destructive"
         });
       } else {
-        console.log('Login successful, redirecting...');
+        console.log('Login successful');
+        toast({
+          title: "Login Successful",
+          description: "Welcome to RGCE Portal!",
+        });
+        // The auth context will handle the redirect
       }
     } catch (err: any) {
+      console.error('Login exception:', err);
       toast({
         title: "Login Error",
         description: err?.message || "An unexpected error occurred during login.",
