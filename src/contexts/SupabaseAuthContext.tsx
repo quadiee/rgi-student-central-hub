@@ -8,30 +8,32 @@ interface SupabaseAuthContextProps {
   children: ReactNode;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'student' | 'hod' | 'principal' | 'admin' | 'chairman';
+  department_id: string;
+  department_name?: string;
+  avatar: string;
+  rollNumber?: string;
+  employeeId?: string;
+  yearSection?: string;
+  studentId?: string;
+  facultyId?: string;
+  isActive?: boolean;
+  lastLogin?: string;
+  createdAt?: string;
+  phone?: string;
+  address?: string;
+  profile_photo_url?: string;
+  roll_number?: string;
+  employee_id?: string;
+  created_at?: string;
+}
+
 interface AuthContextType {
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: 'student' | 'hod' | 'principal' | 'admin' | 'chairman';
-    department_id: string;
-    department_name?: string;
-    avatar: string;
-    rollNumber?: string;
-    employeeId?: string;
-    yearSection?: string;
-    studentId?: string;
-    facultyId?: string;
-    isActive?: boolean;
-    lastLogin?: string;
-    createdAt?: string;
-    phone?: string;
-    address?: string;
-    profile_photo_url?: string;
-    roll_number?: string;
-    employee_id?: string;
-    created_at?: string;
-  } | null;
+  user: UserProfile | null;
   session: Session | null;
   loading: boolean;
   profileLoading?: boolean;
