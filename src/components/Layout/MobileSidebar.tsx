@@ -47,13 +47,15 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
       return {
         icon: Crown,
         title: INSTITUTION.shortName,
-        subtitle: 'Chairman Portal'
+        subtitle: 'Chairman Portal',
+        gradient: 'from-purple-600 to-blue-600'
       };
     }
     return {
       icon: Home,
       title: INSTITUTION.shortName,
-      subtitle: 'Student Portal'
+      subtitle: 'Student Portal',
+      gradient: 'from-blue-600 to-purple-600'
     };
   };
 
@@ -72,100 +74,103 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
       
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
+        fixed top-0 left-0 h-full w-72 bg-gradient-to-br from-white to-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out z-50
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${user?.role === 'chairman' ? 'bg-gradient-to-r from-purple-600 to-blue-600' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}>
-                <HeaderIcon className="w-6 h-6 text-white" />
+          {/* Header with Gradient */}
+          <div className={`bg-gradient-to-r ${headerInfo.gradient} p-6 text-white rounded-br-3xl`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <HeaderIcon className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">{headerInfo.title}</h2>
+                  <p className="text-xs text-white/80">{headerInfo.subtitle}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-800">{headerInfo.title}</h2>
-                <p className="text-xs text-gray-600">{headerInfo.subtitle}</p>
-              </div>
+              <button 
+                onClick={onClose}
+                className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button 
-              onClick={onClose}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            {/* User Info Card */}
+            {user && (
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">
+                      {user.name?.split(' ').map(n => n[0]).join('') || user.email?.[0].toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">{user.name || user.email}</p>
+                    <p className="text-white/70 text-xs capitalize">
+                      {user.role === 'chairman' ? 'Chairman' : user.role}
+                    </p>
+                    {user.department && user.role !== 'chairman' && (
+                      <p className="text-white/60 text-xs truncate">
+                        {getDepartmentName(user.department)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Institution Info */}
-          <div className={`px-6 py-4 border-b ${user?.role === 'chairman' ? 'bg-purple-50 border-purple-100' : 'bg-blue-50 border-blue-100'}`}>
-            <h3 className={`text-sm font-semibold ${user?.role === 'chairman' ? 'text-purple-900' : 'text-blue-900'}`}>{INSTITUTION.name}</h3>
-            <p className={`text-xs ${user?.role === 'chairman' ? 'text-purple-700' : 'text-blue-700'}`}>{INSTITUTION.tagline}</p>
-            <p className={`text-xs mt-1 ${user?.role === 'chairman' ? 'text-purple-600' : 'text-blue-600'}`}>
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900">{INSTITUTION.name}</h3>
+            <p className="text-xs text-gray-600">{INSTITUTION.tagline}</p>
+            <p className="text-xs text-gray-500 mt-1">
               Affiliated to {INSTITUTION.academic.affiliation.split(',')[0]}
             </p>
           </div>
 
-          {/* User Info */}
-          {user && (
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <img 
-                  src={user.avatar} 
-                  alt={user.name}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user.role === 'chairman' ? 'Chairman' : user.role}
-                  </p>
-                  {user.department && user.role !== 'chairman' && (
-                    <p className="text-xs text-gray-400 truncate">
-                      {getDepartmentName(user.department)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Navigation */}
-          <nav className="flex-1 p-4">
-            <ul className="space-y-2">
-              {visibleItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => {
-                        onTabChange(item.id);
-                        onClose();
-                      }}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                        activeTab === item.id
-                          ? `${user?.role === 'chairman' ? 'bg-purple-50 text-purple-600 border border-purple-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`
-                          : 'text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{item.label}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+          <nav className="flex-1 p-4 space-y-2">
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onTabChange(item.id);
+                    onClose();
+                  }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? `${user?.role === 'chairman' ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'}`
+                      : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                  <span className="font-medium">{item.label}</span>
+                  {isActive && (
+                    <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
+                  )}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="mb-3">
-              <p className="text-xs text-gray-500">Contact Support:</p>
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="mb-4">
+              <p className="text-xs text-gray-500 mb-1">Need Help?</p>
               <p className="text-xs text-gray-600">{INSTITUTION.contact.emails[0]}</p>
               <p className="text-xs text-gray-600">{INSTITUTION.contact.phones[0]}</p>
             </div>
             <Button
               variant="outline"
               onClick={handleSignOut}
-              className="w-full flex items-center space-x-2"
+              className="w-full flex items-center justify-center space-x-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>

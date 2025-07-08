@@ -3,17 +3,25 @@ import React, { useState } from 'react';
 import { Bell, Settings, User, LogOut, Menu } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useIsMobile } from '../../hooks/use-mobile';
 import UserProfile from '../Auth/UserProfile';
 import NotificationCenter from '../Notifications/NotificationCenter';
+import MobileHeader from './MobileHeader';
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  activeTab?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab = 'dashboard' }) => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  if (isMobile) {
+    return <MobileHeader onMenuClick={onMenuClick || (() => {})} activeTab={activeTab} />;
+  }
 
   return (
     <>
