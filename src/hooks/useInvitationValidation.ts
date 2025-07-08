@@ -24,10 +24,7 @@ export const useInvitationValidation = (token: string | undefined) => {
       
       const { data, error } = await supabase.rpc('validate_invitation_token', {
         p_token: token!
-      }) as {
-        data: ValidateInvitationResponse[] | null;
-        error: any;
-      };
+      });
       
       if (error) {
         console.error('RPC Error:', error);
@@ -36,17 +33,18 @@ export const useInvitationValidation = (token: string | undefined) => {
         return;
       }
 
+      // Type guard to ensure data is the expected format
       if (!data || !Array.isArray(data) || data.length === 0) {
         setInviteError("Invalid invitation token.");
         setLoadingInvitation(false);
         return;
       }
 
-      // Now TypeScript knows data[0] has the ValidateInvitationResponse shape
-      const inviteData = data[0];
+      // Type assertion with runtime validation
+      const inviteData = data[0] as ValidateInvitationResponse;
       
       // Validate the response structure
-      if (!inviteData || typeof inviteData !== 'object' || !inviteData.email) {
+      if (!inviteData || typeof inviteData !== 'object' || !('email' in inviteData) || !inviteData.email) {
         setInviteError("Invalid invitation response format.");
         setLoadingInvitation(false);
         return;
