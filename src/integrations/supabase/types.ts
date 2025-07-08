@@ -1102,6 +1102,18 @@ export type Database = {
         }
         Returns: number
       }
+      check_hod_department: {
+        Args: { user_id: string; dept_id: string }
+        Returns: boolean
+      }
+      check_user_role: {
+        Args: { user_id: string; target_role: string }
+        Returns: boolean
+      }
+      check_user_roles: {
+        Args: { user_id: string; target_roles: string[] }
+        Returns: boolean
+      }
       complete_invitation_profile: {
         Args: {
           p_user_id: string
