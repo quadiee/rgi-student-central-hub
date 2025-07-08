@@ -53,30 +53,66 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const fetchProfile = async (userId: string) => {
     try {
       setProfileLoading(true);
-      const { data, error } = await supabase
+      console.log('Fetching profile for user:', userId);
+      
+      // First, fetch the profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          departments(name)
-        `)
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Profile fetch error:', error);
-        setProfile(null);
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        if (profileError.code === 'PGRST116') {
+          console.log('No profile found for user, this might be expected for new users');
+          setProfile(null);
+        } else {
+          toast({
+            title: "Profile Error",
+            description: "Failed to load profile data",
+            variant: "destructive"
+          });
+          setProfile(null);
+        }
         return;
       }
 
-      // Transform the data to include department_name
+      console.log('Profile data fetched:', profileData);
+
+      // Then, fetch department name if department_id exists
+      let departmentName = null;
+      if (profileData.department_id) {
+        try {
+          const { data: deptData, error: deptError } = await supabase
+            .from('departments')
+            .select('name')
+            .eq('id', profileData.department_id)
+            .single();
+          
+          if (!deptError && deptData) {
+            departmentName = deptData.name;
+          }
+        } catch (deptErr) {
+          console.warn('Could not fetch department name:', deptErr);
+        }
+      }
+
+      // Combine profile data with department name
       const profileWithDepartment = {
-        ...data,
-        department_name: data.departments?.name || null
+        ...profileData,
+        department_name: departmentName
       };
 
+      console.log('Final profile data:', profileWithDepartment);
       setProfile(profileWithDepartment);
     } catch (error) {
-      console.error('Profile fetch error:', error);
+      console.error('Unexpected error in fetchProfile:', error);
+      toast({
+        title: "Profile Error",
+        description: "An unexpected error occurred while loading your profile",
+        variant: "destructive"
+      });
       setProfile(null);
     } finally {
       setProfileLoading(false);
@@ -163,14 +199,18 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('Session error:', error);
         }
         
         if (session?.user) {
+          console.log('Initial session found for user:', session.user.email);
           setUser(session.user);
           await fetchProfile(session.user.id);
+        } else {
+          console.log('No initial session found');
         }
       } catch (error) {
         console.error('Initial session error:', error);

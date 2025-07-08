@@ -9,8 +9,13 @@ const ProfileCompletionGuard: React.FC<{ children: React.ReactNode }> = ({ child
   const { user, profile, profileLoading } = useAuth();
   const navigate = useNavigate();
 
+  console.log('ProfileCompletionGuard - user:', !!user);
+  console.log('ProfileCompletionGuard - profile:', profile);
+  console.log('ProfileCompletionGuard - profileLoading:', profileLoading);
+
   // Show loading state while profile is being fetched
   if (profileLoading) {
+    console.log('ProfileCompletionGuard - showing loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -21,8 +26,36 @@ const ProfileCompletionGuard: React.FC<{ children: React.ReactNode }> = ({ child
     );
   }
 
+  // If no profile exists, show error
+  if (user && !profile) {
+    console.log('ProfileCompletionGuard - no profile found for authenticated user');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Profile Not Found</h2>
+          <p className="text-gray-600 mb-6">
+            Your account exists but no profile was found. Please contact your administrator.
+          </p>
+          <div className="space-y-3">
+            <Button
+              onClick={() => navigate("/auth")}
+              variant="outline"
+              className="w-full"
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // If user is authenticated but profile is incomplete, show completion prompt
   if (user && profile && profile.profile_completed === false) {
+    console.log('ProfileCompletionGuard - profile incomplete');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
@@ -49,6 +82,7 @@ const ProfileCompletionGuard: React.FC<{ children: React.ReactNode }> = ({ child
   }
 
   // If everything is okay, render children
+  console.log('ProfileCompletionGuard - rendering children');
   return <>{children}</>;
 };
 
