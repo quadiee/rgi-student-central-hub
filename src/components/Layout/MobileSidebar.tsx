@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen, Crown } from 'lucide-react';
+import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen, Crown, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
 import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
+import { Badge } from '../ui/badge';
 
 interface MobileSidebarProps {
   activeTab: string;
@@ -44,99 +45,124 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
     return DEPARTMENT_CODES[deptCode as keyof typeof DEPARTMENT_CODES] || deptCode;
   };
 
-  const getSidebarHeader = () => {
+  const getSidebarTheme = () => {
     if (user?.role === 'chairman') {
       return {
         icon: Crown,
         title: INSTITUTION.shortName,
         subtitle: 'Chairman Portal',
-        gradient: 'from-purple-600 to-blue-600'
+        gradient: 'from-purple-600 via-blue-600 to-indigo-600',
+        accent: 'from-purple-500 to-blue-500'
       };
     }
+    
     return {
       icon: Home,
       title: INSTITUTION.shortName,
       subtitle: 'Student Portal',
-      gradient: 'from-blue-600 to-purple-600'
+      gradient: 'from-blue-600 via-cyan-600 to-teal-600',
+      accent: 'from-blue-500 to-cyan-500'
     };
   };
 
-  const headerInfo = getSidebarHeader();
-  const HeaderIcon = headerInfo.icon;
+  const theme = getSidebarTheme();
+  const HeaderIcon = theme.icon;
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Enhanced Mobile Overlay */}
       {isOpen && !isDesktop && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
           onClick={onClose}
         />
       )}
       
-      {/* Sidebar */}
+      {/* Enhanced Sidebar */}
       <div className={`
-        ${isDesktop ? 'relative' : 'fixed'} top-0 left-0 h-full w-72 bg-gradient-to-br from-white to-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out
+        ${isDesktop ? 'relative' : 'fixed'} top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 shadow-2xl transform transition-all duration-500 ease-out
         ${isDesktop ? 'z-30' : 'z-50'}
         ${isOpen ? 'translate-x-0' : isDesktop ? '-translate-x-full' : '-translate-x-full lg:translate-x-0'}
+        border-r border-gray-200 dark:border-gray-800
       `}>
         <div className="flex flex-col h-full">
-          {/* Header with Gradient */}
-          <div className={`bg-gradient-to-r ${headerInfo.gradient} p-6 text-white rounded-br-3xl`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                  <HeaderIcon className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold">{headerInfo.title}</h2>
-                  <p className="text-xs text-white/80">{headerInfo.subtitle}</p>
-                </div>
-              </div>
-              <button 
-                onClick={onClose}
-                className={`${isDesktop ? '' : 'lg:hidden'} p-2 rounded-lg hover:bg-white/10 transition-colors`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* User Info Card */}
-            {user && (
-              <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+          {/* Enhanced Header with Gradient and Pattern */}
+          <div className="relative overflow-hidden">
+            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient}`} />
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+            
+            <div className="relative p-6 text-white">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">
-                      {user.name?.split(' ').map(n => n[0]).join('') || user.email?.[0].toUpperCase()}
-                    </span>
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                    <HeaderIcon className="w-8 h-8 text-white" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">{user.name || user.email}</p>
-                    <p className="text-white/70 text-xs capitalize">
-                      {user.role === 'chairman' ? 'Chairman' : user.role}
-                    </p>
-                    {user.department_id && user.role !== 'chairman' && (
-                      <p className="text-white/60 text-xs truncate">
-                        {getDepartmentName(user.department_id)}
-                      </p>
-                    )}
+                  <div>
+                    <h2 className="text-xl font-bold font-heading">{theme.title}</h2>
+                    <p className="text-sm text-white/80 font-medium">{theme.subtitle}</p>
                   </div>
                 </div>
+                <button 
+                  onClick={onClose}
+                  className={`${isDesktop ? '' : 'lg:hidden'} p-2 rounded-xl hover:bg-white/10 transition-colors`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            )}
+
+              {/* Enhanced User Info Card */}
+              {user && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-white text-lg font-bold">
+                        {user.name?.split(' ').map(n => n[0]).join('') || user.email?.[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-semibold truncate">{user.name || user.email}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge 
+                          variant="secondary" 
+                          className="bg-white/20 text-white border-white/30 text-xs capitalize"
+                        >
+                          {user.role === 'chairman' ? 'Chairman' : user.role}
+                        </Badge>
+                        {user.role === 'chairman' && (
+                          <div className="flex items-center space-x-1">
+                            <Sparkles className="w-3 h-3 text-yellow-300" />
+                            <span className="text-xs text-white/70">Premium</span>
+                          </div>
+                        )}
+                      </div>
+                      {user.department_id && user.role !== 'chairman' && (
+                        <p className="text-white/70 text-xs mt-1 truncate">
+                          {getDepartmentName(user.department_id)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Institution Info */}
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900">{INSTITUTION.name}</h3>
-            <p className="text-xs text-gray-600">{INSTITUTION.tagline}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Affiliated to {INSTITUTION.academic.affiliation.split(',')[0]}
-            </p>
+          {/* Enhanced Institution Info */}
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{INSTITUTION.name}</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{INSTITUTION.tagline}</p>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Affiliated to {INSTITUTION.academic.affiliation.split(',')[0]}
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          {/* Enhanced Navigation */}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin">
             {visibleItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -147,37 +173,47 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                     onTabChange(item.id);
                     onClose();
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={`group w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all duration-300 font-medium ${
                     isActive
-                      ? `${user?.role === 'chairman' ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'}`
-                      : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
+                      ? `bg-gradient-to-r ${theme.accent} text-white shadow-lg shadow-black/10 scale-105`
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:shadow-md hover:scale-105'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                  <Icon className={`w-5 h-5 transition-all duration-300 ${
+                    isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'
+                  }`} />
                   <span className="font-medium">{item.label}</span>
                   {isActive && (
-                    <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
+                    <div className="ml-auto flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                      <Sparkles className="w-4 h-4 text-white/70" />
+                    </div>
                   )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
-            <div className="mb-4">
-              <p className="text-xs text-gray-500 mb-1">Need Help?</p>
-              <p className="text-xs text-gray-600">{INSTITUTION.contact.emails[0]}</p>
-              <p className="text-xs text-gray-600">{INSTITUTION.contact.phones[0]}</p>
+          {/* Enhanced Footer */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Need Help?</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{INSTITUTION.contact.emails[0]}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{INSTITUTION.contact.phones[0]}</p>
+                </div>
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={handleSignOut}
+                className="w-full flex items-center justify-center space-x-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:border-red-800 dark:hover:text-red-400 transition-all duration-300 rounded-2xl"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-center space-x-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </Button>
           </div>
         </div>
       </div>
