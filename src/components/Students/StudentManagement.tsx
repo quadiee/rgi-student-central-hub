@@ -25,10 +25,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
-  const [selectedYear, setSelectedYear] = useState<string>('');
-  const [selectedSection, setSelectedSection] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [departments, setDepartments] = useState<string[]>([]);
   
   // Modal states
@@ -186,10 +186,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
-    const matchesYear = !selectedYear || student.year.toString() === selectedYear;
-    const matchesSection = !selectedSection || student.section === selectedSection;
-    const matchesStatus = !selectedStatus || student.feeStatus === selectedStatus;
+    const matchesDepartment = selectedDepartment === 'all' || student.department === selectedDepartment;
+    const matchesYear = selectedYear === 'all' || student.year.toString() === selectedYear;
+    const matchesSection = selectedSection === 'all' || student.section === selectedSection;
+    const matchesStatus = selectedStatus === 'all' || student.feeStatus === selectedStatus;
 
     return matchesSearch && matchesDepartment && matchesYear && matchesSection && matchesStatus;
   });
@@ -349,7 +349,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Departments</SelectItem>
+                <SelectItem value="all">All Departments</SelectItem>
                 {departments.map(dept => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                 ))}
@@ -361,7 +361,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                 <SelectValue placeholder="All Years" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Years</SelectItem>
+                <SelectItem value="all">All Years</SelectItem>
                 {[1, 2, 3, 4].map(year => (
                   <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
                 ))}
@@ -373,7 +373,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                 <SelectValue placeholder="All Sections" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Sections</SelectItem>
+                <SelectItem value="all">All Sections</SelectItem>
                 {['A', 'B', 'C', 'D'].map(section => (
                   <SelectItem key={section} value={section}>Section {section}</SelectItem>
                 ))}
@@ -385,7 +385,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                 <SelectValue placeholder="Fee Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Paid">Paid</SelectItem>
                 <SelectItem value="Partial">Partial</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>

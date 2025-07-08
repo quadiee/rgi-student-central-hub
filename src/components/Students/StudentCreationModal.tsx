@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, User, Phone, Mail, MapPin, Users, Heart, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
