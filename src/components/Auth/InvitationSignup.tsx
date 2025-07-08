@@ -249,7 +249,7 @@ const InvitationSignup: React.FC = () => {
     );
   }
 
-  if (userExists) {
+  if (userExists && invitationData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
@@ -258,7 +258,7 @@ const InvitationSignup: React.FC = () => {
               <Mail className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800">Complete Your Setup</h2>
-            <p className="text-gray-600">Account exists for <strong>{invitationData?.email}</strong></p>
+            <p className="text-gray-600">Account exists for <strong>{invitationData.email}</strong></p>
             <p className="text-gray-600 mb-6">Click below to receive a password setup link</p>
           </div>
           <div className="space-y-3">
@@ -315,6 +315,7 @@ const InvitationSignup: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
           <div className="space-y-2">
             <Label htmlFor="name">Full Name *</Label>
             <div className="relative">

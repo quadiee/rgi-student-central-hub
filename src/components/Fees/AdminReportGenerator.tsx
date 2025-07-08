@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar, Download, Filter, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -6,11 +5,13 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { FeeService } from '../../services/feeService';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useUserConversion } from '../../hooks/useUserConversion';
 
 const AdminReportGenerator: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { convertProfileToUser } = useUserConversion();
   const [reportType, setReportType] = useState('revenue');
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -25,9 +26,12 @@ const AdminReportGenerator: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const generateReport = async () => {
+    if (!profile) return;
+    
     setLoading(true);
     try {
-      const report = await FeeService.generateReport(user!, {
+      const user = convertProfileToUser(profile);
+      const report = await FeeService.generateReport(user, {
         type: reportType as any,
         title: `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`,
         dateRange,

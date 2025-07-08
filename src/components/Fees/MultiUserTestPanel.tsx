@@ -18,7 +18,7 @@ interface TestUser {
 }
 
 const MultiUserTestPanel: React.FC = () => {
-  const { user: currentUser } = useAuth();
+  const { profile } = useAuth();
   const { convertUserProfileToUser } = useUserConversion();
   const { toast } = useToast();
   const [testUsers, setTestUsers] = useState<TestUser[]>([]);
@@ -53,7 +53,7 @@ const MultiUserTestPanel: React.FC = () => {
         name: profile.name,
         email: profile.email,
         role: profile.role,
-        department_name: profile.departments?.name || 'Unknown', // Fixed: use department_name
+        department_name: profile.departments?.name || 'Unknown',
         department_id: profile.department_id,
         is_active: profile.is_active
       }));
@@ -107,10 +107,10 @@ const MultiUserTestPanel: React.FC = () => {
   };
 
   const getVisibleUsers = () => {
-    if (!currentUser) return [];
+    if (!profile) return [];
     
-    const userRole = currentUser.role;
-    const userDepartment = currentUser.department_name; // Fixed: use department_name
+    const userRole = profile.role;
+    const userDepartment = profile.department_name;
     
     switch (userRole) {
       case 'admin':
@@ -118,11 +118,11 @@ const MultiUserTestPanel: React.FC = () => {
         return testUsers; // Can see all users
       case 'hod':
         return testUsers.filter(user => 
-          user.department_name === userDepartment || user.role === 'admin' || user.role === 'principal' // Fixed: use department_name
+          user.department_name === userDepartment || user.role === 'admin' || user.role === 'principal'
         );
       case 'student':
         return testUsers.filter(user => 
-          user.department_name === userDepartment && user.role === 'student' // Fixed: use department_name
+          user.department_name === userDepartment && user.role === 'student'
         );
       default:
         return [];
@@ -131,7 +131,7 @@ const MultiUserTestPanel: React.FC = () => {
 
   const visibleUsers = getVisibleUsers();
 
-  if (!currentUser) {
+  if (!profile) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
         <p className="text-gray-500">Please log in to use the multi-user test panel.</p>
@@ -177,9 +177,9 @@ const MultiUserTestPanel: React.FC = () => {
               Available Test Users ({visibleUsers.length})
             </h4>
             <div className="text-sm text-gray-500">
-              Your access level: <span className="font-medium capitalize">{currentUser.role}</span>
-              {currentUser.department_name && (
-                <span> - {currentUser.department_name}</span> // Fixed: use department_name
+              Your access level: <span className="font-medium capitalize">{profile.role}</span>
+              {profile.department_name && (
+                <span> - {profile.department_name}</span>
               )}
             </div>
           </div>
@@ -194,7 +194,7 @@ const MultiUserTestPanel: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mb-1">{user.email}</p>
-                <p className="text-xs text-gray-500 mb-3">{user.department_name}</p> {/* Fixed: use department_name */}
+                <p className="text-xs text-gray-500 mb-3">{user.department_name}</p>
                 
                 <div className="flex space-x-2">
                   <Button
