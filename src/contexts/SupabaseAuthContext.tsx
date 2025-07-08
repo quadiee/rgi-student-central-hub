@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -54,17 +54,18 @@ export const useAuth = () => {
   return context;
 };
 
+// Single instance management
+let authProviderInstance: any = null;
+
 // Enhanced caching system
 const profileCache = new Map<string, UserProfile>();
 const departmentCache = new Map<string, string>();
 
 const getCachedProfile = (userId: string): UserProfile | null => {
-  // Check memory cache first
   if (profileCache.has(userId)) {
     return profileCache.get(userId)!;
   }
 
-  // Check sessionStorage
   try {
     const cached = sessionStorage.getItem(`profile_${userId}`);
     if (cached) {
@@ -89,12 +90,10 @@ const setCachedProfile = (userId: string, profile: UserProfile) => {
 };
 
 const loadDepartmentName = async (departmentId: string): Promise<string> => {
-  // Check cache first
   if (departmentCache.has(departmentId)) {
     return departmentCache.get(departmentId)!;
   }
 
-  // Check localStorage cache
   try {
     const cachedName = localStorage.getItem(`dept_${departmentId}`);
     if (cachedName) {
@@ -105,7 +104,6 @@ const loadDepartmentName = async (departmentId: string): Promise<string> => {
     console.error('Error reading cached department:', error);
   }
 
-  // Fetch from database
   try {
     const { data, error } = await supabase
       .from('departments')
@@ -131,28 +129,41 @@ const loadDepartmentName = async (departmentId: string): Promise<string> => {
 };
 
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Prevent multiple instances
+  if (authProviderInstance) {
+    console.warn('Multiple SupabaseAuthProvider instances detected. Using existing instance.');
+    return authProviderInstance;
+  }
+
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const mountedRef = useRef(true);
+  const profileLoadingRef = useRef(false);
 
   const loadUserProfileLazy = async (userId: string, forceRefresh: boolean = false): Promise<UserProfile | null> => {
+    if (!mountedRef.current || profileLoadingRef.current) return null;
+    
     try {
       setProfileLoading(true);
+      profileLoadingRef.current = true;
       console.log('Loading user profile for:', userId, forceRefresh ? '(force refresh)' : '');
 
-      // Check cache first for instant loading (unless force refresh)
       if (!forceRefresh) {
         const cachedProfile = getCachedProfile(userId);
         if (cachedProfile) {
           console.log('Found cached profile:', cachedProfile);
-          setUser(cachedProfile);
-          setProfileLoading(false);
+          if (mountedRef.current) {
+            setUser(cachedProfile);
+            setProfileLoading(false);
+            profileLoadingRef.current = false;
+          }
           
           // Refresh department name in background if needed
           if (cachedProfile.department_id) {
             loadDepartmentName(cachedProfile.department_id).then(deptName => {
-              if (deptName !== cachedProfile.department_name) {
+              if (deptName !== cachedProfile.department_name && mountedRef.current) {
                 const updatedProfile = { ...cachedProfile, department_name: deptName };
                 setCachedProfile(userId, updatedProfile);
                 setUser(updatedProfile);
@@ -164,13 +175,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
 
-      // Clear cache if force refresh
       if (forceRefresh) {
         profileCache.delete(userId);
         sessionStorage.removeItem(`profile_${userId}`);
       }
 
-      // Fetch basic profile without JOIN for speed
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -180,20 +189,18 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (profileError) {
         console.error('Error loading user profile:', profileError);
         
-        // If profile doesn't exist and this is the authenticated user, try to create it
         if (profileError.code === 'PGRST116') {
           console.log('Profile not found, attempting to create one...');
           
           const { data: { user: authUser } } = await supabase.auth.getUser();
           if (authUser && authUser.id === userId) {
-            // Create a basic profile for the authenticated user
             const { data: newProfile, error: createError } = await supabase
               .from('profiles')
               .insert({
                 id: userId,
                 name: authUser.email?.split('@')[0] || 'User',
                 email: authUser.email || '',
-                role: 'admin', // Default to admin since they're trying to access admin panel
+                role: 'admin',
                 is_active: true
               })
               .select()
@@ -212,21 +219,26 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 address: newProfile.address || ''
               };
 
-              setCachedProfile(userId, userProfile);
-              setUser(userProfile);
-              setProfileLoading(false);
+              if (mountedRef.current) {
+                setCachedProfile(userId, userProfile);
+                setUser(userProfile);
+                setProfileLoading(false);
+                profileLoadingRef.current = false;
+              }
               return userProfile;
             }
           }
         }
         
-        setProfileLoading(false);
+        if (mountedRef.current) {
+          setProfileLoading(false);
+          profileLoadingRef.current = false;
+        }
         return null;
       }
 
       console.log('Loaded profile data:', profileData);
 
-      // Load department name asynchronously
       let departmentName = 'Unknown';
       let departmentCode = 'Unknown';
       
@@ -259,15 +271,20 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       console.log('Created user profile:', userProfile);
 
-      // Cache the profile
-      setCachedProfile(userId, userProfile);
-      setUser(userProfile);
-      setProfileLoading(false);
+      if (mountedRef.current) {
+        setCachedProfile(userId, userProfile);
+        setUser(userProfile);
+        setProfileLoading(false);
+        profileLoadingRef.current = false;
+      }
 
       return userProfile;
     } catch (error) {
       console.error('Error in loadUserProfileLazy:', error);
-      setProfileLoading(false);
+      if (mountedRef.current) {
+        setProfileLoading(false);
+        profileLoadingRef.current = false;
+      }
       return null;
     }
   };
@@ -290,81 +307,84 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const refreshUser = async () => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
-    if (currentSession?.user) {
-      // Force refresh to get latest data
+    if (currentSession?.user && mountedRef.current) {
       await loadUserProfileLazy(currentSession.user.id, true);
       setSession(currentSession);
     }
   };
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
+    let authSubscription: any = null;
 
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log('Auth state changed:', event, currentSession?.user?.email);
-      
-      if (!mounted) return;
-
-      setSession(currentSession);
-      setLoading(false); // Set loading to false immediately after auth check
-      
-      if (currentSession?.user) {
-        console.log('User authenticated, loading profile...');
-        // Load profile asynchronously without blocking UI
-        setTimeout(() => {
-          if (mounted) {
-            loadUserProfileLazy(currentSession.user.id);
-          }
-        }, 0);
-      } else {
-        console.log('User not authenticated, clearing profile');
-        setUser(null);
-        setProfileLoading(false);
-        // Clear all caches on logout
-        profileCache.clear();
-        departmentCache.clear();
-        try {
-          sessionStorage.clear();
-        } catch (error) {
-          console.error('Error clearing session storage:', error);
-        }
-      }
-    });
-
-    // Get initial session
-    const getInitialSession = async () => {
+    const initializeAuth = async () => {
       try {
+        // Set up auth state listener first
+        authSubscription = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+          console.log('Auth state changed:', event, currentSession?.user?.email);
+          
+          if (!mountedRef.current) return;
+
+          setSession(currentSession);
+          setLoading(false);
+          
+          if (currentSession?.user) {
+            console.log('User authenticated, loading profile...');
+            // Load profile asynchronously without blocking UI
+            setTimeout(() => {
+              if (mountedRef.current) {
+                loadUserProfileLazy(currentSession.user.id);
+              }
+            }, 0);
+          } else {
+            console.log('User not authenticated, clearing profile');
+            setUser(null);
+            setProfileLoading(false);
+            profileLoadingRef.current = false;
+            // Clear all caches on logout
+            profileCache.clear();
+            departmentCache.clear();
+            try {
+              sessionStorage.clear();
+            } catch (error) {
+              console.error('Error clearing session storage:', error);
+            }
+          }
+        });
+
+        // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         console.log('Initial session:', initialSession?.user?.email);
         setSession(initialSession);
-        setLoading(false); // Set loading to false immediately
+        setLoading(false);
         
         if (initialSession?.user) {
           console.log('Initial user found, loading profile...');
-          // Load profile asynchronously
           setTimeout(() => {
-            if (mounted) {
+            if (mountedRef.current) {
               loadUserProfileLazy(initialSession.user.id);
             }
           }, 0);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
-        if (mounted) {
+        if (mountedRef.current) {
           setLoading(false);
         }
       }
     };
 
-    getInitialSession();
+    initializeAuth();
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      mountedRef.current = false;
+      profileLoadingRef.current = false;
+      if (authSubscription?.data?.subscription) {
+        authSubscription.data.subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -378,11 +398,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (!error) {
+    if (!error && mountedRef.current) {
       setUser(null);
       setSession(null);
       setProfileLoading(false);
-      // Clear all caches
+      profileLoadingRef.current = false;
       profileCache.clear();
       departmentCache.clear();
       try {
@@ -418,11 +438,16 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     getInvitationDetails,
   };
 
-  return (
+  const providerComponent = (
     <SupabaseAuthContext.Provider value={value}>
       {children}
     </SupabaseAuthContext.Provider>
   );
+
+  // Store the instance to prevent duplicates
+  authProviderInstance = providerComponent;
+
+  return providerComponent;
 };
 
 export const AuthProvider = SupabaseAuthProvider;
