@@ -28,6 +28,7 @@ const FeeManagementHub: React.FC = () => {
 
   const isAdmin = user.role && ['admin', 'principal'].includes(user.role);
   const isHOD = user.role === 'hod';
+  const isChairman = user.role === 'chairman';
   const isStudent = user.role === 'student';
 
   return (
@@ -46,7 +47,7 @@ const FeeManagementHub: React.FC = () => {
             Dashboard
           </TabsTrigger>
           
-          {(isAdmin || isHOD) && (
+          {(isAdmin || isHOD || isChairman) && (
             <TabsTrigger value="list-management" className="flex items-center gap-2">
               <List className="w-4 h-4" />
               Fee Records
@@ -66,7 +67,7 @@ const FeeManagementHub: React.FC = () => {
             </>
           )}
           
-          {(isAdmin || isHOD) && (
+          {(isAdmin || isHOD || isChairman) && (
             <TabsTrigger value="real-time" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Real-time Stats
@@ -77,10 +78,10 @@ const FeeManagementHub: React.FC = () => {
         <TabsContent value="dashboard" className="space-y-6">
           {isStudent && <StudentFeeDashboard />}
           {isHOD && <HODFeeDashboard />}
-          {isAdmin && <RealTimeFeeDashboard />}
+          {(isAdmin || isChairman) && <RealTimeFeeDashboard />}
         </TabsContent>
 
-        {(isAdmin || isHOD) && (
+        {(isAdmin || isHOD || isChairman) && (
           <TabsContent value="list-management" className="space-y-6">
             <FeeListManagement />
           </TabsContent>
@@ -98,7 +99,7 @@ const FeeManagementHub: React.FC = () => {
           </>
         )}
 
-        {(isAdmin || isHOD) && (
+        {(isAdmin || isHOD || isChairman) && (
           <TabsContent value="real-time" className="space-y-6">
             <RealTimeFeeDashboard />
           </TabsContent>
@@ -106,7 +107,7 @@ const FeeManagementHub: React.FC = () => {
       </Tabs>
 
       {/* Quick Stats for Overview */}
-      {activeTab === 'dashboard' && (isAdmin || isHOD) && (
+      {activeTab === 'dashboard' && (isAdmin || isHOD || isChairman) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
           <Card>
             <CardHeader className="pb-2">
@@ -135,15 +136,17 @@ const FeeManagementHub: React.FC = () => {
                   </Button>
                 </>
               )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => setActiveTab('list-management')}
-              >
-                <List className="w-4 h-4 mr-2" />
-                Manage Records
-              </Button>
+              {(isAdmin || isHOD || isChairman) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('list-management')}
+                >
+                  <List className="w-4 h-4 mr-2" />
+                  Manage Records
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>

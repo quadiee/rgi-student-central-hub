@@ -33,7 +33,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab = 'dashboard' })
                 variant="ghost"
                 size="sm"
                 onClick={onMenuClick}
-                className="md:hidden"
               >
                 <Menu className="w-5 h-5" />
               </Button>

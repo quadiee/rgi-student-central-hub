@@ -23,6 +23,7 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
 
@@ -40,6 +41,10 @@ const Index = () => {
   const handleTabChange = (tab: string) => {
     navigate(`/${tab}`);
     setSidebarOpen(false); // Close mobile sidebar after navigation
+  };
+
+  const toggleDesktopSidebar = () => {
+    setDesktopSidebarOpen(!desktopSidebarOpen);
   };
 
   const handleViewStudent = (student: Student) => {
@@ -162,11 +167,11 @@ const Index = () => {
           <MobileSidebar 
             activeTab={activeTab} 
             onTabChange={handleTabChange}
-            isOpen={true}
+            isOpen={desktopSidebarOpen}
             onClose={() => {}}
           />
-          <div className="flex-1 ml-64">
-            <Header />
+          <div className={`flex-1 transition-all duration-300 ${desktopSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+            <Header onMenuClick={toggleDesktopSidebar} />
             <main className="p-6 pt-8">
               <div className="mb-4">
                 <nav className="text-sm breadcrumbs">
