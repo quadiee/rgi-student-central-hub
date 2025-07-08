@@ -2,32 +2,69 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PasswordSetupForm from '../components/Auth/PasswordSetupForm';
-import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useToast } from '../components/ui/use-toast';
+import { supabase } from '../integrations/supabase/client';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, session } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+
+  // Extract tokens from URL hash or query params
+  const accessToken = searchParams.get('access_token') || 
+    new URLSearchParams(window.location.hash.substring(1)).get('access_token');
+  const refreshToken = searchParams.get('refresh_token') || 
+    new URLSearchParams(window.location.hash.substring(1)).get('refresh_token');
+  const type = searchParams.get('type') || 
+    new URLSearchParams(window.location.hash.substring(1)).get('type');
 
   const isInvitation = searchParams.get('invitation') === 'true';
+  const isPasswordRecovery = type === 'recovery';
 
   useEffect(() => {
     console.log('ResetPassword page loaded');
-    console.log('User:', user);
-    console.log('Session:', !!session);
-    console.log('Is invitation:', isInvitation);
+    console.log('Access Token:', !!accessToken);
+    console.log('Refresh Token:', !!refreshToken);
+    console.log('Type:', type);
+    console.log('Is password recovery:', isPasswordRecovery);
 
-    // Add a small delay to ensure auth state has settled
-    const timer = setTimeout(() => {
-      // Check if user is authenticated (from password reset link or invitation)
-      if (session?.user) {
-        console.log('User is authenticated, showing password setup form');
-        setLoading(false);
+    const validateTokens = async () => {
+      if (accessToken && refreshToken && isPasswordRecovery) {
+        try {
+          // Set the session using the tokens from the URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (error) {
+            console.error('Error setting session:', error);
+            toast({
+              title: "Invalid Reset Link",
+              description: "This password reset link is invalid or has expired. Please request a new password reset link.",
+              variant: "destructive"
+            });
+            navigate('/auth');
+            return;
+          }
+
+          if (data.session) {
+            console.log('Session established successfully');
+            setTokenValid(true);
+          }
+        } catch (error) {
+          console.error('Token validation error:', error);
+          toast({
+            title: "Reset Link Error",
+            description: "There was an error processing your reset link. Please try again.",
+            variant: "destructive"
+          });
+          navigate('/auth');
+        }
       } else {
-        console.log('No authenticated session found');
+        console.log('No valid tokens found, redirecting to auth');
         toast({
           title: "Invalid Reset Link",
           description: "This password reset link is invalid or has expired. Please request a new password reset link.",
@@ -35,10 +72,11 @@ const ResetPassword: React.FC = () => {
         });
         navigate('/auth');
       }
-    }, 1000); // Give auth state time to settle
+      setLoading(false);
+    };
 
-    return () => clearTimeout(timer);
-  }, [user, session, navigate, toast, isInvitation]);
+    validateTokens();
+  }, [accessToken, refreshToken, type, isPasswordRecovery, navigate, toast]);
 
   const handlePasswordSetupSuccess = () => {
     if (isInvitation) {
@@ -70,6 +108,16 @@ const ResetPassword: React.FC = () => {
     );
   }
 
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">Invalid or expired reset link.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -86,7 +134,6 @@ const ResetPassword: React.FC = () => {
         </div>
         
         <PasswordSetupForm 
-          email={user?.email}
           onSuccess={handlePasswordSetupSuccess}
           onCancel={handleCancel}
         />

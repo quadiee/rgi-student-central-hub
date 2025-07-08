@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useToast } from '../ui/use-toast';
-import { PersonalizedAuthService } from '../../lib/personalizedAuth';
+import { supabase } from '../../integrations/supabase/client';
 
 interface PasswordSetupFormProps {
   email?: string;
@@ -52,20 +53,24 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
 
     try {
       console.log('PasswordSetupForm: Attempting to update password');
-      const result = await PersonalizedAuthService.updatePasswordWithContext(formData.password);
       
-      if (!result.success) {
-        console.error('PasswordSetupForm: Password update failed:', result.error);
+      // Use Supabase auth updateUser method directly
+      const { data, error } = await supabase.auth.updateUser({ 
+        password: formData.password 
+      });
+      
+      if (error) {
+        console.error('PasswordSetupForm: Password update failed:', error);
         toast({
           title: "Password Setup Failed",
-          description: result.error || 'Failed to update password',
+          description: error.message || 'Failed to update password',
           variant: "destructive"
         });
       } else {
         console.log('PasswordSetupForm: Password updated successfully');
         toast({
           title: "Password Set Successfully",
-          description: result.message || "Your password has been set successfully.",
+          description: "Your password has been set successfully.",
         });
         onSuccess?.();
       }

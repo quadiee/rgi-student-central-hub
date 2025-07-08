@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 
@@ -223,9 +224,9 @@ serve(async (req: Request) => {
       console.log('Profile not found, continuing with basic reset:', profileError.message);
     }
 
-    // Generate password recovery link with correct redirect URL for auth callback
+    // Generate password recovery link pointing directly to reset-password page
     const appUrl = getAppUrl(req);
-    const redirectUrl = `${appUrl}/auth/callback`;
+    const redirectUrl = `${appUrl}/reset-password`;
     
     console.log('Generating recovery link with redirect:', redirectUrl);
     const { data, error } = await supabase.auth.admin.generateLink({
