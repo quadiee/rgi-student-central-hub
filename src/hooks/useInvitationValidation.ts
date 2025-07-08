@@ -22,7 +22,8 @@ export const useInvitationValidation = (token: string | undefined) => {
     try {
       setLoadingInvitation(true);
       
-      const { data, error } = await supabase.rpc('validate_invitation_token', {
+      // Properly type the RPC call
+      const { data: rpcData, error } = await supabase.rpc('validate_invitation_token', {
         p_token: token!
       });
       
@@ -34,21 +35,28 @@ export const useInvitationValidation = (token: string | undefined) => {
       }
 
       // Type guard to ensure data is the expected format
-      if (!data || !Array.isArray(data) || data.length === 0) {
+      if (!rpcData || !Array.isArray(rpcData) || rpcData.length === 0) {
         setInviteError("Invalid invitation token.");
         setLoadingInvitation(false);
         return;
       }
 
-      // Type assertion with runtime validation
-      const inviteData = data[0] as ValidateInvitationResponse;
+      // Extract the first item and validate it's the correct structure
+      const responseItem = rpcData[0];
       
-      // Validate the response structure
-      if (!inviteData || typeof inviteData !== 'object' || !('email' in inviteData) || !inviteData.email) {
+      // Runtime validation to ensure we have the expected structure
+      if (!responseItem || 
+          typeof responseItem !== 'object' || 
+          !('email' in responseItem) || 
+          !('is_valid' in responseItem) ||
+          !responseItem.email) {
         setInviteError("Invalid invitation response format.");
         setLoadingInvitation(false);
         return;
       }
+
+      // Now we can safely cast to our expected type
+      const inviteData = responseItem as ValidateInvitationResponse;
 
       if (!inviteData.is_valid) {
         setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
