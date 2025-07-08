@@ -5,18 +5,20 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useToast } from '../ui/use-toast';
-import { authUtils } from '../../lib/auth-utils';
+import { supabase } from '../../integrations/supabase/client';
 
 interface PasswordSetupFormProps {
   email?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
+  isReset?: boolean;
 }
 
 const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({ 
   email, 
   onSuccess, 
-  onCancel 
+  onCancel,
+  isReset = false
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -52,7 +54,9 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
     }
 
     try {
-      const { error } = await authUtils.updatePassword(formData.password);
+      const { error } = await supabase.auth.updateUser({
+        password: formData.password
+      });
       
       if (error) {
         toast({
@@ -62,8 +66,8 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
         });
       } else {
         toast({
-          title: "Password Set Successfully",
-          description: "Your password has been set. You can now log in.",
+          title: isReset ? "Password Reset Successfully" : "Password Set Successfully",
+          description: isReset ? "Your password has been reset." : "Your password has been set. You can now log in.",
         });
         onSuccess?.();
       }
@@ -83,9 +87,13 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
         <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Set Your Password</h2>
+        <h2 className="text-2xl font-bold text-gray-800">
+          {isReset ? 'Reset Your Password' : 'Set Your Password'}
+        </h2>
         {email && (
-          <p className="text-gray-600">Creating password for {email}</p>
+          <p className="text-gray-600">
+            {isReset ? `Resetting password for ${email}` : `Creating password for ${email}`}
+          </p>
         )}
       </div>
 
@@ -146,7 +154,7 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
             className="w-full"
             disabled={loading}
           >
-            {loading ? 'Setting Password...' : 'Set Password'}
+            {loading ? (isReset ? 'Resetting Password...' : 'Setting Password...') : (isReset ? 'Reset Password' : 'Set Password')}
           </Button>
           {onCancel && (
             <Button
