@@ -67,7 +67,7 @@ export const authUtils = {
     }
   },
 
-  // Sign up new user with profile data
+  // Sign up new user with complete profile data
   signUpWithProfile: async (email: string, password: string, userData: SignUpData): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.auth.signUp({
@@ -75,8 +75,44 @@ export const authUtils = {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: userData
+          data: {
+            name: userData.name,
+            role: userData.role,
+            department: userData.department,
+            phone: userData.phone,
+            roll_number: userData.roll_number,
+            employee_id: userData.employee_id,
+            guardian_name: userData.guardian_name,
+            guardian_phone: userData.guardian_phone,
+            address: userData.address
+          }
         }
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Validate invitation token
+  validateInvitationToken: async (token: string): Promise<{ data?: any; error?: any }> => {
+    try {
+      const { data, error } = await supabase.rpc('validate_invitation_token', {
+        p_token: token
+      });
+      return { data: data?.[0], error };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Complete invitation profile
+  completeInvitationProfile: async (userId: string, invitationId: string, profileData: any): Promise<{ error?: any }> => {
+    try {
+      const { data, error } = await supabase.rpc('complete_invitation_profile', {
+        p_user_id: userId,
+        p_invitation_id: invitationId,
+        p_profile_data: profileData
       });
       return { error };
     } catch (error) {

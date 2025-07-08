@@ -13,15 +13,15 @@ const ResetPassword: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const isInvitation = searchParams.get('invitation') === 'true';
-  const token = searchParams.get('token');
 
   useEffect(() => {
     // Check if user is authenticated (from password reset link)
     if (user) {
       setLoading(false);
     } else {
-      // If no user but has token, they might need to authenticate first
+      // If no user, they might need to authenticate first
       setLoading(false);
+      const token = searchParams.get('token');
       if (!token) {
         toast({
           title: "Invalid Reset Link",
@@ -31,12 +31,10 @@ const ResetPassword: React.FC = () => {
         navigate('/auth');
       }
     }
-  }, [user, token, navigate, toast]);
+  }, [user, searchParams, navigate, toast]);
 
   const handlePasswordSetupSuccess = () => {
-    if (isInvitation && token) {
-      // Mark invitation as used if this was from an invitation
-      // This would typically be handled by the backend
+    if (isInvitation) {
       toast({
         title: "Setup Complete",
         description: "Your account has been activated successfully!",

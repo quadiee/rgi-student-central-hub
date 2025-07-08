@@ -100,7 +100,10 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
     
     for (const invitation of invitations) {
       try {
-        // Insert a single invitation object
+        // Generate a unique token for each invitation
+        const token = crypto.randomUUID();
+        
+        // Insert invitation with token
         const { data, error } = await supabase
           .from('user_invitations')
           .insert({
@@ -109,6 +112,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
             department: invitation.department as any,
             roll_number: invitation.rollNumber || null,
             employee_id: invitation.employeeId || null,
+            token: token,
             is_active: true,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
           })
@@ -121,12 +125,16 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
           continue;
         }
 
+        // Create invitation URL with token
+        const invitationUrl = `${window.location.origin}/invitation/${data.token}`;
+
         // Trigger email using the edge function
         const { error: sendError } = await supabase.functions.invoke("send-invitation", {
           body: {
             email: invitation.email,
             role: invitation.role,
             department: invitation.department,
+            invitationUrl: invitationUrl,
             invitedBy: null,
             invitationId: data.id
           }
