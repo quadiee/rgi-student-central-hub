@@ -4,6 +4,8 @@ import { PersonalizedAuthService } from './personalizedAuth';
 // Enhanced reset password function with personalization
 export async function resetPassword(email: string) {
   console.log('Sending personalized password reset to:', email);
+  console.log('Environment check - window available:', typeof window !== 'undefined');
+  console.log('Current origin:', typeof window !== 'undefined' ? window.location.origin : 'server-side');
   
   const result = await PersonalizedAuthService.sendPersonalizedPasswordReset(email);
   
@@ -14,6 +16,7 @@ export async function resetPassword(email: string) {
   
   console.log('Personalized password reset email sent successfully');
   console.log('User role detected:', result.userRole);
+  console.log('Full result:', result);
   
   return null;
 }

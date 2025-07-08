@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import { LinkGenerator, LinkContext } from '../utils/linkGenerator';
 
@@ -65,12 +66,16 @@ export class PersonalizedAuthService {
   // Enhanced password reset with role-based personalization
   static async sendPersonalizedPasswordReset(email: string): Promise<PersonalizedAuthResult> {
     try {
+      console.log('PersonalizedAuthService: Starting password reset for:', email);
+      
       // Get user profile for context
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('name, role, department_id, departments(name, code)')
         .eq('email', email)
         .single();
+
+      console.log('Profile lookup result:', { profile, profileError });
 
       const context: LinkContext = {
         userRole: profile?.role,
@@ -81,6 +86,8 @@ export class PersonalizedAuthService {
         }
       };
 
+      console.log('Calling edge function with context:', context);
+
       const { data, error } = await supabase.functions.invoke('send-password-reset', {
         body: { 
           email,
@@ -88,6 +95,8 @@ export class PersonalizedAuthService {
           context
         }
       });
+
+      console.log('Edge function response:', { data, error });
 
       if (error) {
         console.error('Edge function error:', error);
@@ -99,6 +108,7 @@ export class PersonalizedAuthService {
 
       // Check if the response indicates success
       if (data && !data.success) {
+        console.error('Edge function returned failure:', data);
         return {
           success: false,
           error: data.error || 'Failed to send password reset email'
@@ -108,7 +118,8 @@ export class PersonalizedAuthService {
       return {
         success: true,
         message: `Personalized password reset email sent to ${email}`,
-        userRole: profile?.role
+        userRole: profile?.role,
+        emailId: data?.emailId
       };
     } catch (error: any) {
       console.error('Password reset service error:', error);
