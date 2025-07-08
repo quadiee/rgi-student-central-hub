@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen } from 'lucide-react';
+import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen, Crown } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
 import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
@@ -25,7 +25,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'hod', 'principal', 'admin'] },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'hod', 'principal', 'admin', 'chairman'] },
     { id: 'fees', label: 'Fee Management', icon: CreditCard, roles: ['student', 'hod', 'principal', 'admin'] },
     { id: 'students', label: 'Students', icon: Users, roles: ['hod', 'principal', 'admin'] },
     { id: 'attendance', label: 'Attendance', icon: UserCheck, roles: ['hod', 'principal', 'admin'] },
@@ -41,6 +41,24 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const getDepartmentName = (deptCode: string) => {
     return DEPARTMENT_CODES[deptCode as keyof typeof DEPARTMENT_CODES] || deptCode;
   };
+
+  const getSidebarHeader = () => {
+    if (user?.role === 'chairman') {
+      return {
+        icon: Crown,
+        title: INSTITUTION.shortName,
+        subtitle: 'Chairman Portal'
+      };
+    }
+    return {
+      icon: Home,
+      title: INSTITUTION.shortName,
+      subtitle: 'Student Portal'
+    };
+  };
+
+  const headerInfo = getSidebarHeader();
+  const HeaderIcon = headerInfo.icon;
 
   return (
     <>
@@ -61,12 +79,12 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">R</span>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${user?.role === 'chairman' ? 'bg-gradient-to-r from-purple-600 to-blue-600' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}>
+                <HeaderIcon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-800">{INSTITUTION.shortName}</h2>
-                <p className="text-xs text-gray-600">Student Portal</p>
+                <h2 className="text-lg font-bold text-gray-800">{headerInfo.title}</h2>
+                <p className="text-xs text-gray-600">{headerInfo.subtitle}</p>
               </div>
             </div>
             <button 
@@ -78,10 +96,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
           </div>
 
           {/* Institution Info */}
-          <div className="px-6 py-4 bg-blue-50 border-b border-blue-100">
-            <h3 className="text-sm font-semibold text-blue-900">{INSTITUTION.name}</h3>
-            <p className="text-xs text-blue-700">{INSTITUTION.tagline}</p>
-            <p className="text-xs text-blue-600 mt-1">
+          <div className={`px-6 py-4 border-b ${user?.role === 'chairman' ? 'bg-purple-50 border-purple-100' : 'bg-blue-50 border-blue-100'}`}>
+            <h3 className={`text-sm font-semibold ${user?.role === 'chairman' ? 'text-purple-900' : 'text-blue-900'}`}>{INSTITUTION.name}</h3>
+            <p className={`text-xs ${user?.role === 'chairman' ? 'text-purple-700' : 'text-blue-700'}`}>{INSTITUTION.tagline}</p>
+            <p className={`text-xs mt-1 ${user?.role === 'chairman' ? 'text-purple-600' : 'text-blue-600'}`}>
               Affiliated to {INSTITUTION.academic.affiliation.split(',')[0]}
             </p>
           </div>
@@ -97,8 +115,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-                  {user.department && (
+                  <p className="text-xs text-gray-500 capitalize">
+                    {user.role === 'chairman' ? 'Chairman' : user.role}
+                  </p>
+                  {user.department && user.role !== 'chairman' && (
                     <p className="text-xs text-gray-400 truncate">
                       {getDepartmentName(user.department)}
                     </p>
@@ -122,7 +142,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                       }}
                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                         activeTab === item.id
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                          ? `${user?.role === 'chairman' ? 'bg-purple-50 text-purple-600 border border-purple-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >

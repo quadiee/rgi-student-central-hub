@@ -8,7 +8,8 @@ import {
   FileText,
   UserCheck,
   GraduationCap,
-  LogOut
+  LogOut,
+  Crown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 
@@ -29,6 +30,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     const baseItems = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
     ];
+
+    // Chairman only sees dashboard
+    if (user?.role === 'chairman') {
+      return baseItems;
+    }
 
     if (user?.role === 'admin' || user?.role === 'principal') {
       return [
@@ -59,16 +65,35 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
   const menuItems = getMenuItems();
 
+  // Get the appropriate icon and title based on role
+  const getSidebarHeader = () => {
+    if (user?.role === 'chairman') {
+      return {
+        icon: Crown,
+        title: 'RGCE Portal',
+        subtitle: 'Chairman Panel'
+      };
+    }
+    return {
+      icon: GraduationCap,
+      title: 'RGCE Portal',
+      subtitle: 'Fee Management'
+    };
+  };
+
+  const headerInfo = getSidebarHeader();
+  const HeaderIcon = headerInfo.icon;
+
   return (
     <div className="bg-white shadow-lg h-full w-64 fixed left-0 top-0 z-10">
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
-            <GraduationCap className="w-6 h-6 text-white" />
+          <div className={`p-2 rounded-lg ${user?.role === 'chairman' ? 'bg-gradient-to-r from-purple-600 to-blue-600' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}>
+            <HeaderIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800">RGCE Portal</h1>
-            <p className="text-sm text-gray-500">Fee Management</p>
+            <h1 className="text-xl font-bold text-gray-800">{headerInfo.title}</h1>
+            <p className="text-sm text-gray-500">{headerInfo.subtitle}</p>
           </div>
         </div>
       </div>
@@ -82,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center px-6 py-3 text-left hover:bg-blue-50 transition-colors ${
                 activeTab === item.id
-                  ? 'bg-blue-50 border-r-4 border-blue-600 text-blue-600'
+                  ? `${user?.role === 'chairman' ? 'bg-purple-50 border-r-4 border-purple-600 text-purple-600' : 'bg-blue-50 border-r-4 border-blue-600 text-blue-600'}`
                   : 'text-gray-700 hover:text-blue-600'
               }`}
             >
@@ -97,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user?.role === 'chairman' ? 'bg-gradient-to-r from-purple-500 to-blue-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`}>
               <span className="text-white text-sm font-medium">
                 {user?.name?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase()}
               </span>
@@ -107,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 {user?.name || user?.email}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {user?.role}
+                {user?.role === 'chairman' ? 'Chairman' : user?.role}
               </p>
             </div>
           </div>
