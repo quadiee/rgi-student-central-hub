@@ -81,7 +81,7 @@ export class PersonalizedAuthService {
         }
       };
 
-      const { error } = await supabase.functions.invoke('send-password-reset', {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
         body: { 
           email,
           resetUrl: LinkGenerator.generatePasswordResetUrl(undefined, context),
@@ -90,9 +90,18 @@ export class PersonalizedAuthService {
       });
 
       if (error) {
+        console.error('Edge function error:', error);
         return {
           success: false,
-          error: error.message
+          error: error.message || 'Failed to send password reset email'
+        };
+      }
+
+      // Check if the response indicates success
+      if (data && !data.success) {
+        return {
+          success: false,
+          error: data.error || 'Failed to send password reset email'
         };
       }
 
@@ -102,9 +111,10 @@ export class PersonalizedAuthService {
         userRole: profile?.role
       };
     } catch (error: any) {
+      console.error('Password reset service error:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message || 'An unexpected error occurred'
       };
     }
   }

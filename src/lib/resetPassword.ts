@@ -9,7 +9,7 @@ export async function resetPassword(email: string) {
   
   if (!result.success) {
     console.error('Reset password error:', result.error);
-    return new Error(result.error || 'Failed to send reset email');
+    throw new Error(result.error || 'Failed to send reset email');
   }
   
   console.log('Personalized password reset email sent successfully');

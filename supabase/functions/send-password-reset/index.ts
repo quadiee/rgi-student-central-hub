@@ -11,6 +11,14 @@ const corsHeaders = {
 interface PasswordResetRequest {
   email: string;
   resetUrl?: string;
+  context?: {
+    userRole?: string;
+    department?: string;
+    userData?: {
+      name?: string;
+      email?: string;
+    };
+  };
 }
 
 const getAppUrl = (req: Request): string => {
@@ -196,9 +204,13 @@ serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { email }: PasswordResetRequest = await req.json();
+    const requestBody: PasswordResetRequest = await req.json();
+    console.log('Password reset request received:', { email: requestBody.email });
+    
+    const { email, context } = requestBody;
 
     if (!email) {
+      console.error('Email is required but not provided');
       return new Response(
         JSON.stringify({ success: false, error: "Email is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -206,31 +218,45 @@ serve(async (req: Request) => {
     }
 
     // Get user profile for personalization
-    const { data: profile } = await supabase
+    console.log('Fetching user profile for:', email);
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('name, role, departments(name)')
       .eq('email', email)
       .single();
 
+    if (profileError) {
+      console.log('Profile not found, continuing with basic reset:', profileError.message);
+    }
+
     // Generate password recovery link
     const appUrl = getAppUrl(req);
     const redirectUrl = `${appUrl}/reset-password`;
+    
+    console.log('Generating recovery link with redirect:', redirectUrl);
     const { data, error } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
       options: { redirectTo: redirectUrl },
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error generating recovery link:', error);
+      throw error;
+    }
 
     const resetUrl = data.properties?.action_link;
     if (!resetUrl) {
+      console.error('Failed to generate reset link - no action_link in response');
       throw new Error("Failed to generate reset link");
     }
+
+    console.log('Recovery link generated successfully');
 
     // Get Resend API key
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
+      console.error('RESEND_API_KEY not configured');
       return new Response(
         JSON.stringify({ success: false, error: "Email service not configured" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -240,14 +266,15 @@ serve(async (req: Request) => {
     // Generate personalized email
     const emailHtml = generatePersonalizedResetEmail({
       recipientEmail: email,
-      recipientName: profile?.name,
-      role: profile?.role,
-      department: profile?.departments?.name,
+      recipientName: profile?.name || context?.userData?.name,
+      role: profile?.role || context?.userRole,
+      department: profile?.departments?.name || context?.department,
       resetUrl
     });
 
-    const emailSubject = `🔒 Reset Your RGCE Portal Password - ${formatRole(profile?.role || 'user')}`;
+    const emailSubject = `🔒 Reset Your RGCE Portal Password - ${formatRole(profile?.role || context?.userRole || 'user')}`;
 
+    console.log('Sending email via Resend to:', email);
     // Send email using Resend
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -266,8 +293,11 @@ serve(async (req: Request) => {
     const result = await response.json();
 
     if (!response.ok) {
+      console.error('Resend API error:', result);
       throw new Error(result.message || "Failed to send email");
     }
+
+    console.log('Email sent successfully:', result.id);
 
     return new Response(
       JSON.stringify({ 
