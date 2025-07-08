@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import PasswordSetupForm from '../components/Auth/PasswordSetupForm';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useToast } from '../components/ui/use-toast';
+import { authUtils } from '../lib/auth-utils';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -10,38 +11,54 @@ const ResetPassword: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
-  const isInvitation   = searchParams.get('invitation') === 'true';
-  const accessToken    = searchParams.get('access_token');
-  const type           = searchParams.get('type');
+  const token = searchParams.get('token');
+  const type = searchParams.get('type');
 
   useEffect(() => {
-    // We’re done loading whether or not user is already signed in
-    setLoading(false);
+    const processToken = async () => {
+      if (user) {
+        // Already logged in
+        setTokenValid(true);
+        setEmail(user.email ?? null);
+        setLoading(false);
+        return;
+      }
 
-    // If there's no access_token or it's not a recovery link, bounce to login
-    if (!accessToken || type !== 'recovery') {
-      toast({
-        title: "Invalid Reset Link",
-        description: "This password reset link is invalid or has expired.",
-        variant: "destructive"
-      });
-      navigate('/auth');
-    }
-  }, [accessToken, type, navigate, toast]);
+      if (token && type === 'recovery') {
+        const { error } = await authUtils.signInWithToken(token);
+        if (error) {
+          toast({
+            title: "Invalid or Expired Token",
+            description: "The password reset link is invalid or has expired.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+        } else {
+          // Supabase should now log the user in
+          setTokenValid(true);
+        }
+      } else {
+        toast({
+          title: "Invalid Reset Link",
+          description: "This password reset link is invalid or incomplete.",
+          variant: "destructive"
+        });
+        navigate('/auth');
+      }
+      setLoading(false);
+    };
+
+    processToken();
+  }, [token, type, user, navigate, toast]);
 
   const handlePasswordSetupSuccess = () => {
-    if (isInvitation && accessToken) {
-      toast({
-        title: "Setup Complete",
-        description: "Your account has been activated successfully!",
-      });
-    } else {
-      toast({
-        title: "Password Updated",
-        description: "Your password has been updated successfully!",
-      });
-    }
+    toast({
+      title: "Password Updated",
+      description: "Your password has been updated successfully!",
+    });
     navigate('/dashboard');
   };
 
@@ -60,11 +77,15 @@ const ResetPassword: React.FC = () => {
     );
   }
 
+  if (!tokenValid) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <PasswordSetupForm 
-        email={user?.email}
-        token={accessToken!}            // pass the real recovery token here
+        email={email ?? ''}
+        token={token!}
         onSuccess={handlePasswordSetupSuccess}
         onCancel={handleCancel}
       />
