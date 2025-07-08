@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Crown, BarChart3, List } from 'lucide-react';
+import { Crown, BarChart3, List, PieChart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import DepartmentAnalytics from '../Fees/DepartmentAnalytics';
+import FeeTypeAnalytics from '../Fees/FeeTypeAnalytics';
 import FeeListManagement from '../Fees/FeeListManagement';
 
 const ChairmanDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('dept-analytics');
 
   return (
     <div className="space-y-6">
@@ -25,10 +26,14 @@ const ChairmanDashboard: React.FC = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="dept-analytics" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
             Department Analytics
+          </TabsTrigger>
+          <TabsTrigger value="fee-type-analytics" className="flex items-center gap-2">
+            <PieChart className="w-4 h-4" />
+            Fee Type Analytics
           </TabsTrigger>
           <TabsTrigger value="fee-records" className="flex items-center gap-2">
             <List className="w-4 h-4" />
@@ -36,8 +41,12 @@ const ChairmanDashboard: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="analytics" className="space-y-6">
+        <TabsContent value="dept-analytics" className="space-y-6">
           <DepartmentAnalytics />
+        </TabsContent>
+
+        <TabsContent value="fee-type-analytics" className="space-y-6">
+          <FeeTypeAnalytics />
         </TabsContent>
 
         <TabsContent value="fee-records" className="space-y-6">
