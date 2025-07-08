@@ -26,9 +26,10 @@ const FeeManagementHub: React.FC = () => {
     );
   }
 
-  const isAdmin = user.role && ['admin', 'principal'].includes(user.role);
+  // Strict role-based access control
+  const isAdmin = user.role === 'admin';
   const isHOD = user.role === 'hod';
-  const isChairman = user.role === 'chairman';
+  const isChairmanOrPrincipal = user.role === 'chairman' || user.role === 'principal';
   const isStudent = user.role === 'student';
 
   return (
@@ -47,13 +48,14 @@ const FeeManagementHub: React.FC = () => {
             Dashboard
           </TabsTrigger>
           
-          {(isAdmin || isHOD || isChairman) && (
+          {(isAdmin || isHOD || isChairmanOrPrincipal) && (
             <TabsTrigger value="list-management" className="flex items-center gap-2">
               <List className="w-4 h-4" />
               Fee Records
             </TabsTrigger>
           )}
           
+          {/* Only Admin gets advanced features */}
           {isAdmin && (
             <>
               <TabsTrigger value="assign-fees" className="flex items-center gap-2">
@@ -67,7 +69,7 @@ const FeeManagementHub: React.FC = () => {
             </>
           )}
           
-          {(isAdmin || isHOD || isChairman) && (
+          {(isAdmin || isHOD || isChairmanOrPrincipal) && (
             <TabsTrigger value="real-time" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Real-time Stats
@@ -78,15 +80,16 @@ const FeeManagementHub: React.FC = () => {
         <TabsContent value="dashboard" className="space-y-6">
           {isStudent && <StudentFeeDashboard />}
           {isHOD && <HODFeeDashboard />}
-          {(isAdmin || isChairman) && <RealTimeFeeDashboard />}
+          {(isAdmin || isChairmanOrPrincipal) && <RealTimeFeeDashboard />}
         </TabsContent>
 
-        {(isAdmin || isHOD || isChairman) && (
+        {(isAdmin || isHOD || isChairmanOrPrincipal) && (
           <TabsContent value="list-management" className="space-y-6">
             <FeeListManagement />
           </TabsContent>
         )}
 
+        {/* Admin-only features */}
         {isAdmin && (
           <>
             <TabsContent value="assign-fees" className="space-y-6">
@@ -99,21 +102,22 @@ const FeeManagementHub: React.FC = () => {
           </>
         )}
 
-        {(isAdmin || isHOD || isChairman) && (
+        {(isAdmin || isHOD || isChairmanOrPrincipal) && (
           <TabsContent value="real-time" className="space-y-6">
             <RealTimeFeeDashboard />
           </TabsContent>
         )}
       </Tabs>
 
-      {/* Quick Stats for Overview */}
-      {activeTab === 'dashboard' && (isAdmin || isHOD || isChairman) && (
+      {/* Quick Stats for Overview - Only for authorized roles */}
+      {activeTab === 'dashboard' && (isAdmin || isHOD || isChairmanOrPrincipal) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {/* Only Admin gets assign fees and CSV upload */}
               {isAdmin && (
                 <>
                   <Button 
@@ -136,7 +140,8 @@ const FeeManagementHub: React.FC = () => {
                   </Button>
                 </>
               )}
-              {(isAdmin || isHOD || isChairman) && (
+              {/* All authorized roles can manage records */}
+              {(isAdmin || isHOD || isChairmanOrPrincipal) && (
                 <Button 
                   variant="outline" 
                   size="sm" 

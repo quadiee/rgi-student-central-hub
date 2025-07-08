@@ -3,8 +3,8 @@ import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import StudentDashboard from './StudentDashboard';
 import HODDashboard from './HODDashboard';
-import PrincipalDashboard from './PrincipalDashboard';
 import ChairmanDashboard from './ChairmanDashboard';
+import PrincipalDashboard from './PrincipalDashboard';
 import RealTimeStats from './RealTimeStats';
 
 const Dashboard: React.FC = () => {
@@ -15,6 +15,8 @@ const Dashboard: React.FC = () => {
       case 'student':
         return <StudentDashboard />;
       case 'chairman':
+      case 'principal':
+        // Both Chairman and Principal get the same view (institution-wide)
         return <ChairmanDashboard />;
       case 'hod':
         return (
@@ -23,8 +25,8 @@ const Dashboard: React.FC = () => {
             <HODDashboard />
           </div>
         );
-      case 'principal':
       case 'admin':
+        // Admin gets full access with enhanced dashboard
         return (
           <div className="space-y-6">
             <RealTimeStats />
