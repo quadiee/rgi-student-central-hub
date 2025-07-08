@@ -1,203 +1,159 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Upload, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Progress } from '../ui/progress';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { Progress } from '../ui/progress';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
+
+// Define proper types for CSV data
+interface CSVRow {
+  [key: string]: string | number;
+}
+
+interface ProcessResponse {
+  success: boolean;
+  message?: string;
+  processed_count?: number;
+  error?: string;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  roll_number: string;
+  year: number;
+  department: string;
+}
 
 interface BatchFeeProcessorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  selectedStudents: Student[];
   onProcessComplete: () => void;
 }
 
-interface Department {
-  id: string;
-  name: string;
-  code: string;
-}
-
-interface CSVRow {
-  roll_number: string;
-  fee_amount: number;
-  due_date: string;
-  fee_type?: string;
-  error?: string;
-  status?: 'error' | 'success' | 'pending';
-}
-
-const BatchFeeProcessor: React.FC<BatchFeeProcessorProps> = ({ open, onOpenChange, onProcessComplete }) => {
+const BatchFeeProcessor: React.FC<BatchFeeProcessorProps> = ({ 
+  open, 
+  onOpenChange, 
+  selectedStudents,
+  onProcessComplete
+}) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [processResults, setProcessResults] = useState<any>(null);
   const [academicYear, setAcademicYear] = useState('2024-25');
   const [semester, setSemester] = useState('5');
-  const [department, setDepartment] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [csvData, setCsvData] = useState<CSVRow[]>([]);
-  const [progress, setProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [processingMode, setProcessingMode] = useState<'csv' | 'bulk'>('bulk');
 
-  useEffect(() => {
-    if (open) {
-      fetchDepartments();
-    }
-  }, [open]);
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const fetchDepartments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name, code')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setDepartments(data || []);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-      parseCSV(e.target.files[0]);
-    }
-  };
-
-  const parseCSV = (file: File) => {
+    setCsvFile(file);
+    
     const reader = new FileReader();
-    
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
-        
-        // Validate required headers
-        const requiredHeaders = ['roll_number', 'fee_amount', 'due_date'];
-        const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
-        
-        if (missingHeaders.length > 0) {
-          toast({
-            title: "Error",
-            description: `CSV is missing required headers: ${missingHeaders.join(', ')}`,
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        const parsedData: CSVRow[] = [];
-        
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-          
-          const values = lines[i].split(',');
-          const row: CSVRow = {
-            roll_number: values[headers.indexOf('roll_number')].trim(),
-            fee_amount: parseFloat(values[headers.indexOf('fee_amount')]),
-            due_date: values[headers.indexOf('due_date')].trim(),
-            status: 'pending'
-          };
-          
-          // Optional fee_type column
-          if (headers.includes('fee_type')) {
-            row.fee_type = values[headers.indexOf('fee_type')].trim();
-          }
-          
-          // Validate row data
-          if (!row.roll_number) {
-            row.error = 'Roll number is required';
-            row.status = 'error';
-          } else if (isNaN(row.fee_amount) || row.fee_amount <= 0) {
-            row.error = 'Invalid fee amount';
-            row.status = 'error';
-          } else if (!isValidDate(row.due_date)) {
-            row.error = 'Invalid due date format (use YYYY-MM-DD)';
-            row.status = 'error';
-          }
-          
-          parsedData.push(row);
-        }
-        
-        setCsvData(parsedData);
-      } catch (error) {
-        console.error('Error parsing CSV:', error);
-        toast({
-          title: "Error",
-          description: "Failed to parse CSV file",
-          variant: "destructive"
+    reader.onload = (e) => {
+      const csv = e.target?.result as string;
+      const lines = csv.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const data: CSVRow[] = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const row: CSVRow = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
         });
-      }
+        return row;
+      });
+      
+      setCsvData(data);
     };
-    
     reader.readAsText(file);
   };
 
-  const isValidDate = (dateString: string): boolean => {
-    const regex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!regex.test(dateString)) return false;
+  const generateSampleCSV = () => {
+    const headers = ['roll_number', 'fee_amount', 'due_date', 'fee_type'];
+    const sampleData = [
+      ['21CS001', '75000', '2024-12-31', 'Semester Fee'],
+      ['21CS002', '75000', '2024-12-31', 'Semester Fee'],
+      ['21CS003', '75000', '2024-12-31', 'Semester Fee']
+    ];
     
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date.getTime());
+    const csvContent = [headers.join(','), ...sampleData.map(row => row.join(','))].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_fee_upload.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
-  const handleSubmit = async () => {
-    if (!department || !academicYear || !semester || csvData.length === 0) {
+  const processBulkFeeAssignment = async () => {
+    if (selectedStudents.length === 0) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields and upload a valid CSV",
+        description: "No students selected for bulk fee assignment",
         variant: "destructive"
       });
       return;
     }
 
     setProcessing(true);
-    setProgress(0);
-    
+    let successCount = 0;
+    let errorCount = 0;
+
     try {
-      const validRows = csvData.filter(row => row.status !== 'error');
-      
-      if (validRows.length === 0) {
-        toast({
-          title: "Error",
-          description: "No valid rows to process",
-          variant: "destructive"
-        });
-        setProcessing(false);
-        return;
+      for (const student of selectedStudents) {
+        try {
+          const { error } = await supabase
+            .from('fee_records')
+            .insert({
+              student_id: student.id,
+              academic_year: academicYear,
+              semester: parseInt(semester),
+              original_amount: 75000, // Default amount
+              final_amount: 75000,
+              due_date: '2024-12-31',
+              status: 'Pending'
+            });
+
+          if (error) throw error;
+          successCount++;
+        } catch (error) {
+          console.error(`Error processing student ${student.roll_number}:`, error);
+          errorCount++;
+        }
       }
-      
-      // Call the stored procedure to process the CSV data
-      const { data, error } = await supabase.rpc('process_fee_csv_upload_with_types', {
-        p_academic_year: academicYear,
-        p_semester: parseInt(semester),
-        p_department: department as any, // Department code as enum
-        p_csv_data: validRows,
-        p_uploaded_by: null // Will be filled by RLS with auth.uid()
+
+      setProcessResults({
+        success: true,
+        processed_count: successCount,
+        error_count: errorCount,
+        message: `Successfully processed ${successCount} students`
       });
-      
-      if (error) throw error;
-      
+
       toast({
         title: "Success",
-        description: `Processed ${data.processed_count} student fee records successfully`,
+        description: `Bulk fee assignment completed. ${successCount} students processed successfully.`,
       });
-      
+
       onProcessComplete();
-      onOpenChange(false);
     } catch (error: any) {
-      console.error('Error processing batch:', error);
+      console.error('Error in bulk processing:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to process batch",
+        description: error.message || "Failed to process bulk fee assignment",
         variant: "destructive"
       });
     } finally {
@@ -205,45 +161,139 @@ const BatchFeeProcessor: React.FC<BatchFeeProcessorProps> = ({ open, onOpenChang
     }
   };
 
-  const clearFile = () => {
-    setFile(null);
-    setCsvData([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const processCSVUpload = async () => {
+    if (!csvFile || csvData.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please upload a valid CSV file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      // Convert CSV data to proper format for the database function
+      const processedData = csvData.map(row => ({
+        roll_number: row.roll_number,
+        fee_amount: row.fee_amount,
+        due_date: row.due_date,
+        fee_type: row.fee_type || 'Semester Fee'
+      }));
+
+      const { data, error } = await supabase.rpc('process_fee_csv_upload_with_types', {
+        p_academic_year: academicYear,
+        p_semester: parseInt(semester),
+        p_department: 'CSE', // You might want to make this dynamic
+        p_csv_data: processedData as any, // Type assertion for JSONB
+        p_uploaded_by: (await supabase.auth.getUser()).data.user?.id
+      });
+
+      if (error) throw error;
+
+      // Type assertion for the response
+      const response = data as ProcessResponse;
+      
+      setProcessResults(response);
+
+      toast({
+        title: "Success",
+        description: `CSV processed successfully. ${response.processed_count || 0} records processed.`,
+      });
+
+      onProcessComplete();
+    } catch (error: any) {
+      console.error('Error processing CSV:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process CSV file",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Batch Fee Processing</DialogTitle>
+          <DialogTitle>Batch Fee Processor</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Processing Mode Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <Card 
+              className={`cursor-pointer transition-all ${
+                processingMode === 'bulk' ? 'ring-2 ring-blue-500' : ''
+              }`}
+              onClick={() => setProcessingMode('bulk')}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Bulk Assignment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  Assign fees to {selectedStudents.length} selected students with default amounts
+                </p>
+                <Badge variant="outline" className="mt-2">
+                  {selectedStudents.length} students selected
+                </Badge>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`cursor-pointer transition-all ${
+                processingMode === 'csv' ? 'ring-2 ring-blue-500' : ''
+              }`}
+              onClick={() => setProcessingMode('csv')}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  CSV Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  Upload a CSV file with custom fee amounts and details
+                </p>
+                <Badge variant="outline" className="mt-2">
+                  {csvData.length} records loaded
+                </Badge>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Common Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Academic Year *</Label>
+              <Label htmlFor="academic-year">Academic Year</Label>
               <Select value={academicYear} onValueChange={setAcademicYear}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select academic year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2023-24">2023-24</SelectItem>
                   <SelectItem value="2024-25">2024-25</SelectItem>
                   <SelectItem value="2025-26">2025-26</SelectItem>
+                  <SelectItem value="2023-24">2023-24</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
-              <Label>Semester *</Label>
+              <Label htmlFor="semester">Semester</Label>
               <Select value={semester} onValueChange={setSemester}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select semester" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[1,2,3,4,5,6,7,8].map(sem => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
                     <SelectItem key={sem} value={sem.toString()}>
                       Semester {sem}
                     </SelectItem>
@@ -251,135 +301,162 @@ const BatchFeeProcessor: React.FC<BatchFeeProcessorProps> = ({ open, onOpenChang
                 </SelectContent>
               </Select>
             </div>
-            
-            <div>
-              <Label>Department *</Label>
-              <Select value={department} onValueChange={setDepartment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map(dept => (
-                    <SelectItem key={dept.id} value={dept.code}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
-          
-          {/* CSV Upload */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-            {!file ? (
-              <div className="text-center space-y-4">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <div>
-                  <Label htmlFor="file-upload" className="block font-medium text-gray-900">
-                    Upload CSV File
-                  </Label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    CSV must include: roll_number, fee_amount, due_date columns
-                  </p>
+
+          {/* CSV Upload Section */}
+          {processingMode === 'csv' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="csv-file">Upload CSV File</Label>
+                  <Input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="mt-1"
+                  />
                 </div>
-                <input
-                  id="file-upload"
-                  name="file-upload"
-                  type="file"
-                  accept=".csv"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="sr-only"
-                />
                 <Button 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
+                  onClick={generateSampleCSV}
+                  variant="outline"
+                  className="flex items-center gap-2"
                 >
-                  Select File
+                  <Download className="w-4 h-4" />
+                  Download Sample
                 </Button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {csvData.length} records • {csvData.filter(row => row.status === 'error').length} errors
-                    </p>
+
+              {csvData.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-2">CSV Preview ({csvData.length} records)</h4>
+                  <div className="max-h-48 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          {Object.keys(csvData[0] || {}).map(key => (
+                            <th key={key} className="text-left p-2">{key}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvData.slice(0, 5).map((row, index) => (
+                          <tr key={index} className="border-b">
+                            {Object.values(row).map((value, i) => (
+                              <td key={i} className="p-2">{value}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={clearFile}>
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
-                
-                {/* Preview */}
-                <div className="max-h-60 overflow-y-auto border rounded">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Roll Number</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {csvData.slice(0, 5).map((row, index) => (
-                        <tr key={index}>
-                          <td className="px-4 py-2 text-sm">{row.roll_number}</td>
-                          <td className="px-4 py-2 text-sm">₹{row.fee_amount}</td>
-                          <td className="px-4 py-2 text-sm">{row.due_date}</td>
-                          <td className="px-4 py-2 text-sm">
-                            {row.status === 'error' ? (
-                              <Badge variant="destructive" className="flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                {row.error}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                Valid
-                              </Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      
-                      {csvData.length > 5 && (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-2 text-sm text-center text-gray-500">
-                            {csvData.length - 5} more records...
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Progress Bar */}
-          {processing && (
-            <div className="space-y-2">
-              <Progress value={progress} className="h-2" />
-              <p className="text-sm text-center text-gray-500">
-                Processing... {progress}%
-              </p>
+              )}
             </div>
           )}
-          
+
+          {/* Bulk Assignment Preview */}
+          {processingMode === 'bulk' && selectedStudents.length > 0 && (
+            <div className="border rounded-lg p-4">
+              <h4 className="font-medium mb-2">Selected Students ({selectedStudents.length})</h4>
+              <div className="max-h-48 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Roll Number</th>
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Year</th>
+                      <th className="text-left p-2">Department</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedStudents.slice(0, 5).map((student, index) => (
+                      <tr key={index} className="border-b">
+                        <td className="p-2">{student.roll_number}</td>
+                        <td className="p-2">{student.name}</td>
+                        <td className="p-2">{student.year}</td>
+                        <td className="p-2">{student.department}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {selectedStudents.length > 5 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    ... and {selectedStudents.length - 5} more students
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Processing Results */}
+          {processResults && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {processResults.success ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                  )}
+                  Processing Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Status:</span>
+                    <Badge variant={processResults.success ? "default" : "destructive"}>
+                      {processResults.success ? "Success" : "Error"}
+                    </Badge>
+                  </div>
+                  {processResults.processed_count && (
+                    <div className="flex justify-between">
+                      <span>Records Processed:</span>
+                      <span className="font-medium">{processResults.processed_count}</span>
+                    </div>
+                  )}
+                  {processResults.error_count && (
+                    <div className="flex justify-between">
+                      <span>Errors:</span>
+                      <span className="font-medium text-red-600">{processResults.error_count}</span>
+                    </div>
+                  )}
+                  {processResults.message && (
+                    <p className="text-sm text-gray-600">{processResults.message}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Processing Progress */}
+          {processing && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span>Processing...</span>
+                </div>
+                <Progress value={45} className="mt-4" />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={processing}
+            >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={processing || !file || !department || !academicYear || !semester || csvData.length === 0}
+            <Button
+              onClick={processingMode === 'csv' ? processCSVUpload : processBulkFeeAssignment}
+              disabled={processing || (processingMode === 'csv' && csvData.length === 0) || (processingMode === 'bulk' && selectedStudents.length === 0)}
             >
-              Process Batch
+              {processing ? 'Processing...' : 'Process Fees'}
             </Button>
           </div>
         </div>

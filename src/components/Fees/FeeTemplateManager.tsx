@@ -78,9 +78,17 @@ const FeeTemplateManager: React.FC<FeeTemplateManagerProps> = ({ open, onOpenCha
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTemplates(data || []);
+      
+      // Type assertion to ensure proper typing
+      const typedData = data as FeeTemplate[];
+      setTemplates(typedData || []);
     } catch (error) {
       console.error('Error fetching templates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch fee templates",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -117,7 +125,9 @@ const FeeTemplateManager: React.FC<FeeTemplateManagerProps> = ({ open, onOpenCha
         description: "Template saved successfully",
       });
 
-      setTemplates([data, ...templates]);
+      // Type assertion for the returned data
+      const savedTemplate = data as FeeTemplate;
+      setTemplates([savedTemplate, ...templates]);
       setNewTemplate({
         name: '',
         fee_type_id: '',

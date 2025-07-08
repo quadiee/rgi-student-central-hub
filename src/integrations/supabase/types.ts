@@ -402,6 +402,47 @@ export type Database = {
           },
         ]
       }
+      fee_templates: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          due_date: string
+          fee_type_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          due_date: string
+          fee_type_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          fee_type_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_templates_fee_type_id_fkey"
+            columns: ["fee_type_id"]
+            isOneToOne: false
+            referencedRelation: "fee_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_types: {
         Row: {
           created_at: string | null
