@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, AlertTriangle, Users, Building2, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -8,11 +7,13 @@ import { useToast } from '../ui/use-toast';
 import { SupabaseFeeService } from '../../services/supabaseFeeService';
 import { FeeRecord } from '../../types';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useUserConversion } from '../../hooks/useUserConversion';
 
 const PrincipalFeeView: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { convertProfileToUser } = useUserConversion();
   const [feeData, setFeeData] = useState<any>({
     totalRevenue: 0,
     totalOutstanding: 0,
@@ -24,13 +25,15 @@ const PrincipalFeeView: React.FC = () => {
 
   useEffect(() => {
     fetchInstitutionData();
-  }, [user]);
+  }, [profile]);
 
   const fetchInstitutionData = async () => {
-    if (!user) return;
+    if (!profile) return;
     
     try {
       setLoading(true);
+      
+      const user = convertProfileToUser(profile);
       
       // Fetch all fee records for institution overview
       const allRecords = await SupabaseFeeService.getFeeRecords(user);
@@ -72,8 +75,11 @@ const PrincipalFeeView: React.FC = () => {
   };
 
   const generateReport = async () => {
+    if (!profile) return;
+    
     try {
-      const report = await SupabaseFeeService.generateReport(user!, {
+      const user = convertProfileToUser(profile);
+      const report = await SupabaseFeeService.generateReport(user, {
         title: 'Institution Fee Report',
         type: 'Revenue',
         filters: { department: selectedDepartment !== 'ALL' ? selectedDepartment : undefined }
