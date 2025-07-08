@@ -17,6 +17,10 @@ export interface User {
   phone?: string;
   address?: string;
   department?: string;
+  profile_photo_url?: string;
+  roll_number?: string;
+  employee_id?: string;
+  created_at?: string;
 }
 
 export interface Student {
