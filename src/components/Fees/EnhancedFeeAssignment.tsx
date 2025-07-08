@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Upload, Filter, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -76,6 +75,8 @@ const EnhancedFeeAssignment: React.FC = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
+      console.log('Fetching students with filters:', { departmentFilter, yearFilter, searchTerm });
+      
       let query = supabase
         .from('profiles')
         .select(`
@@ -86,7 +87,7 @@ const EnhancedFeeAssignment: React.FC = () => {
           year,
           semester,
           department_id,
-          departments:department_id (
+          departments!profiles_department_id_fkey (
             id,
             name,
             code
@@ -110,29 +111,65 @@ const EnhancedFeeAssignment: React.FC = () => {
       const { data, error } = await query.order('roll_number');
 
       if (error) {
-        console.error('Error fetching students:', error);
-        throw error;
+        console.error('Supabase query error:', error);
+        throw new Error(`Database query failed: ${error.message}`);
       }
 
-      // Map the data to match the Student interface
-      const mappedData: Student[] = (data || []).map(item => ({
-        id: item.id,
-        name: item.name,
-        email: item.email,
-        roll_number: item.roll_number,
-        year: item.year,
-        semester: item.semester,
-        department: item.departments || { id: '', name: '', code: '' }
-      }));
+      console.log('Raw query response:', data);
 
+      if (!data) {
+        console.log('No data returned from query');
+        setStudents([]);
+        return;
+      }
+
+      // Map the data to match the Student interface with better error handling
+      const mappedData: Student[] = data
+        .filter(item => {
+          if (!item.id || !item.name || !item.email) {
+            console.warn('Incomplete student data:', item);
+            return false;
+          }
+          return true;
+        })
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          email: item.email,
+          roll_number: item.roll_number || '',
+          year: item.year,
+          semester: item.semester,
+          department: item.departments ? {
+            id: item.departments.id,
+            name: item.departments.name,
+            code: item.departments.code
+          } : {
+            id: '',
+            name: 'No Department',
+            code: 'N/A'
+          }
+        }));
+
+      console.log('Mapped student data:', mappedData);
       setStudents(mappedData);
+
+      if (mappedData.length === 0) {
+        toast({
+          title: "No Students Found",
+          description: "No students match your current filter criteria.",
+          variant: "default"
+        });
+      }
+
     } catch (error) {
       console.error('Error fetching students:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
-        title: "Error",
-        description: "Failed to fetch students. Please try again.",
+        title: "Error Loading Students",
+        description: `Failed to fetch students: ${errorMessage}`,
         variant: "destructive"
       });
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -146,10 +183,20 @@ const EnhancedFeeAssignment: React.FC = () => {
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching departments:', error);
+        throw error;
+      }
+      
+      console.log('Departments loaded:', data);
       setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load departments",
+        variant: "destructive"
+      });
     }
   };
 
@@ -161,10 +208,20 @@ const EnhancedFeeAssignment: React.FC = () => {
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching fee types:', error);
+        throw error;
+      }
+      
+      console.log('Fee types loaded:', data);
       setFeeTypes(data || []);
     } catch (error) {
       console.error('Error fetching fee types:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load fee types",
+        variant: "destructive"
+      });
     }
   };
 
@@ -393,9 +450,24 @@ const EnhancedFeeAssignment: React.FC = () => {
                     </div>
                   ))}
 
-                  {students.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      No students found matching your criteria
+                  {students.length === 0 && !loading && (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <div className="text-gray-500">
+                        <p className="font-medium">No students found</p>
+                        <p className="text-sm">Try adjusting your search criteria or filters</p>
+                        <Button 
+                          variant="outline" 
+                          className="mt-2"
+                          onClick={() => {
+                            setSearchTerm('');
+                            setDepartmentFilter('');
+                            setYearFilter('');
+                          }}
+                        >
+                          Clear Filters
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
