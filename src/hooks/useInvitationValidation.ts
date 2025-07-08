@@ -1,7 +1,37 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { InvitationData, ValidateInvitationResponse } from '../types/invitation';
+import { InvitationData } from '../types/invitation';
+
+// Define the expected RPC response structure
+interface RpcValidationResponse {
+  id: string;
+  email: string;
+  role: string;
+  department: string;
+  roll_number: string | null;
+  employee_id: string | null;
+  is_valid: boolean;
+  error_message: string | null;
+}
+
+// Type predicate function to validate RPC response
+function isValidRpcResponse(data: unknown): data is RpcValidationResponse {
+  if (!data || typeof data !== 'object') return false;
+  
+  const obj = data as Record<string, unknown>;
+  
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.email === 'string' &&
+    typeof obj.role === 'string' &&
+    typeof obj.department === 'string' &&
+    typeof obj.is_valid === 'boolean' &&
+    (obj.roll_number === null || typeof obj.roll_number === 'string') &&
+    (obj.employee_id === null || typeof obj.employee_id === 'string') &&
+    (obj.error_message === null || typeof obj.error_message === 'string')
+  );
+}
 
 export const useInvitationValidation = (token: string | undefined) => {
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
@@ -18,76 +48,75 @@ export const useInvitationValidation = (token: string | undefined) => {
     loadInvitationDetails();
   }, [token]);
 
-  const loadInvitationDetails = async () => {
+  const loadInvitationDetails = async (): Promise<void> => {
     try {
       setLoadingInvitation(true);
+      setInviteError(null);
       
-      // Properly type the RPC call
-      const { data: rpcData, error } = await supabase.rpc('validate_invitation_token', {
+      // Call RPC function
+      const { data: rpcResponse, error: rpcError } = await supabase.rpc('validate_invitation_token', {
         p_token: token!
       });
       
-      if (error) {
-        console.error('RPC Error:', error);
+      if (rpcError) {
+        console.error('RPC Error:', rpcError);
         setInviteError("Failed to validate invitation token.");
         setLoadingInvitation(false);
         return;
       }
 
-      // Type guard to ensure data is the expected format
-      if (!rpcData || !Array.isArray(rpcData) || rpcData.length === 0) {
+      // Validate response structure
+      if (!Array.isArray(rpcResponse) || rpcResponse.length === 0) {
         setInviteError("Invalid invitation token.");
         setLoadingInvitation(false);
         return;
       }
 
-      // Extract the first item and validate it's the correct structure
-      const responseItem = rpcData[0];
+      const responseData = rpcResponse[0];
       
-      // Runtime validation to ensure we have the expected structure
-      if (!responseItem || 
-          typeof responseItem !== 'object' || 
-          !('email' in responseItem) || 
-          !('is_valid' in responseItem) ||
-          !responseItem.email) {
+      // Use type predicate to validate and narrow type
+      if (!isValidRpcResponse(responseData)) {
         setInviteError("Invalid invitation response format.");
         setLoadingInvitation(false);
         return;
       }
 
-      // Now we can safely cast to our expected type
-      const inviteData = responseItem as ValidateInvitationResponse;
-
-      if (!inviteData.is_valid) {
-        setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
+      // Check if invitation is valid
+      if (!responseData.is_valid) {
+        setInviteError(responseData.error_message || "This invitation is invalid or has expired.");
         setLoadingInvitation(false);
         return;
       }
 
-      // Convert to our internal type format
-      const processedInvitationData: InvitationData = {
-        id: inviteData.id,
-        email: inviteData.email,
-        role: inviteData.role,
-        department: inviteData.department,
-        roll_number: inviteData.roll_number || undefined,
-        employee_id: inviteData.employee_id || undefined,
-        is_valid: inviteData.is_valid,
-        error_message: inviteData.error_message || undefined
+      // Transform to our internal type format
+      const processedData: InvitationData = {
+        id: responseData.id,
+        email: responseData.email,
+        role: responseData.role,
+        department: responseData.department,
+        roll_number: responseData.roll_number || undefined,
+        employee_id: responseData.employee_id || undefined,
+        is_valid: responseData.is_valid,
+        error_message: responseData.error_message || undefined
       };
 
-      setInvitationData(processedInvitationData);
+      setInvitationData(processedData);
 
       // Check if user already exists in auth.users
-      const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
-      if (!userError && users) {
-        const existingUser = users.find(u => u.email === inviteData.email);
-        setUserExists(!!existingUser);
+      try {
+        const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+        if (!userError && users) {
+          const existingUser = users.find(u => u.email === responseData.email);
+          setUserExists(!!existingUser);
+        }
+      } catch (userCheckError) {
+        console.warn('Could not check if user exists:', userCheckError);
+        // Don't fail the whole flow if user check fails
+        setUserExists(false);
       }
 
-      setInviteError(null);
       setLoadingInvitation(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading invitation details:', err);
       setInviteError("Something went wrong while verifying your invitation.");
       setLoadingInvitation(false);
