@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Plus, Edit, Trash2, Eye, Users, Calendar, BarChart3 } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -16,6 +17,8 @@ import FeeRecordEditDialog from './FeeRecordEditDialog';
 import BulkFeeActions from './BulkFeeActions';
 import DepartmentAnalytics from './DepartmentAnalytics';
 import UserActivityLogs from '../Admin/UserActivityLogs';
+import EnhancedFeeFilters, { FeeFilterOptions } from './EnhancedFeeFilters';
+import EnhancedCSVUploader from './EnhancedCSVUploader';
 
 interface FeeRecord {
   id: string;
@@ -52,16 +55,25 @@ const FeeListManagement: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [selectedYear, setSelectedYear] = useState('all');
-  const [selectedFeeType, setSelectedFeeType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [editingRecord, setEditingRecord] = useState<FeeRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const recordsPerPage = 20;
+
+  // Enhanced filter state
+  const [filters, setFilters] = useState<FeeFilterOptions>({
+    searchTerm: '',
+    selectedDepartment: 'all',
+    selectedYear: 'all',
+    selectedFeeType: 'all',
+    selectedStatus: 'all',
+    fromDate: '',
+    toDate: '',
+    dateFilterType: 'created_at',
+    minAmount: '',
+    maxAmount: ''
+  });
 
   useEffect(() => {
     if (user) {
@@ -73,7 +85,7 @@ const FeeListManagement: React.FC = () => {
     if (user) {
       loadFeeRecords();
     }
-  }, [user, currentPage, searchTerm, selectedDepartment, selectedYear, selectedFeeType, selectedStatus]);
+  }, [user, currentPage, filters]);
 
   const loadInitialData = async () => {
     try {
@@ -112,10 +124,15 @@ const FeeListManagement: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_fee_records_with_filters', {
         p_user_id: user.id,
-        p_department: selectedDepartment === 'all' ? null : selectedDepartment,
-        p_year: selectedYear === 'all' ? null : parseInt(selectedYear),
-        p_fee_type: selectedFeeType === 'all' ? null : selectedFeeType,
-        p_status: selectedStatus === 'all' ? null : selectedStatus,
+        p_department: filters.selectedDepartment === 'all' ? null : filters.selectedDepartment,
+        p_year: filters.selectedYear === 'all' ? null : parseInt(filters.selectedYear),
+        p_fee_type: filters.selectedFeeType === 'all' ? null : filters.selectedFeeType,
+        p_status: filters.selectedStatus === 'all' ? null : filters.selectedStatus,
+        p_from_date: filters.fromDate || null,
+        p_to_date: filters.toDate || null,
+        p_date_filter_type: filters.dateFilterType,
+        p_min_amount: filters.minAmount ? parseFloat(filters.minAmount) : null,
+        p_max_amount: filters.maxAmount ? parseFloat(filters.maxAmount) : null,
         p_limit: recordsPerPage,
         p_offset: (currentPage - 1) * recordsPerPage
       });
@@ -124,7 +141,7 @@ const FeeListManagement: React.FC = () => {
 
       setFeeRecords(data || []);
       
-      // Get total count
+      // Get total count with same filters
       const { count } = await supabase
         .from('fee_records')
         .select('*', { count: 'exact', head: true });
@@ -219,9 +236,14 @@ const FeeListManagement: React.FC = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fee_records_${new Date().getTime()}.csv`;
+    a.download = `filtered_fee_records_${new Date().getTime()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: "Filtered fee records exported successfully",
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -255,7 +277,7 @@ const FeeListManagement: React.FC = () => {
             <div className="flex gap-2">
               <Button onClick={exportToCSV} variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-2" />
-                Export CSV
+                Export Filtered Data
               </Button>
             </div>
           </CardTitle>
@@ -263,97 +285,36 @@ const FeeListManagement: React.FC = () => {
 
         <CardContent>
           <Tabs defaultValue="records" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="records" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Fee Records
               </TabsTrigger>
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                CSV Upload
+              </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Department Analytics
+                Analytics
               </TabsTrigger>
               <TabsTrigger value="activity" className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Activity Logs
+                Activity
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="records" className="space-y-4">
-              {/* Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search students..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {departments.map(dept => (
-                      <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {[1, 2, 3, 4].map(year => (
-                      <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={selectedFeeType} onValueChange={setSelectedFeeType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Fee Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Fee Types</SelectItem>
-                    {feeTypes.map(type => (
-                      <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Partial">Partial</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedDepartment('all');
-                    setSelectedYear('all');
-                    setSelectedFeeType('all');
-                    setSelectedStatus('all');
-                    setCurrentPage(1);
-                  }}
-                  variant="outline"
-                >
-                  Clear Filters
-                </Button>
-              </div>
+              {/* Enhanced Filters */}
+              <EnhancedFeeFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                departments={departments}
+                feeTypes={feeTypes}
+                totalRecords={totalRecords}
+                filteredRecords={feeRecords.length}
+                loading={loading}
+              />
 
               {/* Bulk Actions */}
               {selectedRecords.length > 0 && (
@@ -396,7 +357,7 @@ const FeeListManagement: React.FC = () => {
                     ) : feeRecords.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                          No fee records found
+                          No fee records found with current filters
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -476,6 +437,10 @@ const FeeListManagement: React.FC = () => {
                   </Button>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="upload">
+              <EnhancedCSVUploader onUploadComplete={loadFeeRecords} />
             </TabsContent>
 
             <TabsContent value="analytics">

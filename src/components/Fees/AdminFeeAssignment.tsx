@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Upload, DollarSign, Users } from 'lucide-react';
+import { UserPlus, Upload, DollarSign, Users, Search } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
@@ -15,6 +17,8 @@ interface Student {
   roll_number: string;
   email: string;
   department_id: string;
+  department_name: string;
+  year: number;
 }
 
 interface FeeType {
@@ -24,11 +28,19 @@ interface FeeType {
   is_mandatory: boolean;
 }
 
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+}
+
 const AdminFeeAssignment: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [feeAmount, setFeeAmount] = useState('');
   const [selectedFeeType, setSelectedFeeType] = useState('default');
@@ -37,24 +49,72 @@ const AdminFeeAssignment: React.FC = () => {
   const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
 
   useEffect(() => {
-    loadStudents();
+    loadDepartments();
     loadFeeTypes();
   }, []);
+
+  useEffect(() => {
+    if (departments.length > 0) {
+      loadStudents();
+    }
+  }, [departments]);
+
+  useEffect(() => {
+    filterStudents();
+  }, [students, studentSearch, departmentFilter, yearFilter]);
+
+  const loadDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error loading departments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load departments",
+        variant: "destructive"
+      });
+    }
+  };
 
   const loadStudents = async () => {
     try {
       setStudentsLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, roll_number, email, department_id')
+        .select(`
+          id, 
+          name, 
+          roll_number, 
+          email, 
+          department_id,
+          year,
+          departments!inner(name)
+        `)
         .eq('role', 'student')
         .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
-      setStudents(data || []);
+      
+      const studentsWithDept = (data || []).map(student => ({
+        ...student,
+        department_name: (student as any).departments?.name || 'Unknown'
+      }));
+
+      setStudents(studentsWithDept);
+      setFilteredStudents(studentsWithDept);
     } catch (error) {
       console.error('Error loading students:', error);
       toast({
@@ -85,6 +145,31 @@ const AdminFeeAssignment: React.FC = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const filterStudents = () => {
+    let filtered = students;
+
+    // Search filter
+    if (studentSearch) {
+      filtered = filtered.filter(student =>
+        student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        student.roll_number.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        student.email.toLowerCase().includes(studentSearch.toLowerCase())
+      );
+    }
+
+    // Department filter
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(student => student.department_id === departmentFilter);
+    }
+
+    // Year filter
+    if (yearFilter !== 'all') {
+      filtered = filtered.filter(student => student.year === parseInt(yearFilter));
+    }
+
+    setFilteredStudents(filtered);
   };
 
   const assignFeesToStudents = async () => {
@@ -141,12 +226,20 @@ const AdminFeeAssignment: React.FC = () => {
     }
   };
 
-  const selectAllStudents = () => {
-    setSelectedStudents(students.map(s => s.id));
+  const selectAllFiltered = () => {
+    setSelectedStudents(filteredStudents.map(s => s.id));
   };
 
   const clearSelection = () => {
     setSelectedStudents([]);
+  };
+
+  const toggleStudent = (studentId: string) => {
+    setSelectedStudents(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
   };
 
   if (!user || !['admin', 'principal'].includes(user.role)) {
@@ -163,16 +256,14 @@ const AdminFeeAssignment: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <DollarSign className="w-5 h-5" />
-            <span>Assign Fees to Students</span>
+            <span>Enhanced Fee Assignment</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Fee Details */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fee Type *
-              </label>
+              <Label htmlFor="feeType">Fee Type *</Label>
               <Select value={selectedFeeType} onValueChange={setSelectedFeeType}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select fee type" />
@@ -194,10 +285,9 @@ const AdminFeeAssignment: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fee Amount (₹) *
-              </label>
+              <Label htmlFor="feeAmount">Fee Amount (₹) *</Label>
               <Input
+                id="feeAmount"
                 type="number"
                 value={feeAmount}
                 onChange={(e) => setFeeAmount(e.target.value)}
@@ -206,9 +296,7 @@ const AdminFeeAssignment: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Semester *
-              </label>
+              <Label htmlFor="semester">Semester *</Label>
               <Select value={semester} onValueChange={setSemester}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select semester" />
@@ -225,10 +313,9 @@ const AdminFeeAssignment: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date *
-              </label>
+              <Label htmlFor="dueDate">Due Date *</Label>
               <Input
+                id="dueDate"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
@@ -237,82 +324,130 @@ const AdminFeeAssignment: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Academic Year
-            </label>
+            <Label htmlFor="academicYear">Academic Year</Label>
             <Input
+              id="academicYear"
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
               placeholder="e.g., 2024-25"
             />
           </div>
 
-          {/* Student Selection */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
+          {/* Student Filters */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Select Students</h3>
-              <div className="space-x-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {filteredStudents.length} students available
+                </Badge>
+                <Badge variant="secondary">
+                  {selectedStudents.length} selected
+                </Badge>
+              </div>
+            </div>
+
+            {/* Filter Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search students..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name} ({dept.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {[1, 2, 3, 4].map(year => (
+                    <SelectItem key={year} value={year.toString()}>
+                      Year {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={selectAllStudents}
-                  disabled={studentsLoading}
+                  onClick={selectAllFiltered}
+                  disabled={studentsLoading || filteredStudents.length === 0}
+                  className="flex-1"
                 >
-                  <Users className="w-4 h-4 mr-2" />
-                  Select All ({students.length})
+                  <Users className="w-4 h-4 mr-1" />
+                  Select All ({filteredStudents.length})
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={clearSelection}
+                  className="flex-1"
                 >
-                  Clear Selection
+                  Clear
                 </Button>
               </div>
             </div>
 
+            {/* Students List */}
             <div className="border rounded-lg max-h-96 overflow-y-auto">
               {studentsLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                   <span className="ml-2">Loading students...</span>
                 </div>
-              ) : students.length === 0 ? (
+              ) : filteredStudents.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No students found
+                  No students found matching the current filters
                 </div>
               ) : (
-                students.map(student => (
-                  <div key={student.id} className="flex items-center p-3 border-b last:border-b-0 hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      id={student.id}
-                      checked={selectedStudents.includes(student.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedStudents([...selectedStudents, student.id]);
-                        } else {
-                          setSelectedStudents(selectedStudents.filter(id => id !== student.id));
-                        }
-                      }}
-                      className="mr-3"
-                    />
-                    <label htmlFor={student.id} className="flex-1 cursor-pointer">
-                      <div className="font-medium">{student.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {student.roll_number} - {student.email}
+                <div className="space-y-1 p-2">
+                  {filteredStudents.map(student => (
+                    <div 
+                      key={student.id} 
+                      className={`flex items-center p-3 rounded border hover:bg-gray-50 cursor-pointer ${
+                        selectedStudents.includes(student.id) ? 'bg-blue-50 border-blue-200' : ''
+                      }`}
+                      onClick={() => toggleStudent(student.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.includes(student.id)}
+                        onChange={() => toggleStudent(student.id)}
+                        className="mr-3"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">{student.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {student.roll_number} • {student.department_name} • Year {student.year}
+                        </div>
+                        <div className="text-xs text-gray-500">{student.email}</div>
                       </div>
-                    </label>
-                  </div>
-                ))
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-            {selectedStudents.length > 0 && (
-              <div className="mt-2 text-sm text-blue-600">
-                {selectedStudents.length} students selected
-              </div>
-            )}
           </div>
 
           {/* Submit Button */}
@@ -320,6 +455,7 @@ const AdminFeeAssignment: React.FC = () => {
             onClick={assignFeesToStudents}
             disabled={loading || selectedStudents.length === 0 || selectedFeeType === 'default'}
             className="w-full"
+            size="lg"
           >
             {loading ? (
               'Assigning Fees...'

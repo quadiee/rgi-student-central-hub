@@ -1181,15 +1181,30 @@ export type Database = {
         }[]
       }
       get_fee_records_with_filters: {
-        Args: {
-          p_user_id: string
-          p_department?: string
-          p_year?: number
-          p_fee_type?: string
-          p_status?: string
-          p_limit?: number
-          p_offset?: number
-        }
+        Args:
+          | {
+              p_user_id: string
+              p_department?: string
+              p_year?: number
+              p_fee_type?: string
+              p_status?: string
+              p_from_date?: string
+              p_to_date?: string
+              p_date_filter_type?: string
+              p_min_amount?: number
+              p_max_amount?: number
+              p_limit?: number
+              p_offset?: number
+            }
+          | {
+              p_user_id: string
+              p_department?: string
+              p_year?: number
+              p_fee_type?: string
+              p_status?: string
+              p_limit?: number
+              p_offset?: number
+            }
         Returns: {
           id: string
           student_id: string
