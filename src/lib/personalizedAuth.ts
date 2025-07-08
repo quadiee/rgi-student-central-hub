@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 import { LinkGenerator, LinkContext } from '../utils/linkGenerator';
 
@@ -9,6 +8,7 @@ export interface PersonalizedAuthResult {
   redirectUrl?: string;
   userRole?: string;
   userData?: any;
+  emailId?: string;
 }
 
 export interface InvitationValidationResult extends PersonalizedAuthResult {
