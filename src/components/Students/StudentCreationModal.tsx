@@ -10,6 +10,9 @@ import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { Database } from '../../integrations/supabase/types';
+
+type Department = Database['public']['Enums']['department'];
 
 interface StudentCreationModalProps {
   isOpen: boolean;
@@ -118,13 +121,13 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({ isOpen, onC
 
       if (deptError) throw deptError;
 
-      // Create user invitation
+      // Create user invitation with proper type casting
       const { error: invitationError } = await supabase
         .from('user_invitations')
         .insert({
           email: formData.email,
-          role: 'student',
-          department: formData.department,
+          role: 'student' as Database['public']['Enums']['user_role'],
+          department: formData.department as Department,
           roll_number: formData.rollNumber,
           invited_by: user?.id
         });
@@ -151,7 +154,7 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({ isOpen, onC
           blood_group: formData.bloodGroup,
           emergency_contact: formData.emergencyContact,
           admission_date: formData.admissionDate,
-          role: 'student',
+          role: 'student' as Database['public']['Enums']['user_role'],
           is_active: false, // Will be activated when invitation is accepted
           profile_completed: false
         });
