@@ -66,7 +66,7 @@ const UserListManagement: React.FC<UserListManagementProps> = ({ refreshTrigger,
 
       // Apply filters
       if (roleFilter !== 'all') {
-        query = query.eq('role', roleFilter);
+        query = query.eq('role', roleFilter as any);
       }
       if (statusFilter !== 'all') {
         query = query.eq('is_active', statusFilter === 'active');

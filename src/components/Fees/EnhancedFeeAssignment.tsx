@@ -110,7 +110,18 @@ const EnhancedFeeAssignment: React.FC = () => {
 
       if (error) throw error;
 
-      setStudents(data || []);
+      // Map the data to match the Student interface
+      const mappedData: Student[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        email: item.email,
+        roll_number: item.roll_number,
+        year: item.year,
+        semester: item.semester,
+        department: item.departments
+      }));
+
+      setStudents(mappedData);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({

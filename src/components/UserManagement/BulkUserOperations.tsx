@@ -43,7 +43,7 @@ const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({ onDataChange })
 
       // Apply filters
       if (selectedRole) {
-        query = query.eq('role', selectedRole);
+        query = query.eq('role', selectedRole as any);
       }
       if (selectedStatus) {
         query = query.eq('is_active', selectedStatus === 'active');
@@ -139,7 +139,7 @@ const BulkUserOperations: React.FC<BulkUserOperationsProps> = ({ onDataChange })
 
       // Apply filters
       if (selectedRole) {
-        query = query.eq('role', selectedRole);
+        query = query.eq('role', selectedRole as any);
       }
       if (selectedStatus) {
         query = query.eq('is_active', selectedStatus === 'active');
