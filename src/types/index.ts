@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'hod' | 'principal' | 'admin';
+  role: 'student' | 'hod' | 'principal' | 'admin' | 'chairman';
   department_id: string;
   department_name?: string;
   avatar: string;
@@ -107,9 +107,9 @@ export interface FeeReport {
   totalOutstanding: number;
 }
 
-export type UserRole = 'student' | 'hod' | 'principal' | 'admin';
+export type UserRole = 'student' | 'hod' | 'principal' | 'admin' | 'chairman';
 
-export type Department = 'CSE' | 'ECE' | 'EEE' | 'MECH' | 'CIVIL' | 'IT' | 'ADMIN';
+export type Department = 'CSE' | 'ECE' | 'EEE' | 'MECH' | 'CIVIL' | 'IT' | 'ADMIN' | 'CHAIRMAN';
 
 export interface AuthContextType {
   user: User | null;
