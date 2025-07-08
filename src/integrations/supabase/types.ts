@@ -1155,6 +1155,31 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_department_analytics_filtered: {
+        Args: {
+          p_from_date?: string
+          p_to_date?: string
+          p_date_filter_type?: string
+          p_department_ids?: string[]
+          p_status_filter?: string[]
+          p_min_amount?: number
+          p_max_amount?: number
+        }
+        Returns: {
+          department_id: string
+          department_name: string
+          department_code: string
+          total_students: number
+          total_fee_records: number
+          total_fees: number
+          total_collected: number
+          total_pending: number
+          collection_percentage: number
+          overdue_records: number
+          avg_fee_per_student: number
+          last_updated: string
+        }[]
+      }
       get_fee_records_with_filters: {
         Args: {
           p_user_id: string
