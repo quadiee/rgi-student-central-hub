@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
+import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus, Download, Upload } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -10,6 +10,9 @@ import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useIsMobile } from '../../hooks/use-mobile';
 import { Student } from '../../types/user-student-fees';
+import StudentCreationModal from './StudentCreationModal';
+import StudentEditModal from './StudentEditModal';
+import StudentDetailsModal from './StudentDetailsModal';
 
 interface StudentManagementProps {
   onViewStudent?: (student: Student) => void;
@@ -24,7 +27,15 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedSection, setSelectedSection] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [departments, setDepartments] = useState<string[]>([]);
+  
+  // Modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -157,14 +168,30 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
     }
   };
 
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    if (onViewStudent) {
+      onViewStudent(student);
+    } else {
+      setShowDetailsModal(true);
+    }
+  };
+
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setShowEditModal(true);
+  };
+
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
     const matchesYear = !selectedYear || student.year.toString() === selectedYear;
+    const matchesSection = !selectedSection || student.section === selectedSection;
+    const matchesStatus = !selectedStatus || student.feeStatus === selectedStatus;
 
-    return matchesSearch && matchesDepartment && matchesYear;
+    return matchesSearch && matchesDepartment && matchesYear && matchesSection && matchesStatus;
   });
 
   const getStudentStatus = (student: Student) => {
@@ -207,16 +234,40 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
           Student Management
         </h2>
-        {['admin', 'principal'].includes(user.role || '') && (
-          <Button className="flex items-center space-x-2" size={isMobile ? 'sm' : 'default'}>
-            <UserPlus className="w-4 h-4" />
-            <span>Invite Student</span>
-          </Button>
-        )}
+        <div className="flex items-center space-x-2">
+          {['admin', 'principal'].includes(user.role || '') && (
+            <>
+              <Button 
+                variant="outline" 
+                size={isMobile ? 'sm' : 'default'}
+                className="flex items-center space-x-2"
+              >
+                <Upload className="w-4 h-4" />
+                {!isMobile && <span>Import</span>}
+              </Button>
+              <Button 
+                variant="outline" 
+                size={isMobile ? 'sm' : 'default'}
+                className="flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                {!isMobile && <span>Export</span>}
+              </Button>
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2" 
+                size={isMobile ? 'sm' : 'default'}
+              >
+                <UserPlus className="w-4 h-4" />
+                {!isMobile && <span>Add Student</span>}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Summary Stats */}
-      <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
+      <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-4`}>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -278,11 +329,11 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
-            <div className="relative">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-6'} gap-4`}>
+            <div className="relative col-span-2">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 type="text"
@@ -298,7 +349,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="">All Departments</SelectItem>
                 {departments.map(dept => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                 ))}
@@ -310,17 +361,36 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                 <SelectValue placeholder="All Years" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
+                <SelectItem value="">All Years</SelectItem>
                 {[1, 2, 3, 4].map(year => (
                   <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Button variant="outline" className="flex items-center space-x-2">
-              <Filter className="w-4 h-4" />
-              <span>More Filters</span>
-            </Button>
+            <Select value={selectedSection} onValueChange={setSelectedSection}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Sections" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Sections</SelectItem>
+                {['A', 'B', 'C', 'D'].map(section => (
+                  <SelectItem key={section} value={section}>Section {section}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Fee Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="Paid">Paid</SelectItem>
+                <SelectItem value="Partial">Partial</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -341,9 +411,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium">
-                            {student.name.split(' ').map(n => n[0]).join('')}
-                          </span>
+                          {student.profileImage ? (
+                            <img src={student.profileImage} alt={student.name} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            <span className="text-white font-medium">
+                              {student.name.split(' ').map(n => n[0]).join('')}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <h3 className="font-medium text-gray-900">{student.name}</h3>
@@ -351,15 +425,20 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                         </div>
                       </div>
                       <div className="flex space-x-1">
-                        {onViewStudent && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onViewStudent(student)}
-                          >
-                            <Eye className="w-3 h-3" />
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewStudent(student)}
+                        >
+                          <Eye className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditStudent(student)}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
                         {['admin', 'principal'].includes(user.role || '') && (
                           <Button
                             size="sm"
@@ -431,9 +510,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-sm font-medium">
-                                {student.name.split(' ').map(n => n[0]).join('')}
-                              </span>
+                              {student.profileImage ? (
+                                <img src={student.profileImage} alt={student.name} className="w-full h-full object-cover rounded-full" />
+                              ) : (
+                                <span className="text-white text-sm font-medium">
+                                  {student.name.split(' ').map(n => n[0]).join('')}
+                                </span>
+                              )}
                             </div>
                             <div className="ml-3">
                               <div className="text-sm font-medium text-gray-900">{student.name}</div>
@@ -462,18 +545,20 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center space-x-2">
-                            {onViewStudent && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => onViewStudent(student)}
-                                className="flex items-center space-x-1"
-                              >
-                                <Eye className="w-3 h-3" />
-                                <span>View</span>
-                              </Button>
-                            )}
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewStudent(student)}
+                              className="flex items-center space-x-1"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>View</span>
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditStudent(student)}
+                            >
                               <Edit className="w-3 h-3" />
                             </Button>
                             {['admin', 'principal'].includes(user.role || '') && (
@@ -504,6 +589,26 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <StudentCreationModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={fetchStudents}
+      />
+
+      <StudentEditModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={fetchStudents}
+        student={selectedStudent}
+      />
+
+      <StudentDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        student={selectedStudent}
+      />
     </div>
   );
 };
