@@ -51,10 +51,10 @@ const FeeListManagement: React.FC = () => {
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedFeeType, setSelectedFeeType] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [selectedFeeType, setSelectedFeeType] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [editingRecord, setEditingRecord] = useState<FeeRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,10 +110,10 @@ const FeeListManagement: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_fee_records_with_filters', {
         p_user_id: user.id,
-        p_department: selectedDepartment || null,
-        p_year: selectedYear ? parseInt(selectedYear) : null,
-        p_fee_type: selectedFeeType || null,
-        p_status: selectedStatus || null,
+        p_department: selectedDepartment === 'all' ? null : selectedDepartment,
+        p_year: selectedYear === 'all' ? null : parseInt(selectedYear),
+        p_fee_type: selectedFeeType === 'all' ? null : selectedFeeType,
+        p_status: selectedStatus === 'all' ? null : selectedStatus,
         p_limit: recordsPerPage,
         p_offset: (currentPage - 1) * recordsPerPage
       });
@@ -277,7 +277,7 @@ const FeeListManagement: React.FC = () => {
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Departments</SelectItem>
+                <SelectItem value="all">All Departments</SelectItem>
                 {departments.map(dept => (
                   <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                 ))}
@@ -289,7 +289,7 @@ const FeeListManagement: React.FC = () => {
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Years</SelectItem>
+                <SelectItem value="all">All Years</SelectItem>
                 {[1, 2, 3, 4].map(year => (
                   <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
                 ))}
@@ -301,7 +301,7 @@ const FeeListManagement: React.FC = () => {
                 <SelectValue placeholder="Fee Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Fee Types</SelectItem>
+                <SelectItem value="all">All Fee Types</SelectItem>
                 {feeTypes.map(type => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}
@@ -313,7 +313,7 @@ const FeeListManagement: React.FC = () => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Paid">Paid</SelectItem>
                 <SelectItem value="Partial">Partial</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
@@ -324,10 +324,10 @@ const FeeListManagement: React.FC = () => {
             <Button 
               onClick={() => {
                 setSearchTerm('');
-                setSelectedDepartment('');
-                setSelectedYear('');
-                setSelectedFeeType('');
-                setSelectedStatus('');
+                setSelectedDepartment('all');
+                setSelectedYear('all');
+                setSelectedFeeType('all');
+                setSelectedStatus('all');
                 setCurrentPage(1);
               }}
               variant="outline"
