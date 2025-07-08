@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SupabaseAuthPage from './components/Auth/SupabaseAuthPage';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
+import MobileLayout from './components/Layout/MobileLayout';
 import Dashboard from './components/Dashboard/Dashboard';
 import FeeManagementHub from './components/Fees/FeeManagementHub';
 import AdminPanel from './components/Admin/AdminPanel';
@@ -19,12 +20,14 @@ import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Student } from './types/user-student-fees';
 import ResetPassword from './pages/ResetPassword';
+import { useIsMobile } from './hooks/use-mobile';
 
 const queryClient = new QueryClient();
 
 function MainAppContent() {
   const { user, session, loading } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const isMobile = useIsMobile();
 
   // Get active tab from current route
   const location = window.location.pathname;
@@ -54,45 +57,55 @@ function MainAppContent() {
         return !selectedStudent ? (
           <StudentManagement onViewStudent={handleViewStudent} />
         ) : (
-          <div className="p-6">
+          <div className="space-y-4">
             <button
               onClick={() => setSelectedStudent(null)}
-              className="mb-4 text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-800 font-medium"
             >
               ← Back to student list
             </button>
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-2xl font-bold mb-4">Student Details</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <strong>Name:</strong> {selectedStudent.name}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <h2 className="text-xl font-bold mb-4">Student Details</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Name</span>
+                  <p className="text-gray-900">{selectedStudent.name}</p>
                 </div>
-                <div>
-                  <strong>Email:</strong> {selectedStudent.email}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Email</span>
+                  <p className="text-gray-900">{selectedStudent.email}</p>
                 </div>
-                <div>
-                  <strong>Department:</strong> {selectedStudent.department}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Department</span>
+                  <p className="text-gray-900">{selectedStudent.department}</p>
                 </div>
-                <div>
-                  <strong>Roll Number:</strong> {selectedStudent.rollNumber}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Roll Number</span>
+                  <p className="text-gray-900">{selectedStudent.rollNumber}</p>
                 </div>
-                <div>
-                  <strong>Year:</strong> {selectedStudent.year}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Year</span>
+                  <p className="text-gray-900">{selectedStudent.year}</p>
                 </div>
-                <div>
-                  <strong>Section:</strong> {selectedStudent.section}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Section</span>
+                  <p className="text-gray-900">{selectedStudent.section}</p>
                 </div>
-                <div>
-                  <strong>Fee Status:</strong> {selectedStudent.feeStatus}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Fee Status</span>
+                  <p className="text-gray-900">{selectedStudent.feeStatus}</p>
                 </div>
-                <div>
-                  <strong>Total Fees:</strong> ₹{selectedStudent.totalFees?.toLocaleString() || 0}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Total Fees</span>
+                  <p className="text-gray-900">₹{selectedStudent.totalFees?.toLocaleString() || 0}</p>
                 </div>
-                <div>
-                  <strong>Paid Amount:</strong> ₹{selectedStudent.paidAmount?.toLocaleString() || 0}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Paid Amount</span>
+                  <p className="text-gray-900">₹{selectedStudent.paidAmount?.toLocaleString() || 0}</p>
                 </div>
-                <div>
-                  <strong>Due Amount:</strong> ₹{selectedStudent.dueAmount?.toLocaleString() || 0}
+                <div className="space-y-1">
+                  <span className="text-sm font-medium text-gray-500">Due Amount</span>
+                  <p className="text-gray-900">₹{selectedStudent.dueAmount?.toLocaleString() || 0}</p>
                 </div>
               </div>
             </div>
@@ -109,6 +122,19 @@ function MainAppContent() {
     }
   };
 
+  // Mobile-first layout
+  if (isMobile) {
+    return (
+      <MobileLayout 
+        activeTab={activeTab} 
+        onTabChange={(tab) => window.location.href = `/${tab}`}
+      >
+        {renderContent()}
+      </MobileLayout>
+    );
+  }
+
+  // Desktop layout (kept for larger screens)
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar activeTab={activeTab} onTabChange={(tab) => window.location.href = `/${tab}`} />
