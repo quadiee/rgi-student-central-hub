@@ -24,7 +24,10 @@ export const useInvitationValidation = (token: string | undefined) => {
       
       const { data, error } = await supabase.rpc('validate_invitation_token', {
         p_token: token!
-      });
+      }) as {
+        data: ValidateInvitationResponse[] | null;
+        error: any;
+      };
       
       if (error) {
         console.error('RPC Error:', error);
@@ -39,8 +42,8 @@ export const useInvitationValidation = (token: string | undefined) => {
         return;
       }
 
-      // Explicit type assertion with proper validation
-      const inviteData = data[0] as ValidateInvitationResponse;
+      // Now TypeScript knows data[0] has the ValidateInvitationResponse shape
+      const inviteData = data[0];
       
       // Validate the response structure
       if (!inviteData || typeof inviteData !== 'object' || !inviteData.email) {
