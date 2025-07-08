@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuickAuth } from '../../hooks/useQuickAuth';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -11,22 +10,31 @@ import { useToast } from '../ui/use-toast';
 import SecureAdminButton from './SecureAdminButton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ProfileLoadingSkeleton, ProgressiveLoader } from './LoadingStates';
-
 const SupabaseAuthPage = () => {
-  const { isAuthenticated, loading: quickAuthLoading } = useQuickAuth();
-  const { profileLoading, signIn } = useAuth();
-  const { toast } = useToast();
+  const {
+    isAuthenticated,
+    loading: quickAuthLoading
+  } = useQuickAuth();
+  const {
+    profileLoading,
+    signIn
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
-
-  console.log('Auth page state:', { isAuthenticated, quickAuthLoading, profileLoading });
+  console.log('Auth page state:', {
+    isAuthenticated,
+    quickAuthLoading,
+    profileLoading
+  });
 
   // Show progressive loading for authenticated users while profile loads
   if (isAuthenticated && profileLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <ProgressiveLoader authLoaded={true} profileLoaded={false} />
         <div className="flex items-center justify-center min-h-screen p-4">
           <div className="text-center space-y-6">
@@ -40,14 +48,12 @@ const SupabaseAuthPage = () => {
             <ProfileLoadingSkeleton />
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Show loading only for the initial quick auth check
   if (quickAuthLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <ProgressiveLoader authLoaded={false} profileLoaded={false} />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
@@ -57,16 +63,12 @@ const SupabaseAuthPage = () => {
             <p className="text-gray-600">Loading RGCE Portal...</p>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
-    
     console.log('Attempting login with:', loginEmail);
-    
     try {
       if (!loginEmail.endsWith('@rgce.edu.in')) {
         toast({
@@ -77,10 +79,8 @@ const SupabaseAuthPage = () => {
         setLoginLoading(false);
         return;
       }
-      
       const result = await signIn(loginEmail, loginPassword);
       console.log('Login result:', result);
-      
       if (result.error) {
         console.error('Login error:', result.error);
         toast({
@@ -92,7 +92,7 @@ const SupabaseAuthPage = () => {
         console.log('Login successful');
         toast({
           title: "Login Successful",
-          description: "Welcome to RGCE Portal!",
+          description: "Welcome to RGCE Portal!"
         });
         // The auth context will handle the redirect
       }
@@ -107,9 +107,7 @@ const SupabaseAuthPage = () => {
       setLoginLoading(false);
     }
   };
-
-  return (
-    <ErrorBoundary>
+  return <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -139,15 +137,7 @@ const SupabaseAuthPage = () => {
                   <Label htmlFor="login-email">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="login-email"
-                      type="email"
-                      value={loginEmail}
-                      onChange={e => setLoginEmail(e.target.value)}
-                      placeholder="your.name@rgce.edu.in"
-                      className="pl-10"
-                      required
-                    />
+                    <Input id="login-email" type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="your.name@rgce.edu.in" className="pl-10" required />
                   </div>
                 </div>
 
@@ -155,43 +145,25 @@ const SupabaseAuthPage = () => {
                   <Label htmlFor="login-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="login-password"
-                      type={showLoginPassword ? 'text' : 'password'}
-                      value={loginPassword}
-                      onChange={e => setLoginPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowLoginPassword(!showLoginPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <Input id="login-password" type={showLoginPassword ? 'text' : 'password'} value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder="Enter your password" className="pl-10 pr-10" required />
+                    <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showLoginPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loginLoading}>
-                  {loginLoading ? (
-                    <div className="flex items-center space-x-2">
+                  {loginLoading ? <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       <span>Signing in...</span>
-                    </div>
-                  ) : (
-                    'Sign In'
-                  )}
+                    </div> : 'Sign In'}
                 </Button>
               </form>
               
               {/* Admin Setup Section */}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600 text-center">
-                    First time setup? Create admin account to get started.
-                  </p>
+                  
                   <SecureAdminButton />
                 </div>
               </div>
@@ -199,24 +171,16 @@ const SupabaseAuthPage = () => {
           </Card>
 
           {/* Features */}
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="text-center p-4 bg-white/60 backdrop-blur-sm rounded-lg">
-              <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <h3 className="font-semibold text-sm">Student Management</h3>
-            </div>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 px-[90px]">
+            
             <div className="text-center p-4 bg-white/60 backdrop-blur-sm rounded-lg">
               <BookOpen className="w-8 h-8 text-purple-600 mx-auto mb-2" />
               <h3 className="font-semibold text-sm">Fee Management</h3>
             </div>
-            <div className="text-center p-4 bg-white/60 backdrop-blur-sm rounded-lg">
-              <GraduationCap className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <h3 className="font-semibold text-sm">Academic Portal</h3>
-            </div>
+            
           </div>
         </div>
       </div>
-    </ErrorBoundary>
-  );
+    </ErrorBoundary>;
 };
-
 export default SupabaseAuthPage;
