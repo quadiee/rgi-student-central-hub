@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Upload, Filter, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -73,105 +74,55 @@ const EnhancedFeeAssignment: React.FC = () => {
   }, [departmentFilter, yearFilter, searchTerm]);
 
   const fetchStudents = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      console.log('Fetching students with filters:', { departmentFilter, yearFilter, searchTerm });
+      console.log('Fetching students using secure function...');
       
-      // Completely simplified approach - just get the basic student data first
-      let query = supabase
-        .from('profiles')
-        .select('id, name, email, roll_number, year, semester, department_id')
-        .eq('role', 'student')
-        .eq('is_active', true);
-
-      // Apply filters
-      if (departmentFilter) {
-        query = query.eq('department_id', departmentFilter);
-      }
-
-      if (yearFilter) {
-        query = query.eq('year', parseInt(yearFilter));
-      }
-
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,roll_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
-      }
-
-      console.log('Executing profiles query...');
-      const { data: profilesData, error: profilesError } = await query.order('roll_number');
-
-      if (profilesError) {
-        console.error('Profiles query error:', profilesError);
-        throw profilesError;
-      }
-
-      console.log('Profiles fetched:', profilesData?.length || 0, 'records');
-
-      if (!profilesData || profilesData.length === 0) {
-        console.log('No student profiles found');
-        setStudents([]);
-        return;
-      }
-
-      // Now get departments separately
-      console.log('Fetching departments...');
-      const { data: departmentsData, error: departmentsError } = await supabase
-        .from('departments')
-        .select('id, name, code')
-        .eq('is_active', true);
-
-      if (departmentsError) {
-        console.error('Departments query error:', departmentsError);
-        throw departmentsError;
-      }
-
-      console.log('Departments fetched:', departmentsData?.length || 0, 'records');
-
-      // Create a department lookup map
-      const departmentMap = new Map();
-      (departmentsData || []).forEach(dept => {
-        departmentMap.set(dept.id, dept);
+      // Use the new secure function to get filtered student data
+      const { data, error } = await supabase.rpc('get_students_with_filters', {
+        p_user_id: user.id,
+        p_department_filter: departmentFilter || null,
+        p_year_filter: yearFilter ? parseInt(yearFilter) : null,
+        p_search_term: searchTerm || null
       });
 
-      console.log('Department map created with', departmentMap.size, 'entries');
+      if (error) {
+        console.error('Error fetching students:', error);
+        throw error;
+      }
 
-      // Map students with their departments
-      const mappedStudents: Student[] = profilesData
-        .filter(profile => profile.id && profile.name && profile.email)
-        .map(profile => {
-          const department = departmentMap.get(profile.department_id) || {
-            id: profile.department_id || '',
-            name: 'Unknown Department',
-            code: 'UNK'
-          };
+      console.log('Students fetched successfully:', data?.length || 0, 'records');
 
-          return {
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            roll_number: profile.roll_number || '',
-            year: profile.year,
-            semester: profile.semester,
-            department: {
-              id: department.id,
-              name: department.name,
-              code: department.code
-            }
-          };
-        });
-
-      console.log('Final mapped students:', mappedStudents.length);
-      setStudents(mappedStudents);
-
-      if (mappedStudents.length === 0) {
+      if (!data || data.length === 0) {
+        console.log('No students found with current filters');
+        setStudents([]);
         toast({
           title: "No Students Found",
           description: "No students match your current filter criteria.",
           variant: "default"
         });
-      } else {
-        console.log('Successfully loaded', mappedStudents.length, 'students');
+        return;
       }
+
+      // Transform the data to match our Student interface
+      const transformedStudents: Student[] = data.map(student => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        roll_number: student.roll_number || '',
+        year: student.year,
+        semester: student.semester,
+        department: {
+          id: student.department_id || '',
+          name: student.department_name || 'Unknown Department',
+          code: student.department_code || 'UNK'
+        }
+      }));
+
+      console.log('Transformed students:', transformedStudents.length);
+      setStudents(transformedStudents);
 
     } catch (error) {
       console.error('Error in fetchStudents:', error);

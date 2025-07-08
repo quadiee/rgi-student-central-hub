@@ -1196,6 +1196,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_all_students_for_admin: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          roll_number: string
+          year: number
+          semester: number
+          department_id: string
+          department_name: string
+          department_code: string
+          is_active: boolean
+        }[]
+      }
       get_department_analytics_filtered: {
         Args: {
           p_from_date?: string
@@ -1278,6 +1293,26 @@ export type Database = {
           used_at: string
           is_active: boolean
           is_valid: boolean
+        }[]
+      }
+      get_students_with_filters: {
+        Args: {
+          p_user_id: string
+          p_department_filter?: string
+          p_year_filter?: number
+          p_search_term?: string
+        }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          roll_number: string
+          year: number
+          semester: number
+          department_id: string
+          department_name: string
+          department_code: string
+          is_active: boolean
         }[]
       }
       get_user_department: {
