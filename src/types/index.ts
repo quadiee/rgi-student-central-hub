@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -118,3 +119,4 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
+
