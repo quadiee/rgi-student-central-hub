@@ -19,7 +19,7 @@ interface InvitationData {
   error_message?: string;
 }
 
-// Type for the database function response
+// Type for the database function response - matches exactly what the RPC returns
 type ValidateInvitationResponse = {
   id: string;
   email: string;
@@ -86,14 +86,24 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
+      // Explicit type assertion with proper validation
       const inviteData = data[0] as ValidateInvitationResponse;
-      if (!inviteData || !inviteData.is_valid) {
-        setInviteError(inviteData?.error_message || "This invitation is invalid or has expired.");
+      
+      // Validate the response structure
+      if (!inviteData || typeof inviteData !== 'object' || !inviteData.email) {
+        setInviteError("Invalid invitation response format.");
         setLoadingInvitation(false);
         return;
       }
 
-      setInvitationData({
+      if (!inviteData.is_valid) {
+        setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
+        setLoadingInvitation(false);
+        return;
+      }
+
+      // Convert to our internal type format
+      const processedInvitationData: InvitationData = {
         id: inviteData.id,
         email: inviteData.email,
         role: inviteData.role,
@@ -102,7 +112,9 @@ const InvitationSignup: React.FC = () => {
         employee_id: inviteData.employee_id || undefined,
         is_valid: inviteData.is_valid,
         error_message: inviteData.error_message || undefined
-      });
+      };
+
+      setInvitationData(processedInvitationData);
 
       // Check if user already exists in auth.users
       const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
@@ -222,11 +234,21 @@ const InvitationSignup: React.FC = () => {
   };
 
   const handlePasswordSetup = async () => {
-    // Ensure invitationData exists and has email before proceeding
-    if (!invitationData || !invitationData.email) {
+    // Type-safe check for invitationData
+    if (!invitationData) {
       toast({
         title: "Error",
         description: "Invalid invitation data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Now TypeScript knows invitationData is not null, check for email
+    if (!invitationData.email) {
+      toast({
+        title: "Error",
+        description: "Invalid email in invitation data.",
         variant: "destructive"
       });
       return;
