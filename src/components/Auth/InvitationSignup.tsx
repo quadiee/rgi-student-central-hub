@@ -19,7 +19,8 @@ interface InvitationData {
   error_message?: string;
 }
 
-interface ValidateInvitationResponse {
+// Type for the database function response
+type ValidateInvitationResponse = {
   id: string;
   email: string;
   role: string;
@@ -28,7 +29,7 @@ interface ValidateInvitationResponse {
   employee_id: string | null;
   is_valid: boolean;
   error_message: string | null;
-}
+};
 
 const InvitationSignup: React.FC = () => {
   const { token } = useParams();
@@ -86,8 +87,8 @@ const InvitationSignup: React.FC = () => {
       }
 
       const inviteData = data[0] as ValidateInvitationResponse;
-      if (!inviteData.is_valid) {
-        setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
+      if (!inviteData || !inviteData.is_valid) {
+        setInviteError(inviteData?.error_message || "This invitation is invalid or has expired.");
         setLoadingInvitation(false);
         return;
       }
@@ -221,7 +222,15 @@ const InvitationSignup: React.FC = () => {
   };
 
   const handlePasswordSetup = async () => {
-    if (!invitationData) return;
+    // Ensure invitationData exists and has email before proceeding
+    if (!invitationData || !invitationData.email) {
+      toast({
+        title: "Error",
+        description: "Invalid invitation data.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setLoading(true);
     try {
