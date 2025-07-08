@@ -6,7 +6,6 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import { SupabaseFeeService } from '../../services/supabaseFeeService';
-import { useUserConversion } from '../../hooks/useUserConversion';
 
 interface FeeStats {
   totalStudents: number;
@@ -18,21 +17,33 @@ interface FeeStats {
 }
 
 const HODFeeDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const { convertUserProfileToUser } = useUserConversion();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [stats, setStats] = useState<FeeStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadStats = async () => {
-    if (!user) return;
+    if (!profile) return;
     
     try {
       setLoading(true);
-      const convertedUser = convertUserProfileToUser(user);
+      
+      // Convert profile to User type for fee service
+      const convertedUser = {
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role as 'student' | 'hod' | 'principal' | 'admin',
+        department_id: profile.department_id || '',
+        department_name: profile.department_name,
+        avatar: profile.profile_photo_url || '',
+        rollNumber: profile.roll_number,
+        employeeId: profile.employee_id,
+        isActive: profile.is_active
+      };
       
       // Use department_name instead of department
-      const departmentName = user.department_name || 'Unknown';
+      const departmentName = profile.department_name || 'Unknown';
       
       // Get fee records for the HOD's department
       const feeRecords = await SupabaseFeeService.getFeeRecords(convertedUser, {
@@ -67,7 +78,7 @@ const HODFeeDashboard: React.FC = () => {
 
   useEffect(() => {
     loadStats();
-  }, [user]);
+  }, [profile]);
 
   if (loading) {
     return (
@@ -84,7 +95,7 @@ const HODFeeDashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Department Fee Dashboard</h2>
-          <p className="text-gray-600">Overview of fee collection for {user?.department_name}</p>
+          <p className="text-gray-600">Overview of fee collection for {profile?.department_name}</p>
         </div>
         <Button onClick={loadStats} disabled={loading} variant="outline">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

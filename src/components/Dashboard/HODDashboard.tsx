@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, AlertTriangle, DollarSign, Search, Filter } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -9,7 +8,6 @@ import { useToast } from '../ui/use-toast';
 import { RealFeeService } from '../../services/realFeeService';
 import { FeeRecord } from '../../types';
 import { useIsMobile } from '../../hooks/use-mobile';
-import { useUserConversion } from '../../hooks/useUserConversion';
 
 interface StudentFeeInfo {
   id: string;
@@ -28,7 +26,6 @@ const HODDashboard: React.FC = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { convertUserProfileToUser } = useUserConversion();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -51,8 +48,18 @@ const HODDashboard: React.FC = () => {
     
     try {
       setLoading(true);
-      const convertedUser = convertUserProfileToUser(profile);
-      const feeRecords = await RealFeeService.getFeeRecords(convertedUser);
+      const feeRecords = await RealFeeService.getFeeRecords({ 
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role as 'student' | 'hod' | 'principal' | 'admin',
+        department_id: profile.department_id || '',
+        department_name: profile.department_name,
+        avatar: profile.profile_photo_url || '',
+        rollNumber: profile.roll_number,
+        employeeId: profile.employee_id,
+        isActive: profile.is_active
+      });
       
       // Mock student data with fee information for department
       const mockStudents: StudentFeeInfo[] = [
