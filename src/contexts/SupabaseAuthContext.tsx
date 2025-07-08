@@ -73,7 +73,6 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
         email: profile.email,
         role: profile.role,
         department_id: profile.department_id,
-        department_name: profile.department_name,
         avatar: profile.profile_photo_url || '',
         rollNumber: profile.roll_number,
         employeeId: profile.employee_id,
