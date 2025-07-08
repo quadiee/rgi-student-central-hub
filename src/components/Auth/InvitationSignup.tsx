@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, GraduationCap, Mail } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -8,13 +8,18 @@ import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { authUtils } from '../../lib/auth-utils';
+import { PersonalizedAuthService } from '../../lib/personalizedAuth';
 
 const InvitationSignup: React.FC = () => {
   const { token } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { signUp } = useAuth();
   const { toast } = useToast();
+
+  // Get context from URL params for personalization
+  const urlRole = searchParams.get('role');
+  const urlDept = searchParams.get('dept');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -53,48 +58,22 @@ const InvitationSignup: React.FC = () => {
     try {
       setValidationState({ loading: true });
       
-      // Extract email from token if needed, or get from invitation data
-      // For now, we'll validate with token only and get email from response
-      const result = await authUtils.validateInvitation('', token);
+      const result = await PersonalizedAuthService.validateInvitationWithContext('', token);
       
-      if (result.error) {
+      if (!result.success || result.error) {
         setValidationState({
           loading: false,
-          error: result.error,
-          redirect: result.redirect
+          error: result.error || "This invitation link is invalid or has expired.",
+          redirect: result.redirect || 'invalid'
         });
         return;
       }
 
-      if (!result.invitationValid) {
-        setValidationState({
-          loading: false,
-          error: "This invitation link is invalid or has expired.",
-          redirect: 'invalid'
-        });
-        return;
-      }
-
-      // Handle different redirect scenarios
-      if (result.redirect === 'password-setup') {
-        setValidationState({
-          loading: false,
-          redirect: 'password-setup',
-          invitationData: result.invitationData
-        });
-      } else if (result.redirect === 'signup') {
-        setValidationState({
-          loading: false,
-          redirect: 'signup',
-          invitationData: result.invitationData
-        });
-      } else {
-        setValidationState({
-          loading: false,
-          error: "Unable to process invitation.",
-          redirect: 'invalid'
-        });
-      }
+      setValidationState({
+        loading: false,
+        redirect: result.redirect,
+        invitationData: result.invitationData
+      });
     } catch (err: any) {
       console.error('Error validating invitation:', err);
       setValidationState({
@@ -117,18 +96,18 @@ const InvitationSignup: React.FC = () => {
     
     setLoading(true);
     try {
-      const { error } = await authUtils.sendPasswordReset(validationState.invitationData.email);
+      const result = await PersonalizedAuthService.sendPersonalizedPasswordReset(validationState.invitationData.email);
       
-      if (error) {
+      if (!result.success) {
         toast({
           title: "Error",
-          description: "Failed to send password setup email.",
+          description: result.error || "Failed to send password setup email.",
           variant: "destructive"
         });
       } else {
         toast({
           title: "Password Setup Email Sent",
-          description: "Please check your email to set up your password.",
+          description: result.message || "Please check your email to set up your password.",
         });
       }
     } catch (error: any) {
@@ -168,6 +147,12 @@ const InvitationSignup: React.FC = () => {
     }
 
     try {
+      const invitationContext = {
+        userRole: validationState.invitationData.role,
+        department: validationState.invitationData.department,
+        userData: validationState.invitationData
+      };
+
       const userData = {
         name: formData.name,
         role: validationState.invitationData.role,
@@ -180,12 +165,17 @@ const InvitationSignup: React.FC = () => {
         address: formData.address
       };
 
-      const { error } = await authUtils.signUpWithProfile(validationState.invitationData.email, formData.password, userData);
+      const result = await PersonalizedAuthService.signUpWithPersonalizedProfile(
+        validationState.invitationData.email,
+        formData.password,
+        userData,
+        invitationContext
+      );
       
-      if (error) {
+      if (!result.success) {
         toast({
           title: "Signup Failed",
-          description: error.message,
+          description: result.error,
           variant: "destructive"
         });
       } else {
@@ -196,10 +186,12 @@ const InvitationSignup: React.FC = () => {
           .eq('id', validationState.invitationData.id);
 
         toast({
-          title: "Account Created",
-          description: "Your account has been created successfully.",
+          title: "Account Created Successfully",
+          description: result.message || "Your personalized account has been created.",
         });
-        navigate("/dashboard");
+        
+        // Navigate to role-based dashboard
+        navigate(result.redirectUrl || "/dashboard");
       }
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -212,242 +204,76 @@ const InvitationSignup: React.FC = () => {
     setLoading(false);
   };
 
-  // Loading state
+  // Loading state with enhanced UI
   if (validationState.loading) {
     return (
-      <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-gray-200 rounded shadow text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p>Validating invitation...</p>
-      </div>
-    );
-  }
-
-  // Error state
-  if (validationState.error || validationState.redirect === 'invalid') {
-    return (
-      <div className="max-w-md mx-auto mt-12 p-8 bg-white border border-red-200 rounded shadow text-center">
-        <h2 className="text-xl font-bold text-red-700 mb-3">Invitation Invalid or Expired</h2>
-        <p className="mb-4">{validationState.error}</p>
-        <Button type="button" onClick={() => navigate("/auth")} className="mt-4">
-          Go to Login
-        </Button>
-      </div>
-    );
-  }
-
-  // Password setup for existing users
-  if (validationState.redirect === 'password-setup') {
-    return (
-      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">Complete Your Setup</h2>
-          <p className="text-gray-600">Account exists for <strong>{validationState.invitationData?.email}</strong></p>
-          <p className="text-gray-600 mb-6">Click below to receive a password setup link</p>
-        </div>
-        <div className="space-y-3">
-          <Button
-            onClick={handlePasswordSetup}
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? 'Sending Setup Link...' : 'Send Password Setup Link'}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate("/auth")}
-            disabled={loading}
-          >
-            Back to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Signup form for new users
-  if (validationState.redirect === 'signup' && validationState.invitationData) {
-    return (
-      <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">Complete Your Registration</h2>
-          <p className="text-gray-600">Fill in your details to activate your account</p>
-          <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Role:</strong> {validationState.invitationData.role.charAt(0).toUpperCase() + validationState.invitationData.role.slice(1)}
-            </p>
-            <p className="text-sm text-blue-800">
-              <strong>Department:</strong> {validationState.invitationData.department}
-            </p>
-          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Validating Invitation</h2>
+          <p className="text-gray-600 mb-4">Please wait while we verify your invitation...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
+      </div>
+    );
+  }
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name field */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name *</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Enter your full name"
-                className="pl-10"
-                required
-              />
+  // Error state with enhanced UI
+  if (validationState.error || validationState.redirect === 'invalid') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 text-center border border-red-200">
+          <div className="w-16 h-16 bg-gradient-to-r from-red-600 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Mail className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-red-700 mb-3">Invitation Invalid or Expired</h2>
+          <p className="text-gray-600 mb-6">{validationState.error}</p>
+          <Button 
+            onClick={() => navigate("/auth")} 
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Password setup for existing users with enhanced UI
+  if (validationState.redirect === 'password-setup') {
+    const roleInfo = validationState.invitationData?.role || 'user';
+    const deptInfo = validationState.invitationData?.department || '';
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-white" />
             </div>
-          </div>
-
-          {/* Phone field */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="Enter your phone number"
-            />
-          </div>
-
-          {/* Role-specific fields */}
-          {validationState.invitationData.role === 'student' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="rollNumber">Roll Number</Label>
-                <Input
-                  id="rollNumber"
-                  name="rollNumber"
-                  type="text"
-                  value={formData.rollNumber}
-                  onChange={handleChange}
-                  placeholder={validationState.invitationData.roll_number || "Enter roll number"}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="guardianName">Guardian Name</Label>
-                  <Input
-                    id="guardianName"
-                    name="guardianName"
-                    type="text"
-                    value={formData.guardianName}
-                    onChange={handleChange}
-                    placeholder="Guardian's name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="guardianPhone">Guardian Phone</Label>
-                  <Input
-                    id="guardianPhone"
-                    name="guardianPhone"
-                    type="tel"
-                    value={formData.guardianPhone}
-                    onChange={handleChange}
-                    placeholder="Guardian's phone"
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {validationState.invitationData.role !== 'student' && (
-            <div className="space-y-2">
-              <Label htmlFor="employeeId">Employee ID</Label>
-              <Input
-                id="employeeId"
-                name="employeeId"
-                type="text"
-                value={formData.employeeId}
-                onChange={handleChange}
-                placeholder={validationState.invitationData.employee_id || "Enter employee ID"}
-              />
+            <h2 className="text-2xl font-bold text-gray-800">Complete Your Setup</h2>
+            <p className="text-gray-600 mt-2">Account exists for</p>
+            <p className="font-semibold text-blue-600">{validationState.invitationData?.email}</p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <p className="text-sm text-blue-800">
+                <strong>Role:</strong> {roleInfo.charAt(0).toUpperCase() + roleInfo.slice(1)}
+                {deptInfo && <><br /><strong>Department:</strong> {deptInfo}</>}
+              </p>
             </div>
-          )}
-
-          {/* Password fields */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password *</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Create a password"
-                className="pl-10 pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
+            
+            <p className="text-gray-600 mt-4">Click below to receive a personalized password setup link</p>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password *</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm your password"
-                className="pl-10 pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                tabIndex={-1}
-              >
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Address field */}
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              name="address"
-              type="text"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="Enter your address"
-            />
-          </div>
-
-          {/* Submit buttons */}
-          <div className="space-y-3 pt-4">
+          
+          <div className="space-y-3">
             <Button
-              type="submit"
-              className="w-full"
+              onClick={handlePasswordSetup}
+              className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
               disabled={loading}
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Sending Setup Link...' : 'Send Password Setup Link'}
             </Button>
             <Button
               type="button"
@@ -459,13 +285,223 @@ const InvitationSignup: React.FC = () => {
               Back to Login
             </Button>
           </div>
-        </form>
+        </div>
       </div>
     );
   }
 
-  // Fallback
-  return <div className="text-center">Processing invitation...</div>;
+  // Enhanced signup form with role-specific personalization
+  if (validationState.redirect === 'signup' && validationState.invitationData) {
+    const roleInfo = validationState.invitationData.role;
+    const deptInfo = validationState.invitationData.department;
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <GraduationCap className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Complete Your Registration</h2>
+            <p className="text-gray-600">Fill in your details to activate your account</p>
+            
+            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>Role:</strong> <span className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-semibold">{roleInfo.charAt(0).toUpperCase() + roleInfo.slice(1)}</span>
+              </p>
+              <p className="text-sm text-blue-800 mt-1">
+                <strong>Department:</strong> {deptInfo}
+              </p>
+              <p className="text-sm text-blue-800 mt-1">
+                <strong>Email:</strong> {validationState.invitationData.email}
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name field */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name *</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Enter your full name"
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Phone field */}
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            {/* Role-specific fields */}
+            {validationState.invitationData.role === 'student' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="rollNumber">Roll Number</Label>
+                  <Input
+                    id="rollNumber"
+                    name="rollNumber"
+                    type="text"
+                    value={formData.rollNumber}
+                    onChange={handleChange}
+                    placeholder={validationState.invitationData.roll_number || "Enter roll number"}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianName">Guardian Name</Label>
+                    <Input
+                      id="guardianName"
+                      name="guardianName"
+                      type="text"
+                      value={formData.guardianName}
+                      onChange={handleChange}
+                      placeholder="Guardian's name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianPhone">Guardian Phone</Label>
+                    <Input
+                      id="guardianPhone"
+                      name="guardianPhone"
+                      type="tel"
+                      value={formData.guardianPhone}
+                      onChange={handleChange}
+                      placeholder="Guardian's phone"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {validationState.invitationData.role !== 'student' && (
+              <div className="space-y-2">
+                <Label htmlFor="employeeId">Employee ID</Label>
+                <Input
+                  id="employeeId"
+                  name="employeeId"
+                  type="text"
+                  value={formData.employeeId}
+                  onChange={handleChange}
+                  placeholder={validationState.invitationData.employee_id || "Enter employee ID"}
+                />
+              </div>
+            )}
+
+            {/* Password fields */}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Create a secure password"
+                  className="pl-10 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm your password"
+                  className="pl-10 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Address field */}
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                name="address"
+                type="text"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Enter your address"
+              />
+            </div>
+
+            {/* Submit buttons */}
+            <div className="space-y-3 pt-4">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                disabled={loading}
+              >
+                {loading ? 'Creating Account...' : 'Create Account & Join RGCE'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate("/auth")}
+                disabled={loading}
+              >
+                Back to Login
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Processing invitation...</p>
+      </div>
+    </div>
+  );
 };
 
 export default InvitationSignup;

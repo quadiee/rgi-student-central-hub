@@ -2,25 +2,26 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-// Replace with your real Resend API Key and verified domain
-const RESEND_API_KEY = "re_j9X6eXgU_By73fLLepM1s2qYZsaG1WqaL";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
 
-// Get the correct app URL
+interface InvitationEmailRequest {
+  email: string;
+  role: string;
+  department: string;
+  invitedBy?: string;
+  invitationId: string;
+  rollNumber?: string;
+  employeeId?: string;
+}
+
 const getAppUrl = (req: Request): string => {
   const origin = req.headers.get('origin');
   const referer = req.headers.get('referer');
   
-  // If origin is available, use it
-  if (origin) {
-    return origin;
-  }
-  
-  // If referer is available, extract origin from it
+  if (origin) return origin;
   if (referer) {
     try {
       return new URL(referer).origin;
@@ -29,8 +30,194 @@ const getAppUrl = (req: Request): string => {
     }
   }
   
-  // Default fallback - update this to your actual deployed URL
   return 'https://rgi-student-central-hub.lovable.app';
+};
+
+const generatePersonalizedEmailTemplate = (data: {
+  recipientName?: string;
+  recipientEmail: string;
+  role: string;
+  department?: string;
+  inviterName?: string;
+  actionUrl: string;
+  rollNumber?: string;
+  employeeId?: string;
+}): string => {
+  const institution = {
+    name: 'Rajiv Gandhi College of Engineering',
+    shortName: 'RGCE'
+  };
+
+  const roleSpecificContent = getRoleSpecificContent(data.role, data.department);
+  
+  return `
+    <html>
+      <head>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: white; }
+          .header { background: linear-gradient(135deg, #2563eb, #9333ea); color: white; padding: 40px 30px; text-align: center; }
+          .content { padding: 40px 30px; background: #fafafa; }
+          .cta-button { 
+            background: linear-gradient(135deg, #2563eb, #9333ea); 
+            color: white; 
+            padding: 16px 32px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            display: inline-block; 
+            margin: 24px 0; 
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .info-card { 
+            background: white; 
+            border: 1px solid #e5e7eb; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin: 24px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          .role-badge { 
+            background: #3b82f6; 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 16px; 
+            font-size: 12px; 
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          .features { list-style: none; padding: 0; }
+          .features li { 
+            padding: 8px 0; 
+            border-bottom: 1px solid #f3f4f6; 
+            position: relative; 
+            padding-left: 24px;
+          }
+          .features li:before { 
+            content: "✓"; 
+            color: #10b981; 
+            font-weight: bold; 
+            position: absolute; 
+            left: 0;
+          }
+          .footer { background: #1f2937; color: #9ca3af; padding: 30px; text-align: center; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Welcome to ${institution.name}</h1>
+            <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 16px;">You're invited to join ${institution.shortName} Portal</p>
+          </div>
+          
+          <div class="content">
+            <h2 style="color: #1f2937; margin-top: 0;">Hello ${data.recipientName || 'Future RGCE Member'}!</h2>
+            
+            <p style="font-size: 16px; color: #4b5563;">
+              You have been invited to join <strong>${institution.name}</strong> as a 
+              <span class="role-badge">${formatRole(data.role)}</span>
+              ${data.department ? ` in the <strong>${data.department}</strong> department` : ''}.
+            </p>
+            
+            ${roleSpecificContent}
+            
+            <div class="info-card">
+              <h3 style="margin-top: 0; color: #1f2937;">Your Account Information</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0; color: #6b7280;"><strong>Email:</strong></td><td style="padding: 8px 0;">${data.recipientEmail}</td></tr>
+                <tr><td style="padding: 8px 0; color: #6b7280;"><strong>Role:</strong></td><td style="padding: 8px 0;">${formatRole(data.role)}</td></tr>
+                ${data.department ? `<tr><td style="padding: 8px 0; color: #6b7280;"><strong>Department:</strong></td><td style="padding: 8px 0;">${data.department}</td></tr>` : ''}
+                ${data.rollNumber ? `<tr><td style="padding: 8px 0; color: #6b7280;"><strong>Roll Number:</strong></td><td style="padding: 8px 0;">${data.rollNumber}</td></tr>` : ''}
+                ${data.employeeId ? `<tr><td style="padding: 8px 0; color: #6b7280;"><strong>Employee ID:</strong></td><td style="padding: 8px 0;">${data.employeeId}</td></tr>` : ''}
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${data.actionUrl}" class="cta-button">
+                Complete Registration & Access Portal
+              </a>
+            </div>
+            
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px; margin: 24px 0;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;">
+                <strong>Important:</strong> This invitation will expire in 7 days. 
+                If you have any questions, please contact the IT department.
+              </p>
+            </div>
+            
+            ${data.inviterName ? `<p style="color: #6b7280; font-style: italic; text-align: center;">Invited by: ${data.inviterName}</p>` : ''}
+          </div>
+          
+          <div class="footer">
+            <p style="margin: 0;">© ${new Date().getFullYear()} ${institution.name}</p>
+            <p style="margin: 8px 0 0 0;">This is an automated email from ${institution.shortName} Portal</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+};
+
+const getRoleSpecificContent = (role: string, department?: string): string => {
+  const features = {
+    student: [
+      'View and manage your fee payments',
+      'Access academic information and grades',
+      'Track your academic progress',
+      'Communicate with faculty and administration',
+      'Access course materials and schedules'
+    ],
+    hod: [
+      'Department-wide fee management and analytics',
+      'Student academic records for your department',
+      'Faculty management and oversight tools',
+      'Department-specific reporting and insights',
+      'Administrative communication tools'
+    ],
+    principal: [
+      'Institution-wide fee management',
+      'Complete analytics and reporting dashboard',
+      'Student and faculty oversight across all departments',
+      'Administrative management tools',
+      'Strategic planning and decision-making tools'
+    ],
+    chairman: [
+      'Complete institutional oversight and control',
+      'Institution-wide fee management and analytics',
+      'Strategic administrative and planning tools',
+      'Executive reporting and decision-making dashboard',
+      'Full student and faculty management'
+    ],
+    admin: [
+      'Complete user management and role assignment',
+      'System configuration and maintenance tools',
+      'Advanced fee management and bulk operations',
+      'Full database access and reporting capabilities',
+      'Security, audit, and system monitoring tools'
+    ]
+  };
+
+  const roleFeatures = features[role as keyof typeof features] || ['Access to portal features'];
+  
+  return `
+    <div class="info-card">
+      <h3 style="margin-top: 0; color: #1f2937;">What you'll have access to:</h3>
+      <ul class="features">
+        ${roleFeatures.map(feature => `<li>${feature}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+};
+
+const formatRole = (role: string): string => {
+  const roleMap: { [key: string]: string } = {
+    'student': 'Student',
+    'hod': 'Head of Department',
+    'principal': 'Principal',
+    'chairman': 'Chairman',
+    'admin': 'System Administrator'
+  };
+  return roleMap[role] || role.charAt(0).toUpperCase() + role.slice(1);
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -44,13 +231,13 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, role, department, invitedBy, invitationId } = await req.json();
+    const { email, role, department, invitedBy, invitationId, rollNumber, employeeId }: InvitationEmailRequest = await req.json();
 
     if (!email || !role || !department || !invitationId) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required field. Please provide email, role, department, and invitationId."
+          error: "Missing required fields: email, role, department, and invitationId are required."
         }),
         {
           status: 400,
@@ -59,8 +246,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate a unique token if not exists and update the invitation
-    const invitationToken = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate secure token and update invitation
+    const invitationToken = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
     
     const { data: updatedInvitation, error: updateError } = await supabase
       .from('user_invitations')
@@ -83,67 +270,61 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch inviter details if available, otherwise use "Administrator"
+    // Get inviter details
     let inviterName = "Administrator";
     if (invitedBy) {
-      const { data: inviterData, error: inviterError } = await supabase
+      const { data: inviterData } = await supabase
         .from("profiles")
         .select("name, email")
         .eq("id", invitedBy)
         .single();
-      if (!inviterError && inviterData?.name) {
+      if (inviterData?.name) {
         inviterName = inviterData.name;
       }
     }
 
-    // Get the correct app URL from the request
+    // Generate personalized invitation URL
     const appUrl = getAppUrl(req);
-    const invitationUrl = `${appUrl}/invite/${invitationToken}`;
+    const invitationUrl = `${appUrl}/invite/${invitationToken}?role=${role}&dept=${department}`;
 
-    const emailHtml = `
-      <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #2563eb;">You're Invited to Join RGI Student Central Hub</h2>
-            <p>Hello,</p>
-            <p>You have been invited by <strong>${inviterName}</strong> to join the RGI Student Central Hub as a <strong>${role.toUpperCase()}</strong> in the <strong>${department}</strong> department.</p>
-            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="margin-top: 0; color: #1e40af;">Invitation Details:</h3>
-              <ul style="list-style: none; padding: 0;">
-                <li><strong>Role:</strong> ${role.charAt(0).toUpperCase() + role.slice(1)}</li>
-                <li><strong>Department:</strong> ${department}</li>
-                <li><strong>Email:</strong> ${email}</li>
-              </ul>
-            </div>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${invitationUrl}" 
-                 style="background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                Accept Invitation & Register
-              </a>
-            </div>
-            <p style="color: #666; font-size: 14px;">
-              This invitation will expire in 7 days. If you have any questions, please contact the administrator.
-            </p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-            <p style="color: #666; font-size: 12px; text-align: center;">
-              This is an automated email from RGI Student Central Hub. Please do not reply to this email.
-            </p>
-          </div>
-        </body>
-      </html>
-    `;
+    // Generate personalized email content
+    const emailHtml = generatePersonalizedEmailTemplate({
+      recipientEmail: email,
+      role,
+      department,
+      inviterName,
+      actionUrl: invitationUrl,
+      rollNumber,
+      employeeId
+    });
 
-    // Always use your verified sender domain
+    // Send email using Resend
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Email service not configured. Please contact administrator."
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+
+    const emailSubject = `Welcome to RGCE Portal - ${formatRole(role)} Invitation`;
+    
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Authorization": `Bearer ${resendApiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "no-reply@rgce.edu.in",
+        from: "RGCE Portal <no-reply@rgce.edu.in>",
         to: email,
-        subject: "You're Invited to Join RGI Student Central Hub",
+        subject: emailSubject,
         html: emailHtml
       }),
     });
@@ -154,7 +335,7 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: resendResult.error || resendResult.message || "Unknown error from Resend",
+          error: resendResult.error || resendResult.message || "Failed to send email",
           resendResult
         }),
         {
@@ -164,6 +345,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Update invitation as sent
     await supabase
       .from("user_invitations")
       .update({
@@ -175,7 +357,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Invitation email sent successfully",
+        message: "Personalized invitation email sent successfully",
         invitationUrl: invitationUrl,
         resendResult
       }),
@@ -188,6 +370,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
+    console.error('Error in send-invitation-email:', error);
     return new Response(
       JSON.stringify({
         success: false,

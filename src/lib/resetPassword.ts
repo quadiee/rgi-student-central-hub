@@ -1,41 +1,22 @@
 
-import { supabase } from '../integrations/supabase/client';
-import { getPasswordResetUrl } from '../utils/appUrl';
+import { PersonalizedAuthService } from './personalizedAuth';
 
-// Usage: await resetPassword(email)
+// Enhanced reset password function with personalization
 export async function resetPassword(email: string) {
-  const resetUrl = getPasswordResetUrl();
+  console.log('Sending personalized password reset to:', email);
   
-  console.log('Sending password reset to:', email);
-  console.log('Reset URL will be:', resetUrl);
+  const result = await PersonalizedAuthService.sendPersonalizedPasswordReset(email);
   
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: resetUrl
-  });
-  
-  if (error) {
-    console.error('Reset password error:', error);
-    return error;
+  if (!result.success) {
+    console.error('Reset password error:', result.error);
+    return new Error(result.error || 'Failed to send reset email');
   }
   
-  try {
-    const { error: functionError } = await supabase.functions.invoke('send-password-reset', {
-      body: {
-        email: email,
-        resetUrl: resetUrl
-      }
-    });
-    
-    if (functionError) {
-      console.error('Function error:', functionError);
-      return functionError;
-    }
-    
-    console.log('Password reset email sent successfully');
-  } catch (err) {
-    console.error('Failed to call send-password-reset function:', err);
-    return { message: 'Failed to send reset email' };
-  }
+  console.log('Personalized password reset email sent successfully');
+  console.log('User role detected:', result.userRole);
   
   return null;
 }
+
+// Legacy compatibility
+export { resetPassword as sendPasswordReset };
