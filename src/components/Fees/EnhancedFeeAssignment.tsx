@@ -68,13 +68,18 @@ const EnhancedFeeAssignment: React.FC = () => {
   const [showBatchProcessor, setShowBatchProcessor] = useState(false);
 
   useEffect(() => {
-    fetchStudents();
-    fetchDepartments();
-    fetchFeeTypes();
-  }, [departmentFilter, yearFilter, searchTerm]);
+    if (user) {
+      fetchStudents();
+      fetchDepartments();
+      fetchFeeTypes();
+    }
+  }, [user, departmentFilter, yearFilter, searchTerm]);
 
   const fetchStudents = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping student fetch');
+      return;
+    }
     
     try {
       setLoading(true);
@@ -294,6 +299,12 @@ const EnhancedFeeAssignment: React.FC = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setDepartmentFilter('');
+    setYearFilter('');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -422,11 +433,7 @@ const EnhancedFeeAssignment: React.FC = () => {
                         <Button 
                           variant="outline" 
                           className="mt-2"
-                          onClick={() => {
-                            setSearchTerm('');
-                            setDepartmentFilter('');
-                            setYearFilter('');
-                          }}
+                          onClick={clearFilters}
                         >
                           Clear Filters
                         </Button>
