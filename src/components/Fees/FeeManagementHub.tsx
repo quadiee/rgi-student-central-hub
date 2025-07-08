@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Users, Upload, FileText, List, Settings, BarChart3 } from 'lucide-react';
+import { Users, Upload, FileText, List, Settings, BarChart3, PieChart } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -11,6 +11,8 @@ import FeeListManagement from './FeeListManagement';
 import StudentFeeDashboard from './StudentFeeDashboard';
 import HODFeeDashboard from './HODFeeDashboard';
 import RealTimeFeeDashboard from './RealTimeFeeDashboard';
+import DepartmentAnalytics from './DepartmentAnalytics';
+import FeeTypeAnalytics from './FeeTypeAnalytics';
 
 const FeeManagementHub: React.FC = () => {
   const { user } = useAuth();
@@ -42,7 +44,7 @@ const FeeManagementHub: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
             Dashboard
@@ -70,10 +72,20 @@ const FeeManagementHub: React.FC = () => {
           )}
           
           {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-            <TabsTrigger value="real-time" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Real-time Stats
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="real-time" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Real-time Stats
+              </TabsTrigger>
+              <TabsTrigger value="dept-analytics" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Dept Analytics
+              </TabsTrigger>
+              <TabsTrigger value="fee-type-analytics" className="flex items-center gap-2">
+                <PieChart className="w-4 h-4" />
+                Fee Type Analytics
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -103,9 +115,19 @@ const FeeManagementHub: React.FC = () => {
         )}
 
         {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-          <TabsContent value="real-time" className="space-y-6">
-            <RealTimeFeeDashboard />
-          </TabsContent>
+          <>
+            <TabsContent value="real-time" className="space-y-6">
+              <RealTimeFeeDashboard />
+            </TabsContent>
+
+            <TabsContent value="dept-analytics" className="space-y-6">
+              <DepartmentAnalytics />
+            </TabsContent>
+
+            <TabsContent value="fee-type-analytics" className="space-y-6">
+              <FeeTypeAnalytics />
+            </TabsContent>
+          </>
         )}
       </Tabs>
 
@@ -142,15 +164,35 @@ const FeeManagementHub: React.FC = () => {
               )}
               {/* All authorized roles can manage records */}
               {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab('list-management')}
-                >
-                  <List className="w-4 h-4 mr-2" />
-                  Manage Records
-                </Button>
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab('list-management')}
+                  >
+                    <List className="w-4 h-4 mr-2" />
+                    Manage Records
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab('dept-analytics')}
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Department Analytics
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab('fee-type-analytics')}
+                  >
+                    <PieChart className="w-4 h-4 mr-2" />
+                    Fee Type Analytics
+                  </Button>
+                </>
               )}
             </CardContent>
           </Card>

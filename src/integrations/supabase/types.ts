@@ -1279,6 +1279,32 @@ export type Database = {
           created_at: string
         }[]
       }
+      get_fee_type_analytics_filtered: {
+        Args: {
+          p_from_date?: string
+          p_to_date?: string
+          p_date_filter_type?: string
+          p_department_ids?: string[]
+          p_status_filter?: string[]
+          p_min_amount?: number
+          p_max_amount?: number
+        }
+        Returns: {
+          fee_type_id: string
+          fee_type_name: string
+          fee_type_description: string
+          is_mandatory: boolean
+          total_students: number
+          total_fee_records: number
+          total_fees: number
+          total_collected: number
+          total_pending: number
+          collection_percentage: number
+          overdue_records: number
+          avg_fee_per_student: number
+          last_updated: string
+        }[]
+      }
       get_invitation_details: {
         Args: { invitation_email: string }
         Returns: {
