@@ -383,6 +383,13 @@ export type Database = {
             foreignKeyName: "fee_structures_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
+            referencedRelation: "department_fee_analytics"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "fee_structures_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
             referencedRelation: "departments"
             referencedColumns: ["id"]
           },
@@ -727,6 +734,13 @@ export type Database = {
             foreignKeyName: "profiles_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
+            referencedRelation: "department_fee_analytics"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
             referencedRelation: "departments"
             referencedColumns: ["id"]
           },
@@ -796,6 +810,39 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+        }
+        Relationships: []
+      }
+      user_activity_logs: {
+        Row: {
+          activity_description: string
+          activity_type: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_description: string
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_description?: string
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -912,6 +959,13 @@ export type Database = {
             foreignKeyName: "user_roles_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
+            referencedRelation: "department_fee_analytics"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "user_roles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
             referencedRelation: "departments"
             referencedColumns: ["id"]
           },
@@ -947,6 +1001,21 @@ export type Database = {
       }
     }
     Views: {
+      department_fee_analytics: {
+        Row: {
+          collection_percentage: number | null
+          department_code: string | null
+          department_id: string | null
+          department_name: string | null
+          overdue_records: number | null
+          total_collected: number | null
+          total_fee_records: number | null
+          total_fees: number | null
+          total_pending: number | null
+          total_students: number | null
+        }
+        Relationships: []
+      }
       hod_department_summary: {
         Row: {
           collection_percentage: number | null
@@ -988,6 +1057,13 @@ export type Database = {
           total_paid: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "department_fee_analytics"
+            referencedColumns: ["department_id"]
+          },
           {
             foreignKeyName: "profiles_department_id_fkey"
             columns: ["department_id"]
@@ -1043,6 +1119,14 @@ export type Database = {
       generate_complete_fee_system: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      generate_fee_record_for_student: {
+        Args: {
+          p_student_id: string
+          p_academic_year?: string
+          p_semester?: number
+        }
+        Returns: string
       }
       generate_receipt_number: {
         Args: Record<PropertyKey, never>

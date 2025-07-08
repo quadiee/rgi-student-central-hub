@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, Edit, Trash2, Eye, Users, Calendar } from 'lucide-react';
+import { Search, Filter, Download, Plus, Edit, Trash2, Eye, Users, Calendar, BarChart3 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -8,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Checkbox } from '../ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { formatCurrency } from '../../utils/feeValidation';
 import FeeRecordEditDialog from './FeeRecordEditDialog';
 import BulkFeeActions from './BulkFeeActions';
+import DepartmentAnalytics from './DepartmentAnalytics';
+import UserActivityLogs from '../Admin/UserActivityLogs';
 
 interface FeeRecord {
   id: string;
@@ -248,7 +250,7 @@ const FeeListManagement: React.FC = () => {
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Fee Management System
+              Enhanced Fee Management System
             </span>
             <div className="flex gap-2">
               <Button onClick={exportToCSV} variant="outline" size="sm">
@@ -259,204 +261,231 @@ const FeeListManagement: React.FC = () => {
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search students..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        <CardContent>
+          <Tabs defaultValue="records" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="records" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Fee Records
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Department Analytics
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Activity Logs
+              </TabsTrigger>
+            </TabsList>
 
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger>
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <TabsContent value="records" className="space-y-4">
+              {/* Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search students..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
 
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger>
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                {[1, 2, 3, 4].map(year => (
-                  <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {departments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Select value={selectedFeeType} onValueChange={setSelectedFeeType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Fee Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Fee Types</SelectItem>
-                {feeTypes.map(type => (
-                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {[1, 2, 3, 4].map(year => (
+                      <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Partial">Partial</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
+                <Select value={selectedFeeType} onValueChange={setSelectedFeeType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Fee Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Fee Types</SelectItem>
+                    {feeTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Button 
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedDepartment('all');
-                setSelectedYear('all');
-                setSelectedFeeType('all');
-                setSelectedStatus('all');
-                setCurrentPage(1);
-              }}
-              variant="outline"
-            >
-              Clear Filters
-            </Button>
-          </div>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Partial">Partial</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
 
-          {/* Bulk Actions */}
-          {selectedRecords.length > 0 && (
-            <BulkFeeActions
-              selectedRecords={selectedRecords}
-              onBulkUpdate={loadFeeRecords}
-              onClear={() => setSelectedRecords([])}
-            />
-          )}
+                <Button 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedDepartment('all');
+                    setSelectedYear('all');
+                    setSelectedFeeType('all');
+                    setSelectedStatus('all');
+                    setCurrentPage(1);
+                  }}
+                  variant="outline"
+                >
+                  Clear Filters
+                </Button>
+              </div>
 
-          {/* Records Table */}
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedRecords.length === feeRecords.length && feeRecords.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>Fee Type</TableHead>
-                  <TableHead>Total Fee</TableHead>
-                  <TableHead>Paid Amount</TableHead>
-                  <TableHead>Fee Status</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    </TableCell>
-                  </TableRow>
-                ) : feeRecords.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                      No fee records found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  feeRecords.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell>
+              {/* Bulk Actions */}
+              {selectedRecords.length > 0 && (
+                <BulkFeeActions
+                  selectedRecords={selectedRecords}
+                  onBulkUpdate={loadFeeRecords}
+                  onClear={() => setSelectedRecords([])}
+                />
+              )}
+
+              {/* Records Table */}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedRecords.includes(record.id)}
-                          onCheckedChange={(checked) => handleSelectRecord(record.id, checked as boolean)}
+                          checked={selectedRecords.length === feeRecords.length && feeRecords.length > 0}
+                          onCheckedChange={handleSelectAll}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{record.student_name}</div>
-                          <div className="text-sm text-gray-500">{record.roll_number}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{record.department_name}</TableCell>
-                      <TableCell>{record.year}</TableCell>
-                      <TableCell>{record.fee_type_name}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(record.final_amount)}</TableCell>
-                      <TableCell className="text-green-600">{formatCurrency(record.paid_amount)}</TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
-                      <TableCell>{new Date(record.due_date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEdit(record)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {user?.role && ['admin', 'principal'].includes(user.role) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(record.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      </TableHead>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Year</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Total Fee</TableHead>
+                      <TableHead>Paid Amount</TableHead>
+                      <TableHead>Fee Status</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        </TableCell>
+                      </TableRow>
+                    ) : feeRecords.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                          No fee records found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      feeRecords.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedRecords.includes(record.id)}
+                              onCheckedChange={(checked) => handleSelectRecord(record.id, checked as boolean)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{record.student_name}</div>
+                              <div className="text-sm text-gray-500">{record.roll_number}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{record.department_name}</TableCell>
+                          <TableCell>{record.year}</TableCell>
+                          <TableCell>{record.fee_type_name}</TableCell>
+                          <TableCell className="font-medium">{formatCurrency(record.final_amount)}</TableCell>
+                          <TableCell className="text-green-600">{formatCurrency(record.paid_amount)}</TableCell>
+                          <TableCell>{getStatusBadge(record.status)}</TableCell>
+                          <TableCell>{new Date(record.due_date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEdit(record)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              {user?.role && ['admin', 'principal'].includes(user.role) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDelete(record.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Showing {((currentPage - 1) * recordsPerPage) + 1} to {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+              {/* Pagination */}
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Showing {((currentPage - 1) * recordsPerPage) + 1} to {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <DepartmentAnalytics />
+            </TabsContent>
+
+            <TabsContent value="activity">
+              <UserActivityLogs />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

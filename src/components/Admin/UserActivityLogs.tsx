@@ -1,0 +1,270 @@
+
+import React, { useState, useEffect } from 'react';
+import { Activity, Filter, Search, Calendar, User, Clock } from 'lucide-react';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { supabase } from '../../integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Badge } from '../ui/badge';
+import { useToast } from '../ui/use-toast';
+import { Button } from '../ui/button';
+
+interface UserActivity {
+  id: string;
+  user_id: string;
+  activity_type: string;
+  activity_description: string;
+  metadata: any;
+  created_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  user_name?: string;
+  user_email?: string;
+}
+
+const UserActivityLogs: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [activities, setActivities] = useState<UserActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedActivityType, setSelectedActivityType] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 20;
+
+  useEffect(() => {
+    if (user) {
+      loadActivityLogs();
+    }
+  }, [user, currentPage, searchTerm, selectedActivityType]);
+
+  const loadActivityLogs = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      let query = supabase
+        .from('user_activity_logs')
+        .select(`
+          *,
+          profiles!user_id (
+            name,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage - 1);
+
+      // Apply filters based on user role
+      if (user.role === 'student') {
+        query = query.eq('user_id', user.id);
+      }
+
+      if (selectedActivityType !== 'all') {
+        query = query.eq('activity_type', selectedActivityType);
+      }
+
+      if (searchTerm) {
+        query = query.or(`activity_description.ilike.%${searchTerm}%,activity_type.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      const formattedActivities = (data || []).map(activity => ({
+        ...activity,
+        user_name: activity.profiles?.name,
+        user_email: activity.profiles?.email
+      }));
+
+      setActivities(formattedActivities);
+      setTotalRecords(count || 0);
+
+    } catch (error) {
+      console.error('Error loading activity logs:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load activity logs",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getActivityIcon = (activityType: string) => {
+    switch (activityType) {
+      case 'user_registered':
+        return <User className="w-4 h-4 text-blue-500" />;
+      case 'payment_created':
+      case 'payment_updated':
+        return <Activity className="w-4 h-4 text-green-500" />;
+      case 'fee_record_created':
+        return <Calendar className="w-4 h-4 text-purple-500" />;
+      default:
+        return <Activity className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getActivityBadgeColor = (activityType: string) => {
+    switch (activityType) {
+      case 'user_registered':
+        return 'bg-blue-100 text-blue-800';
+      case 'payment_created':
+      case 'payment_updated':
+        return 'bg-green-100 text-green-800';
+      case 'fee_record_created':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            User Activity Logs
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search activities..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <Select value={selectedActivityType} onValueChange={setSelectedActivityType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Activity Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="user_registered">User Registration</SelectItem>
+                <SelectItem value="payment_created">Payment Created</SelectItem>
+                <SelectItem value="payment_updated">Payment Updated</SelectItem>
+                <SelectItem value="fee_record_created">Fee Record Created</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button 
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedActivityType('all');
+                setCurrentPage(1);
+              }}
+              variant="outline"
+            >
+              Clear Filters
+            </Button>
+          </div>
+
+          {/* Activity List */}
+          <div className="space-y-4">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No activity logs found
+              </div>
+            ) : (
+              activities.map((activity) => (
+                <div key={activity.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      {getActivityIcon(activity.activity_type)}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium text-gray-900">
+                            {activity.activity_description}
+                          </h4>
+                          <Badge className={getActivityBadgeColor(activity.activity_type)}>
+                            {activity.activity_type.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        
+                        {user?.role !== 'student' && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            User: {activity.user_name || activity.user_email || 'Unknown'}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(activity.created_at).toLocaleString()}
+                          </span>
+                          {activity.ip_address && (
+                            <span>IP: {activity.ip_address}</span>
+                          )}
+                        </div>
+
+                        {activity.metadata && Object.keys(activity.metadata).length > 0 && (
+                          <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                            <strong>Details:</strong>
+                            <pre className="mt-1 whitespace-pre-wrap">
+                              {JSON.stringify(activity.metadata, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {((currentPage - 1) * recordsPerPage) + 1} to {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default UserActivityLogs;

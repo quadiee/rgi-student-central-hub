@@ -12,12 +12,7 @@ const Dashboard: React.FC = () => {
   const renderDashboard = () => {
     switch (user?.role) {
       case 'student':
-        return (
-          <div className="space-y-6">
-            <RealTimeStats />
-            <StudentDashboard />
-          </div>
-        );
+        return <StudentDashboard />;
       case 'hod':
         return (
           <div className="space-y-6">
@@ -34,12 +29,7 @@ const Dashboard: React.FC = () => {
           </div>
         );
       default:
-        return (
-          <div className="space-y-6">
-            <RealTimeStats />
-            <StudentDashboard />
-          </div>
-        );
+        return <StudentDashboard />;
     }
   };
 
