@@ -148,7 +148,7 @@ const FeeListManagement: React.FC = () => {
   };
 
   const handleDelete = async (recordId: string) => {
-    if (!user || !['admin', 'principal'].includes(user.role)) {
+    if (!user || !['admin', 'principal', 'chairman'].includes(user.role)) {
       toast({
         title: "Access Denied",
         description: "You don't have permission to delete fee records",
@@ -430,7 +430,7 @@ const FeeListManagement: React.FC = () => {
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              {user?.role && ['admin', 'principal'].includes(user.role) && (
+                              {user?.role && ['admin', 'principal', 'chairman'].includes(user.role) && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
