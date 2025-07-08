@@ -234,8 +234,8 @@ const InvitationSignup: React.FC = () => {
   };
 
   const handlePasswordSetup = async () => {
-    // Single comprehensive check with proper type guard
-    if (!invitationData?.email) {
+    // Explicit type guard with proper null checks
+    if (!invitationData || !invitationData.email) {
       toast({
         title: "Error",
         description: "Invalid invitation data or missing email.",
