@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Shield, User, Users, Building, Mail, KeyRound, MailPlus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import UserRemovalManager from './UserRemovalManager';
 import ProfileFixer from './ProfileFixer';

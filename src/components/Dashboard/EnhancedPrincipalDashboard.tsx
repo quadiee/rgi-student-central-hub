@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Building, Users, DollarSign, AlertTriangle, TrendingUp } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface PrincipalInstitutionSummary {
