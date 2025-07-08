@@ -18,13 +18,21 @@ import { GraduationCap } from 'lucide-react';
 import { INSTITUTION } from '../constants/institutional';
 import { Student } from '../types/user-student-fees';
 
-const AppContent = () => {
-  const { user, loading } = useAuth();
+const Index = () => {
+  const { user, loading, profileLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const isMobile = useIsMobile();
+
+  console.log('Index page - Auth state:', { 
+    user: !!user, 
+    loading, 
+    profileLoading,
+    userRole: user?.role,
+    currentPath: location.pathname 
+  });
 
   // Get active tab from current route
   const activeTab = location.pathname.slice(1) || 'dashboard';
@@ -107,7 +115,9 @@ const AppContent = () => {
     }
   };
 
+  // Show loading only during initial auth check
   if (loading) {
+    console.log('Showing loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -122,9 +132,13 @@ const AppContent = () => {
     );
   }
 
+  // Show auth page if no user
   if (!user) {
+    console.log('No user, showing auth page');
     return <SupabaseAuthPage />;
   }
+
+  console.log('Showing main app content');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 w-full">
@@ -173,10 +187,6 @@ const AppContent = () => {
       )}
     </div>
   );
-};
-
-const Index = () => {
-  return <AppContent />;
 };
 
 export default Index;

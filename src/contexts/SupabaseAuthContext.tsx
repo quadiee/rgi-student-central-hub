@@ -52,7 +52,7 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log('Fetching profile for user:', userId);
       const { data: profile, error } = await supabase
@@ -66,7 +66,7 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
         return null;
       }
 
-      console.log('Profile fetched:', profile);
+      console.log('Profile fetched successfully:', profile);
       return {
         id: userId,
         name: profile.name || profile.email,
@@ -96,44 +96,74 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
   };
 
   useEffect(() => {
+    let mounted = true;
+    
     console.log('Setting up auth state listener');
     
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Initial session check:', { session: !!session, error });
-      setSession(session);
-      
-      if (session?.user) {
-        setProfileLoading(true);
-        fetchUserProfile(session.user.id).then((profile) => {
-          setUser(profile);
-          setProfileLoading(false);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', { session: !!session, error });
+        
+        if (!mounted) return;
+        
+        setSession(session);
+        
+        if (session?.user) {
+          setProfileLoading(true);
+          const profile = await fetchUserProfile(session.user.id);
+          if (mounted) {
+            setUser(profile);
+            setProfileLoading(false);
+          }
+        }
+        
+        if (mounted) {
           setLoading(false);
-        });
-      } else {
-        setUser(null);
-        setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    });
+    };
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, { session: !!session });
+      
+      if (!mounted) return;
+      
       setSession(session);
       
       if (session?.user) {
         setProfileLoading(true);
-        const profile = await fetchUserProfile(session.user.id);
-        setUser(profile);
-        setProfileLoading(false);
+        // Use setTimeout to avoid blocking the auth state change
+        setTimeout(async () => {
+          if (mounted) {
+            const profile = await fetchUserProfile(session.user.id);
+            if (mounted) {
+              setUser(profile);
+              setProfileLoading(false);
+            }
+          }
+        }, 0);
       } else {
         setUser(null);
         setProfileLoading(false);
       }
-      setLoading(false);
+      
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
+    initializeAuth();
+
     return () => {
+      mounted = false;
       console.log('Cleaning up auth listener');
       subscription.unsubscribe();
     };
@@ -141,7 +171,6 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
 
   const signIn = async (email: string, password: string) => {
     console.log('Sign in attempt for:', email);
-    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
@@ -159,13 +188,10 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
     } catch (error: any) {
       console.error('Sign in exception:', error);
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -175,13 +201,10 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
     } catch (error: any) {
       console.error('Error signing out:', error);
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, userData: any = {}) => {
-    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -202,13 +225,10 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
     } catch (error: any) {
       console.error('Error during sign-up:', error);
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
   const updateProfile = async (updates: any) => {
-    setLoading(true);
     try {
       const { error } = await supabase
         .from('profiles')
@@ -225,8 +245,6 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthContextProps> = ({ child
     } catch (error: any) {
       console.error('Error updating profile:', error);
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
