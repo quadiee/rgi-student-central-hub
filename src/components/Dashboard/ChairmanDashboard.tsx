@@ -72,7 +72,6 @@ const ChairmanDashboard: React.FC = () => {
       {/* Enhanced Header with Gradient Background */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-600 rounded-2xl" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
         
         <div className="relative p-6 lg:p-8 text-white">
           <div className="flex items-center justify-between">
@@ -129,7 +128,7 @@ const ChairmanDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
         {quickStats.map((stat, index) => (
           <Card key={index} className="bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-3">
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-600">
                   {stat.title}
