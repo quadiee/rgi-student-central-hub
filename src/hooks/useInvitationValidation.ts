@@ -102,12 +102,17 @@ export const useInvitationValidation = (token: string | undefined) => {
 
       setInvitationData(processedData);
 
-      // Check if user already exists in auth.users
+      // Check if user already exists in auth.users - simplified approach
       try {
-        const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
-        if (!userError && users) {
-          const existingUser = users.find(u => u.email === responseData.email);
+        // Use a more direct approach to check user existence
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (!authError && authData?.users) {
+          const existingUser = authData.users.find(user => user.email === responseData.email);
           setUserExists(!!existingUser);
+        } else {
+          console.warn('Could not check if user exists:', authError);
+          setUserExists(false);
         }
       } catch (userCheckError) {
         console.warn('Could not check if user exists:', userCheckError);
