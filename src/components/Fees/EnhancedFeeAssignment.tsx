@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Upload, Filter, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -531,6 +530,15 @@ const EnhancedFeeAssignment: React.FC = () => {
         <BatchFeeProcessor
           open={showBatchProcessor}
           onOpenChange={setShowBatchProcessor}
+          selectedStudents={
+            students.filter(student => selectedStudents.includes(student.id)).map(student => ({
+              id: student.id,
+              name: student.name,
+              roll_number: student.roll_number,
+              year: student.year || 0,
+              department: student.department?.name || ''
+            }))
+          }
           onProcessComplete={() => {
             toast({
               title: "Success",

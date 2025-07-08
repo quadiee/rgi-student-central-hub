@@ -192,8 +192,8 @@ const BatchFeeProcessor: React.FC<BatchFeeProcessorProps> = ({
 
       if (error) throw error;
 
-      // Type assertion for the response
-      const response = data as ProcessResponse;
+      // Properly type the response with typecasting
+      const response = data as unknown as ProcessResponse;
       
       setProcessResults(response);
 
