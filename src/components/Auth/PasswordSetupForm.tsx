@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useToast } from '../ui/use-toast';
-import { authUtils } from '../../lib/auth-utils';
+import { PersonalizedAuthService } from '../../lib/personalizedAuth';
 
 interface PasswordSetupFormProps {
   email?: string;
@@ -52,22 +51,26 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
     }
 
     try {
-      const { error } = await authUtils.updatePassword(formData.password);
+      console.log('PasswordSetupForm: Attempting to update password');
+      const result = await PersonalizedAuthService.updatePasswordWithContext(formData.password);
       
-      if (error) {
+      if (!result.success) {
+        console.error('PasswordSetupForm: Password update failed:', result.error);
         toast({
           title: "Password Setup Failed",
-          description: error.message,
+          description: result.error || 'Failed to update password',
           variant: "destructive"
         });
       } else {
+        console.log('PasswordSetupForm: Password updated successfully');
         toast({
           title: "Password Set Successfully",
-          description: "Your password has been set. You can now log in.",
+          description: result.message || "Your password has been set successfully.",
         });
         onSuccess?.();
       }
     } catch (error: any) {
+      console.error('PasswordSetupForm: Unexpected error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",

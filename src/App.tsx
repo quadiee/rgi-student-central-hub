@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/Auth/ErrorBoundary';
 import Index from './pages/Index';
 import InvitationSignup from './components/Auth/InvitationSignup';
 import ResetPassword from './pages/ResetPassword';
+import AuthCallback from './pages/AuthCallback';
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ function App() {
             <Routes>
               <Route path="/invite/:token" element={<InvitationSignup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/dashboard" element={<Index />} />
               <Route path="/fees" element={<Index />} />
               <Route path="/admin" element={<Index />} />

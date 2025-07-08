@@ -223,9 +223,9 @@ serve(async (req: Request) => {
       console.log('Profile not found, continuing with basic reset:', profileError.message);
     }
 
-    // Generate password recovery link with correct redirect URL
+    // Generate password recovery link with correct redirect URL for auth callback
     const appUrl = getAppUrl(req);
-    const redirectUrl = `${appUrl}/reset-password`;
+    const redirectUrl = `${appUrl}/auth/callback`;
     
     console.log('Generating recovery link with redirect:', redirectUrl);
     const { data, error } = await supabase.auth.admin.generateLink({

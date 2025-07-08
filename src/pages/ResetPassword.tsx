@@ -8,28 +8,26 @@ import { useToast } from '../components/ui/use-toast';
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
   const isInvitation = searchParams.get('invitation') === 'true';
-  const token = searchParams.get('token');
 
   useEffect(() => {
     console.log('ResetPassword page loaded');
     console.log('User:', user);
-    console.log('Token:', token);
+    console.log('Session:', !!session);
     console.log('Is invitation:', isInvitation);
 
-    // Check if user is authenticated (from password reset link)
-    if (user) {
-      console.log('User is authenticated, showing password setup form');
-      setLoading(false);
-    } else {
-      // If no user but has token, they might need to authenticate first
-      setLoading(false);
-      if (!token) {
-        console.log('No user and no token, showing error');
+    // Add a small delay to ensure auth state has settled
+    const timer = setTimeout(() => {
+      // Check if user is authenticated (from password reset link or invitation)
+      if (session?.user) {
+        console.log('User is authenticated, showing password setup form');
+        setLoading(false);
+      } else {
+        console.log('No authenticated session found');
         toast({
           title: "Invalid Reset Link",
           description: "This password reset link is invalid or has expired. Please request a new password reset link.",
@@ -37,11 +35,13 @@ const ResetPassword: React.FC = () => {
         });
         navigate('/auth');
       }
-    }
-  }, [user, token, navigate, toast]);
+    }, 1000); // Give auth state time to settle
+
+    return () => clearTimeout(timer);
+  }, [user, session, navigate, toast, isInvitation]);
 
   const handlePasswordSetupSuccess = () => {
-    if (isInvitation && token) {
+    if (isInvitation) {
       toast({
         title: "Account Setup Complete",
         description: "Your account has been activated successfully! You can now access the system.",
