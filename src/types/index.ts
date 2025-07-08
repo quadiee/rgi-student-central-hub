@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -15,6 +14,9 @@ export interface User {
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
+  phone?: string;
+  address?: string;
+  department?: string;
 }
 
 export interface Student {
