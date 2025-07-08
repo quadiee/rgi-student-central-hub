@@ -16,6 +16,13 @@ interface EnhancedCSVUploaderProps {
   onUploadComplete: () => void;
 }
 
+interface CSVUploadResult {
+  success: boolean;
+  processed_count?: number;
+  error?: string;
+  message?: string;
+}
+
 const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadComplete }) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -60,7 +67,7 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
     valid: boolean;
     errors: string[];
     warnings: string[];
-    data?: any[];
+    previewData?: any[];
   }> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -73,7 +80,7 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
           const requiredFields = ['roll_number', 'fee_amount', 'due_date'];
           const errors: string[] = [];
           const warnings: string[] = [];
-          const data: any[] = [];
+          const previewData: any[] = [];
 
           // Check headers
           const missingFields = requiredFields.filter(field => !headers.includes(field));
@@ -111,7 +118,7 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
               }
             }
 
-            data.push(row);
+            previewData.push(row);
           }
 
           if (lines.length > 6) {
@@ -122,7 +129,7 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
             valid: errors.length === 0,
             errors,
             warnings,
-            data: errors.length === 0 ? data : undefined
+            previewData: errors.length === 0 ? previewData : undefined
           });
         } catch (error) {
           resolve({
@@ -196,10 +203,13 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
 
           if (error) throw error;
 
-          if (data?.success) {
+          // Type cast the response safely
+          const result = data as unknown as CSVUploadResult;
+
+          if (result?.success) {
             toast({
               title: "Upload Successful",
-              description: `Processed ${data.processed_count} fee records successfully`,
+              description: `Processed ${result.processed_count || 0} fee records successfully`,
             });
             
             setSelectedFile(null);
@@ -209,7 +219,7 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
             }
             onUploadComplete();
           } else {
-            throw new Error(data?.error || 'Upload failed');
+            throw new Error(result?.error || 'Upload failed');
           }
         } catch (error) {
           console.error('Error processing CSV:', error);
@@ -355,19 +365,19 @@ const EnhancedCSVUploader: React.FC<EnhancedCSVUploaderProps> = ({ onUploadCompl
                 </Alert>
               )}
 
-              {validationResults.valid && validationResults.data && (
+              {validationResults.valid && validationResults.previewData && (
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertDescription>
                     <div className="font-medium mb-2">Validation Successful! Preview:</div>
                     <div className="mt-2 p-3 bg-gray-50 rounded text-sm">
-                      {validationResults.data.slice(0, 3).map((row, index) => (
+                      {validationResults.previewData.slice(0, 3).map((row, index) => (
                         <div key={index} className="mb-1">
                           {row.roll_number} - ₹{row.fee_amount} (Due: {row.due_date})
                         </div>
                       ))}
-                      {validationResults.data.length > 3 && (
-                        <div className="text-gray-600">...and {validationResults.data.length - 3} more rows</div>
+                      {validationResults.previewData.length > 3 && (
+                        <div className="text-gray-600">...and {validationResults.previewData.length - 3} more rows</div>
                       )}
                     </div>
                   </AlertDescription>
