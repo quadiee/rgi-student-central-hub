@@ -77,7 +77,8 @@ const EnhancedFeeAssignment: React.FC = () => {
       setLoading(true);
       console.log('Fetching students with filters:', { departmentFilter, yearFilter, searchTerm });
       
-      let query = supabase
+      // Use a simpler approach - fetch profiles and departments separately, then join in JavaScript
+      let profileQuery = supabase
         .from('profiles')
         .select(`
           id,
@@ -86,74 +87,97 @@ const EnhancedFeeAssignment: React.FC = () => {
           roll_number,
           year,
           semester,
-          department_id,
-          departments!profiles_department_id_fkey (
-            id,
-            name,
-            code
-          )
+          department_id
         `)
         .eq('role', 'student')
         .eq('is_active', true);
 
       if (departmentFilter) {
-        query = query.eq('department_id', departmentFilter);
+        profileQuery = profileQuery.eq('department_id', departmentFilter);
       }
 
       if (yearFilter) {
-        query = query.eq('year', parseInt(yearFilter));
+        profileQuery = profileQuery.eq('year', parseInt(yearFilter));
       }
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,roll_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+        profileQuery = profileQuery.or(`name.ilike.%${searchTerm}%,roll_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query.order('roll_number');
+      const { data: profilesData, error: profilesError } = await profileQuery.order('roll_number');
 
-      if (error) {
-        console.error('Supabase query error:', error);
-        throw new Error(`Database query failed: ${error.message}`);
+      if (profilesError) {
+        console.error('Profiles query error:', profilesError);
+        throw new Error(`Failed to fetch students: ${profilesError.message}`);
       }
 
-      console.log('Raw query response:', data);
+      console.log('Profiles data:', profilesData);
 
-      if (!data) {
-        console.log('No data returned from query');
+      if (!profilesData || profilesData.length === 0) {
+        console.log('No students found');
         setStudents([]);
+        toast({
+          title: "No Students Found",
+          description: "No students match your current filter criteria.",
+          variant: "default"
+        });
         return;
       }
 
-      // Map the data to match the Student interface with better error handling
-      const mappedData: Student[] = data
-        .filter(item => {
-          if (!item.id || !item.name || !item.email) {
-            console.warn('Incomplete student data:', item);
+      // Fetch all departments
+      const { data: departmentsData, error: departmentsError } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true);
+
+      if (departmentsError) {
+        console.error('Departments query error:', departmentsError);
+        throw new Error(`Failed to fetch departments: ${departmentsError.message}`);
+      }
+
+      console.log('Departments data:', departmentsData);
+
+      // Create a map of department ID to department data for quick lookup
+      const departmentMap = new Map();
+      (departmentsData || []).forEach(dept => {
+        departmentMap.set(dept.id, dept);
+      });
+
+      // Map profiles with department information
+      const mappedStudents: Student[] = profilesData
+        .filter(profile => {
+          if (!profile.id || !profile.name || !profile.email) {
+            console.warn('Incomplete student data:', profile);
             return false;
           }
           return true;
         })
-        .map(item => ({
-          id: item.id,
-          name: item.name,
-          email: item.email,
-          roll_number: item.roll_number || '',
-          year: item.year,
-          semester: item.semester,
-          department: item.departments ? {
-            id: item.departments.id,
-            name: item.departments.name,
-            code: item.departments.code
-          } : {
+        .map(profile => {
+          const department = departmentMap.get(profile.department_id) || {
             id: '',
             name: 'No Department',
             code: 'N/A'
-          }
-        }));
+          };
 
-      console.log('Mapped student data:', mappedData);
-      setStudents(mappedData);
+          return {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            roll_number: profile.roll_number || '',
+            year: profile.year,
+            semester: profile.semester,
+            department: {
+              id: department.id,
+              name: department.name,
+              code: department.code
+            }
+          };
+        });
 
-      if (mappedData.length === 0) {
+      console.log('Mapped students:', mappedStudents);
+      setStudents(mappedStudents);
+
+      if (mappedStudents.length === 0) {
         toast({
           title: "No Students Found",
           description: "No students match your current filter criteria.",
