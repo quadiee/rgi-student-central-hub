@@ -10,11 +10,15 @@ interface Profile {
   email: string;
   role: string;
   department_id?: string;
+  department_name?: string;
   is_active: boolean;
   profile_completed?: boolean;
   roll_number?: string;
   employee_id?: string;
   phone?: string;
+  address?: string;
+  profile_photo_url?: string;
+  created_at?: string;
 }
 
 interface AuthContextType {
@@ -23,8 +27,10 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  getInvitationDetails: (email: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -49,7 +55,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setProfileLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          departments(name)
+        `)
         .eq('id', userId)
         .single();
 
@@ -59,7 +68,13 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
 
-      setProfile(data);
+      // Transform the data to include department_name
+      const profileWithDepartment = {
+        ...data,
+        department_name: data.departments?.name || null
+      };
+
+      setProfile(profileWithDepartment);
     } catch (error) {
       console.error('Profile fetch error:', error);
       setProfile(null);
@@ -83,6 +98,37 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return { error };
     } catch (error) {
       return { error };
+    }
+  };
+
+  const signUp = async (email: string, password: string, metadata?: any) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const getInvitationDetails = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('email', email)
+        .eq('is_active', true)
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      return { data: null, error };
     }
   };
 
@@ -162,8 +208,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     loading,
     profileLoading,
     signIn,
+    signUp,
     signOut,
-    refreshProfile
+    refreshProfile,
+    getInvitationDetails
   };
 
   return (

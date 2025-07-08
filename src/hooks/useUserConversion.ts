@@ -35,5 +35,21 @@ export const useUserConversion = () => {
     };
   };
 
-  return { convertUserProfileToUser };
+  const convertProfileToUser = (profile: any): User => {
+    return {
+      id: profile.id,
+      name: profile.name || '',
+      email: profile.email || '',
+      role: profile.role || 'student',
+      department_id: profile.department_id || '',
+      department_name: profile.department_name,
+      avatar: profile.profile_photo_url || '',
+      rollNumber: profile.roll_number,
+      employeeId: profile.employee_id,
+      isActive: profile.is_active || false,
+      createdAt: profile.created_at,
+    };
+  };
+
+  return { convertUserProfileToUser, convertProfileToUser };
 };
