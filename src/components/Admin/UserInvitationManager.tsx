@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, ExternalLink, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -174,7 +175,7 @@ const UserInvitationManager: React.FC = () => {
             employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
             invitation_id: inviteData.id
           },
-          emailRedirectTo: ${window.location.origin}/auth?mode=invited
+          emailRedirectTo: `${window.location.origin}/auth?mode=invited`
         }
       });
 
@@ -182,12 +183,12 @@ const UserInvitationManager: React.FC = () => {
         console.error('Sign up error:', signUpError);
         toast({
           title: "Invitation Created",
-          description: Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'},
+          description: `Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'}`,
         });
       } else {
         toast({
           title: "Invitation Sent Successfully",
-          description: User account created and invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : ''},
+          description: `User account created and invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : ''}`,
         });
       }
 
@@ -225,7 +226,7 @@ const UserInvitationManager: React.FC = () => {
     if (emailSent) {
       toast({
         title: "Email Resent",
-        description: Invitation email resent to ${invite.email},
+        description: `Invitation email resent to ${invite.email}`,
       });
       loadPendingInvites();
     } else {
@@ -238,7 +239,7 @@ const UserInvitationManager: React.FC = () => {
   };
 
   const copyInvitationUrl = (email: string) => {
-    const invitationUrl = ${window.location.origin}/auth?mode=invited&email=${encodeURIComponent(email)};
+    const invitationUrl = `${window.location.origin}/auth?mode=invited&email=${encodeURIComponent(email)}`;
     navigator.clipboard.writeText(invitationUrl);
     toast({
       title: "Link Copied",
