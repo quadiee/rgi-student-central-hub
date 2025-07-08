@@ -7,7 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
-import { authUtils } from '../../lib/auth-utils';
+import { supabase } from '../../integrations/supabase/client';
 
 const InvitationSignup: React.FC = () => {
   const { token } = useParams();
@@ -47,26 +47,33 @@ const InvitationSignup: React.FC = () => {
     try {
       setLoadingInvitation(true);
       
-      // Validate invitation token using the new function
-      const { data, error } = await authUtils.validateInvitationToken(token!);
+      // Validate invitation token using the database function
+      const { data, error } = await supabase.rpc('validate_invitation_token', {
+        p_token: token!
+      });
       
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         setInviteError("Failed to validate invitation token.");
         setLoadingInvitation(false);
         return;
       }
 
-      if (!data.is_valid) {
-        setInviteError(data.error_message || "This invitation is invalid or has expired.");
+      const inviteData = data[0];
+      if (!inviteData.is_valid) {
+        setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
         setLoadingInvitation(false);
         return;
       }
 
-      setInvitationData(data);
+      setInvitationData(inviteData);
 
-      // Check if user exists
-      const exists = await authUtils.checkUserExists(data.email);
-      setUserExists(exists);
+      // Check if user already exists in auth.users
+      const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+      if (!userError) {
+        const existingUser = users.find(u => u.email === inviteData.email);
+        setUserExists(!!existingUser);
+      }
+
       setInviteError(null);
       setLoadingInvitation(false);
     } catch (err: any) {
@@ -108,10 +115,28 @@ const InvitationSignup: React.FC = () => {
     }
 
     try {
-      const userData = {
+      // Sign up the user (this will create a minimal placeholder profile)
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: invitationData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`
+        }
+      });
+      
+      if (signUpError) {
+        toast({
+          title: "Signup Failed",
+          description: signUpError.message,
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Now complete the profile with the form data
+      const profileData = {
         name: formData.name,
-        role: invitationData.role,
-        department: invitationData.department,
         phone: formData.phone,
         roll_number: invitationData.role === 'student' ? (formData.rollNumber || invitationData.roll_number) : null,
         employee_id: invitationData.role !== 'student' ? (formData.employeeId || invitationData.employee_id) : null,
@@ -120,18 +145,24 @@ const InvitationSignup: React.FC = () => {
         address: formData.address
       };
 
-      const { error } = await authUtils.signUpWithProfile(invitationData.email, formData.password, userData);
-      
-      if (error) {
+      // Complete the invitation profile
+      const { data: completionResult, error: completionError } = await supabase.rpc('complete_invitation_profile', {
+        p_user_id: authData.user?.id,
+        p_invitation_id: invitationData.id,
+        p_profile_data: profileData
+      });
+
+      if (completionError) {
+        console.error('Profile completion error:', completionError);
         toast({
-          title: "Signup Failed",
-          description: error.message,
+          title: "Profile Setup Failed",
+          description: "Account created but profile setup failed. Please contact admin.",
           variant: "destructive"
         });
       } else {
         toast({
-          title: "Account Created",
-          description: "Your account has been created successfully. Please check your email for verification.",
+          title: "Account Created Successfully",
+          description: "Your account has been created and profile completed. You can now log in.",
         });
         navigate("/auth");
       }
@@ -149,7 +180,9 @@ const InvitationSignup: React.FC = () => {
   const handlePasswordSetup = async () => {
     setLoading(true);
     try {
-      const { error } = await authUtils.sendPasswordReset(invitationData.email);
+      const { error } = await supabase.auth.resetPasswordForEmail(invitationData.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
       
       if (error) {
         toast({

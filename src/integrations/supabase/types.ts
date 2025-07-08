@@ -659,6 +659,7 @@ export type Database = {
           name: string
           paid_amount: number | null
           phone: string | null
+          profile_completed: boolean | null
           profile_photo_url: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           roll_number: string | null
@@ -689,6 +690,7 @@ export type Database = {
           name: string
           paid_amount?: number | null
           phone?: string | null
+          profile_completed?: boolean | null
           profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
@@ -719,6 +721,7 @@ export type Database = {
           name?: string
           paid_amount?: number | null
           phone?: string | null
+          profile_completed?: boolean | null
           profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
