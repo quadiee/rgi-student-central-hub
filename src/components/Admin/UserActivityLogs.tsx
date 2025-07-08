@@ -1,31 +1,53 @@
-
 import React, { useState, useEffect } from 'react';
 import { Activity, Filter, Search, Calendar, User, Clock } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/button';
 
 interface UserActivity {
   id: string;
-  user_id: string;
+  user_id: string | null;
   activity_type: string;
   activity_description: string;
-  metadata: any;
-  created_at: string;
-  ip_address?: string;
-  user_agent?: string;
+  metadata: any | null;
+  created_at: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
   user_name?: string;
   user_email?: string;
 }
 
+// This matches exactly what Supabase returns when you join the `profiles` table
+type ActivityRow = {
+  id: string;
+  user_id: string | null;
+  activity_type: string;
+  activity_description: string;
+  metadata: any | null;
+  created_at: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  profiles: {
+    name: string;
+    email: string;
+  } | null;
+};
+
 const UserActivityLogs: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,9 +57,7 @@ const UserActivityLogs: React.FC = () => {
   const recordsPerPage = 20;
 
   useEffect(() => {
-    if (user) {
-      loadActivityLogs();
-    }
+    if (user) loadActivityLogs();
   }, [user, currentPage, searchTerm, selectedActivityType]);
 
   const loadActivityLogs = async () => {
@@ -47,49 +67,61 @@ const UserActivityLogs: React.FC = () => {
       setLoading(true);
 
       let query = supabase
-        .from('user_activity_logs')
-        .select(`
+        .from<ActivityRow>('user_activity_logs')
+        .select(
+          `
           *,
-          profiles!user_id (
+          profiles (
             name,
             email
           )
-        `)
+        `,
+          { count: 'exact' }
+        )
         .order('created_at', { ascending: false })
-        .range((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage - 1);
+        .range(
+          (currentPage - 1) * recordsPerPage,
+          currentPage * recordsPerPage - 1
+        );
 
-      // Apply filters based on user role
+      // if student, filter to only their own logs
       if (user.role === 'student') {
         query = query.eq('user_id', user.id);
       }
-
       if (selectedActivityType !== 'all') {
         query = query.eq('activity_type', selectedActivityType);
       }
-
       if (searchTerm) {
-        query = query.or(`activity_description.ilike.%${searchTerm}%,activity_type.ilike.%${searchTerm}%`);
+        query = query.or(
+          `activity_description.ilike.%${searchTerm}%,activity_type.ilike.%${searchTerm}%`
+        );
       }
 
       const { data, error, count } = await query;
-
       if (error) throw error;
 
-      const formattedActivities = (data || []).map(activity => ({
-        ...activity,
-        user_name: activity.profiles?.name,
-        user_email: activity.profiles?.email
+      // Map the joined row into our UI-friendly UserActivity
+      const formatted = (data || []).map((row) => ({
+        id: row.id,
+        user_id: row.user_id,
+        activity_type: row.activity_type,
+        activity_description: row.activity_description,
+        metadata: row.metadata,
+        created_at: row.created_at,
+        ip_address: row.ip_address,
+        user_agent: row.user_agent,
+        user_name: row.profiles?.name,
+        user_email: row.profiles?.email,
       }));
 
-      setActivities(formattedActivities);
-      setTotalRecords(count || 0);
-
-    } catch (error) {
-      console.error('Error loading activity logs:', error);
+      setActivities(formatted);
+      setTotalRecords(count ?? 0);
+    } catch (err) {
+      console.error('Error loading activity logs:', err);
       toast({
-        title: "Error",
-        description: "Failed to load activity logs",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to load activity logs',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -135,7 +167,6 @@ const UserActivityLogs: React.FC = () => {
             User Activity Logs
           </CardTitle>
         </CardHeader>
-
         <CardContent className="space-y-4">
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -148,21 +179,26 @@ const UserActivityLogs: React.FC = () => {
                 className="pl-10"
               />
             </div>
-
-            <Select value={selectedActivityType} onValueChange={setSelectedActivityType}>
+            <Select
+              value={selectedActivityType}
+              onValueChange={setSelectedActivityType}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Activity Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Activities</SelectItem>
-                <SelectItem value="user_registered">User Registration</SelectItem>
+                <SelectItem value="user_registered">
+                  User Registration
+                </SelectItem>
                 <SelectItem value="payment_created">Payment Created</SelectItem>
                 <SelectItem value="payment_updated">Payment Updated</SelectItem>
-                <SelectItem value="fee_record_created">Fee Record Created</SelectItem>
+                <SelectItem value="fee_record_created">
+                  Fee Record Created
+                </SelectItem>
               </SelectContent>
             </Select>
-
-            <Button 
+            <Button
               onClick={() => {
                 setSearchTerm('');
                 setSelectedActivityType('all');
@@ -178,49 +214,47 @@ const UserActivityLogs: React.FC = () => {
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
               </div>
             ) : activities.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No activity logs found
               </div>
             ) : (
-              activities.map((activity) => (
-                <div key={activity.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+              activities.map((act) => (
+                <div
+                  key={act.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
-                      {getActivityIcon(activity.activity_type)}
+                      {getActivityIcon(act.activity_type)}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium text-gray-900">
-                            {activity.activity_description}
+                            {act.activity_description}
                           </h4>
-                          <Badge className={getActivityBadgeColor(activity.activity_type)}>
-                            {activity.activity_type.replace('_', ' ')}
+                          <Badge className={getActivityBadgeColor(act.activity_type)}>
+                            {act.activity_type.replace('_', ' ')}
                           </Badge>
                         </div>
-                        
                         {user?.role !== 'student' && (
                           <p className="text-sm text-gray-600 mb-2">
-                            User: {activity.user_name || activity.user_email || 'Unknown'}
+                            User: {act.user_name ?? act.user_email ?? 'Unknown'}
                           </p>
                         )}
-                        
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {new Date(activity.created_at).toLocaleString()}
+                            {new Date(act.created_at || '').toLocaleString()}
                           </span>
-                          {activity.ip_address && (
-                            <span>IP: {activity.ip_address}</span>
-                          )}
+                          {act.ip_address && <span>IP: {act.ip_address}</span>}
                         </div>
-
-                        {activity.metadata && Object.keys(activity.metadata).length > 0 && (
+                        {act.metadata && Object.keys(act.metadata).length > 0 && (
                           <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
                             <strong>Details:</strong>
                             <pre className="mt-1 whitespace-pre-wrap">
-                              {JSON.stringify(activity.metadata, null, 2)}
+                              {JSON.stringify(act.metadata, null, 2)}
                             </pre>
                           </div>
                         )}
@@ -236,7 +270,10 @@ const UserActivityLogs: React.FC = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                Showing {((currentPage - 1) * recordsPerPage) + 1} to {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
+                Showing{' '}
+                {(currentPage - 1) * recordsPerPage + 1} to{' '}
+                {Math.min(currentPage * recordsPerPage, totalRecords)} of{' '}
+                {totalRecords} records
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -253,7 +290,9 @@ const UserActivityLogs: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   Next
