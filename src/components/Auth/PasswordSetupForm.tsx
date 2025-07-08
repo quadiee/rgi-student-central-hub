@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -8,14 +9,12 @@ import { authUtils } from '../../lib/auth-utils';
 
 interface PasswordSetupFormProps {
   email?: string;
-  token?: string; // ✅ added
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({ 
   email, 
-  token,       // ✅ added
   onSuccess, 
   onCancel 
 }) => {
@@ -53,21 +52,6 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
     }
 
     try {
-      // ✅ Sign in using token first if provided
-      if (token) {
-        const { error: signInError } = await authUtils.signInWithToken(token);
-        if (signInError) {
-          toast({
-            title: "Invalid or Expired Link",
-            description: "The password reset link is no longer valid. Please request a new one.",
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
-      }
-
-      // ✅ Now update the password
       const { error } = await authUtils.updatePassword(formData.password);
       
       if (error) {
