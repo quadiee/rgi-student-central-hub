@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 
 export interface SignUpData {
@@ -13,7 +14,7 @@ export interface SignUpData {
 }
 
 export const authUtils = {
-  // ✅ Check if user exists in auth system
+  // Check if user exists in auth system
   checkUserExists: async (email: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase.functions.invoke('check-user-exists', {
@@ -26,7 +27,7 @@ export const authUtils = {
     }
   },
 
-  // ✅ Send password reset email
+  // Send password reset email
   sendPasswordReset: async (email: string): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.functions.invoke('send-password-reset', {
@@ -41,30 +42,7 @@ export const authUtils = {
     }
   },
 
-  // ✅ Sign in user using token from password reset link
-  signInWithToken: async (token: string): Promise<{ error?: any }> => {
-    try {
-      const { error } = await supabase.auth.setSession({
-        access_token: token,
-        refresh_token: '' // Required, but empty for one-time use
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  // ✅ Update user password (after token-based login)
-  updatePassword: async (password: string): Promise<{ error?: any }> => {
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  // ✅ Send magic link
+  // Send magic link
   sendMagicLink: async (email: string): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -79,7 +57,17 @@ export const authUtils = {
     }
   },
 
-  // ✅ Sign up new user with additional profile data
+  // Update user password (for existing users)
+  updatePassword: async (password: string): Promise<{ error?: any }> => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // Sign up new user with profile data
   signUpWithProfile: async (email: string, password: string, userData: SignUpData): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.auth.signUp({
@@ -96,7 +84,7 @@ export const authUtils = {
     }
   },
 
-  // ✅ Remove user (admin only)
+  // Remove user (admin function)
   removeUser: async (userId: string): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.functions.invoke('remove-user', {
