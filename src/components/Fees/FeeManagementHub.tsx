@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import AdminFeeAssignment from './AdminFeeAssignment';
+import EnhancedFeeAssignment from './EnhancedFeeAssignment';
 import CSVFeeUploader from './CSVFeeUploader';
 import FeeListManagement from './FeeListManagement';
 import StudentFeeDashboard from './StudentFeeDashboard';
@@ -93,7 +93,7 @@ const FeeManagementHub: React.FC = () => {
         {isAdmin && (
           <>
             <TabsContent value="assign-fees" className="space-y-6">
-              <AdminFeeAssignment />
+              <EnhancedFeeAssignment />
             </TabsContent>
 
             <TabsContent value="csv-upload" className="space-y-6">
