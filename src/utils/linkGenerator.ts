@@ -16,9 +16,7 @@ export interface LinkContext {
 
 export class LinkGenerator {
   private static getBaseUrl(): string {
-    if (typeof window !== 'undefined') {
-      return window.location.origin;
-    }
+    // Always use the production URL for consistency across all environments
     return 'https://rgi-student-central-hub.lovable.app';
   }
 

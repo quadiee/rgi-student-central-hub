@@ -1,12 +1,7 @@
 
 // Utility function to get the correct app URL for redirects and links
 export const getAppUrl = (): string => {
-  // Check if we're in a browser environment
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  
-  // Fallback for server-side or when window is not available
+  // Always use the production URL for consistency
   return 'https://rgi-student-central-hub.lovable.app';
 };
 

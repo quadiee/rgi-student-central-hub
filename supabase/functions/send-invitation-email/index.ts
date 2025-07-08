@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -18,18 +17,7 @@ interface InvitationEmailRequest {
 }
 
 const getAppUrl = (req: Request): string => {
-  const origin = req.headers.get('origin');
-  const referer = req.headers.get('referer');
-  
-  if (origin) return origin;
-  if (referer) {
-    try {
-      return new URL(referer).origin;
-    } catch (e) {
-      console.log('Could not parse referer:', referer);
-    }
-  }
-  
+  // Always use the production URL for consistency
   return 'https://rgi-student-central-hub.lovable.app';
 };
 
@@ -283,7 +271,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Generate personalized invitation URL
+    // Generate personalized invitation URL with correct app URL
     const appUrl = getAppUrl(req);
     const invitationUrl = `${appUrl}/invite/${invitationToken}?role=${role}&dept=${department}`;
 

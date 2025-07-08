@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 
@@ -22,12 +21,7 @@ interface PasswordResetRequest {
 }
 
 const getAppUrl = (req: Request): string => {
-  const origin = req.headers.get("origin");
-  const referer = req.headers.get("referer");
-  if (origin) return origin;
-  if (referer) {
-    try { return new URL(referer).origin; } catch {}
-  }
+  // Always use the production URL for consistency
   return "https://rgi-student-central-hub.lovable.app";
 };
 
@@ -229,7 +223,7 @@ serve(async (req: Request) => {
       console.log('Profile not found, continuing with basic reset:', profileError.message);
     }
 
-    // Generate password recovery link
+    // Generate password recovery link with correct redirect URL
     const appUrl = getAppUrl(req);
     const redirectUrl = `${appUrl}/reset-password`;
     
