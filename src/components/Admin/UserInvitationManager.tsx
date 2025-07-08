@@ -1,6 +1,5 @@
-// src/components/UserInvitationManager.tsx
 import React, { useState, useEffect } from 'react';
-import { Plus, Send, Edit3, XCircle, Mail, ExternalLink, CheckCircle } from 'lucide-react';
+import { Plus, Send, ExternalLink, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -16,13 +15,13 @@ interface PendingInvite {
   id: string;
   email: string;
   invited_at: string;
-  role: UserRole;
-  department: Department;
-  roll_number: string | null;
-  employee_id: string | null;
-  email_sent: boolean;
+  role?: string;
+  department?: string;
+  email_sent?: boolean;
+  email_sent_at?: string | null;
 }
 
+// Utility function to format date for Supabase/Postgres (no milliseconds, +00:00 timezone)
 function toSupabaseTimestamp(date: Date) {
   return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
 }
@@ -30,12 +29,9 @@ function toSupabaseTimestamp(date: Date) {
 const UserInvitationManager: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
-  const [editingInvite, setEditingInvite] = useState<PendingInvite | null>(null);
-
   const [formData, setFormData] = useState({
     email: '',
     role: 'student' as UserRole,
@@ -47,217 +43,236 @@ const UserInvitationManager: React.FC = () => {
   const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
   const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
 
-  // Read
+  // Load pending invites from user_invitations table
   const loadPendingInvites = async () => {
-    const { data, error } = await supabase
-      .from('user_invitations')
-      .select('*')
-      .is('used_at', null)
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString());
-    if (error) {
-      console.error(error);
-      toast({ title: 'Error', description: 'Could not load invites', variant: 'destructive' });
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .is('used_at', null)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
+
+      if (error) {
+        console.error('Error loading pending invites:', error);
+        toast({ 
+          title: "Error", 
+          description: "Failed to load pending invites", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      const invites = (data || []).map(invite => ({
+        id: invite.id,
+        email: invite.email,
+        invited_at: invite.invited_at || new Date().toISOString(),
+        role: invite.role || "",
+        department: invite.department || "",
+        email_sent: invite.email_sent || false,
+        email_sent_at: invite.email_sent_at || null
+      }));
+      
+      setPendingInvites(invites);
+    } catch (error) {
+      console.error('Error in loadPendingInvites:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to load pending invites", 
+        variant: "destructive" 
+      });
     }
-    setPendingInvites(
-      (data ?? []).map(inv => ({
-        id: inv.id,
-        email: inv.email,
-        invited_at: inv.invited_at!,
-        role: inv.role!,
-        department: inv.department!,
-        roll_number: inv.roll_number,
-        employee_id: inv.employee_id,
-        email_sent: inv.email_sent ?? false
-      }))
-    );
   };
 
   useEffect(() => {
     loadPendingInvites();
+    // eslint-disable-next-line
   }, []);
 
-  // Send email (shared by create & resend)
-  const sendInvitationEmail = async (
-    invitationId: string,
-    email: string,
-    role: UserRole,
-    department: Department
-  ) => {
-    const { error } = await supabase.functions.invoke('send-invitation-email', {
-      body: { email, role, department, invitedBy: user?.id, invitationId }
-    });
-    return !error;
+  const sendInvitationEmail = async (invitationId: string, email: string, role: string, department: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invitation-email', {
+        body: {
+          email,
+          role,
+          department,
+          invitedBy: user?.id,
+          invitationId
+        }
+      });
+
+      if (error) {
+        console.error('Error sending invitation email:', error);
+        return false;
+      }
+
+      console.log('Invitation email sent:', data);
+      return true;
+    } catch (error) {
+      console.error('Error in sendInvitationEmail:', error);
+      return false;
+    }
   };
 
-  // Create or Update handler
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setLoading(true);
 
     try {
-      if (editingInvite) {
-        // UPDATE
-        const { error } = await supabase
-          .from('user_invitations')
-          .update({
-            role: formData.role,
-            department: formData.department,
-            roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
-            employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-          })
-          .eq('id', editingInvite.id);
+      // First create the invitation record
+      const { data: inviteData, error: inviteError } = await supabase
+        .from('user_invitations')
+        .insert({
+          email: formData.email.trim().toLowerCase(),
+          role: formData.role,
+          department: formData.department,
+          roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
+          employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
+          invited_by: user.id,
+          is_active: true,
+          expires_at: toSupabaseTimestamp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
+        })
+        .select()
+        .single();
 
-        if (error) {
-          toast({ title: 'Update Failed', description: error.message, variant: 'destructive' });
+      if (inviteError) {
+        if (inviteError.code === '23505') { // Unique constraint violation
+          toast({
+            title: "Invite Failed",
+            description: "An invitation for this email already exists.",
+            variant: "destructive"
+          });
         } else {
-          toast({ title: 'Invitation Updated' });
-          setShowForm(false);
-          setEditingInvite(null);
-          loadPendingInvites();
+          toast({
+            title: "Invite Failed",
+            description: inviteError.message,
+            variant: "destructive"
+          });
         }
-      } else {
-        // CREATE
-        // 1) insert invite record
-        const { data: inv, error: invErr } = await supabase
-          .from('user_invitations')
-          .insert({
-            email: formData.email.trim().toLowerCase(),
+        return;
+      }
+
+      // Send invitation email
+      const emailSent = await sendInvitationEmail(
+        inviteData.id,
+        formData.email.trim().toLowerCase(),
+        formData.role,
+        formData.department
+      );
+
+      // Create the user in auth.users with metadata
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email.trim().toLowerCase(),
+        password: 'TempPassword123!', // Temporary password - user will be prompted to change
+        options: {
+          data: {
+            name: formData.email.split('@')[0], // Use email prefix as initial name
             role: formData.role,
             department: formData.department,
             roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
             employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-            invited_by: user.id,
-            expires_at: toSupabaseTimestamp(new Date(Date.now() + 7 * 86400e3))
-          })
-          .select()
-          .single();
-
-        if (invErr) {
-          if (invErr.code === '23505') {
-            toast({ title: 'Invite Failed', description: 'Already invited', variant: 'destructive' });
-          } else {
-            toast({ title: 'Invite Failed', description: invErr.message, variant: 'destructive' });
-          }
-          setLoading(false);
-          return;
+            invitation_id: inviteData.id
+          },
+          emailRedirectTo: ${window.location.origin}/auth?mode=invited
         }
+      });
 
-        // 2) send email
-        await sendInvitationEmail(inv.id, inv.email, inv.role!, inv.department!);
-
-        // 3) create auth user
-        const { error: authErr } = await supabase.auth.signUp({
-          email: inv.email,
-          password: 'TempPassword123!',
-          options: {
-            data: {
-              role: inv.role,
-              department: inv.department,
-              roll_number: inv.roll_number,
-              employee_id: inv.employee_id,
-              invitation_id: inv.id
-            },
-            emailRedirectTo: `${window.location.origin}/auth?mode=invited`
-          }
-        });
-
+      if (signUpError) {
+        console.error('Sign up error:', signUpError);
         toast({
-          title: authErr ? 'Invitation Created' : 'Invitation Sent',
-          description: authErr
-            ? `Invite recorded; ask user to sign up manually.`
-            : `Account created; email sent to ${inv.email}.`
+          title: "Invitation Created",
+          description: Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'},
         });
-
-        setFormData({ email: '', role: 'student', department: 'CSE', rollNumber: '', employeeId: '' });
-        setShowForm(false);
-        loadPendingInvites();
+      } else {
+        toast({
+          title: "Invitation Sent Successfully",
+          description: User account created and invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : ''},
+        });
       }
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' });
+
+      // Reset form and reload invites
+      setFormData({
+        email: '',
+        role: 'student',
+        department: 'CSE',
+        rollNumber: '',
+        employeeId: ''
+      });
+      setShowForm(false);
+      loadPendingInvites();
+
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send invitation. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Open edit form
-  const openEditForm = (invite: PendingInvite) => {
-    setEditingInvite(invite);
-    setFormData({
-      email: invite.email,
-      role: invite.role,
-      department: invite.department,
-      rollNumber: invite.roll_number ?? '',
-      employeeId: invite.employee_id ?? ''
-    });
-    setShowForm(true);
-  };
-
-  // Cancel (soft-delete)
-  const handleCancelInvitation = async (id: string) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from('user_invitations')
-      .update({ is_active: false })
-      .eq('id', id);
-
-    if (error) {
-      toast({ title: 'Cancel Failed', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Invitation Cancelled' });
-      loadPendingInvites();
-    }
-    setLoading(false);
-  };
-
-  // Resend email
   const handleResendEmail = async (invite: PendingInvite) => {
-    if (await sendInvitationEmail(invite.id, invite.email, invite.role, invite.department)) {
-      toast({ title: 'Email Resent', description: `Resent to ${invite.email}` });
+    const emailSent = await sendInvitationEmail(
+      invite.id,
+      invite.email,
+      invite.role || 'student',
+      invite.department || 'CSE'
+    );
+
+    if (emailSent) {
+      toast({
+        title: "Email Resent",
+        description: Invitation email resent to ${invite.email},
+      });
       loadPendingInvites();
     } else {
-      toast({ title: 'Resend Failed', variant: 'destructive' });
+      toast({
+        title: "Failed to Resend",
+        description: "Failed to resend invitation email",
+        variant: "destructive"
+      });
     }
   };
 
-  // Copy link
   const copyInvitationUrl = (email: string) => {
-    const url = `${window.location.origin}/auth?mode=invited&email=${encodeURIComponent(email)}`;
-    navigator.clipboard.writeText(url);
-    toast({ title: 'Link Copied' });
+    const invitationUrl = ${window.location.origin}/auth?mode=invited&email=${encodeURIComponent(email)};
+    navigator.clipboard.writeText(invitationUrl);
+    toast({
+      title: "Link Copied",
+      description: "Invitation link copied to clipboard",
+    });
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">User Invitations</h3>
+        <h3 className="text-lg font-semibold text-gray-800">User Invitations</h3>
         <Button onClick={() => setShowForm(true)} className="flex items-center space-x-2">
-          <Plus className="w-4 h-4" /><span>Send Invitation</span>
+          <Plus className="w-4 h-4" />
+          <span>Send Invitation</span>
         </Button>
       </div>
 
+      {/* Invitation Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
-              {editingInvite ? 'Edit Invitation' : 'Send Invitation'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!editingInvite && (
-                <div>
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    required
-                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-              )}
+            <h3 className="text-lg font-semibold mb-4">Send User Invitation</h3>
+            <form onSubmit={handleSendInvitation} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="user@rgce.edu.in"
+                  required
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -265,65 +280,79 @@ const UserInvitationManager: React.FC = () => {
                   <select
                     id="role"
                     value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
-                    onChange={e => setFormData({ ...formData, role: e.target.value as UserRole })}
-                    className="w-full px-3 py-2 border rounded"
                   >
-                    {roles.map(r => <option key={r}>{r}</option>)}
+                    {roles.map(role => (
+                      <option key={role} value={role}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </option>
+                    ))}
                   </select>
                 </div>
+
                 <div>
-                  <Label htmlFor="dept">Dept *</Label>
+                  <Label htmlFor="department">Department *</Label>
                   <select
-                    id="dept"
+                    id="department"
                     value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value as Department })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
-                    onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
-                    className="w-full px-3 py-2 border rounded"
                   >
-                    {departments.map(d => <option key={d}>{d}</option>)}
+                    {departments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               {formData.role === 'student' ? (
                 <div>
-                  <Label htmlFor="roll">Roll #</Label>
+                  <Label htmlFor="rollNumber">Roll Number</Label>
                   <Input
-                    id="roll"
+                    id="rollNumber"
+                    type="text"
                     value={formData.rollNumber}
-                    onChange={e => setFormData({ ...formData, rollNumber: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                    placeholder="e.g., 21CSE001"
                   />
                 </div>
               ) : (
                 <div>
-                  <Label htmlFor="emp">Emp ID</Label>
+                  <Label htmlFor="employeeId">Employee ID</Label>
                   <Input
-                    id="emp"
+                    id="employeeId"
+                    type="text"
                     value={formData.employeeId}
-                    onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                    placeholder="e.g., FAC001"
                   />
                 </div>
               )}
 
               <div className="flex justify-end space-x-3 pt-4">
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingInvite(null);
-                  }}
+                  onClick={() => setShowForm(false)}
                   disabled={loading}
                 >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading
-                    ? <span>Processing…</span>
-                    : editingInvite
-                      ? <span><Edit3 className="w-4 h-4 inline" /> Update</span>
-                      : <span><Send className="w-4 h-4 inline" /> Send</span>
-                  }
+                  {loading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Sending...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Send className="w-4 h-4" />
+                      <span>Send Invitation</span>
+                    </div>
+                  )}
                 </Button>
               </div>
             </form>
@@ -331,60 +360,72 @@ const UserInvitationManager: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <h4 className="px-6 py-3 text-sm font-medium">Pending Invitations</h4>
+      {/* Pending Invites List */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-6">
+        <h4 className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pending Invitations</h4>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-2">Email</th>
-                <th className="px-6 py-2">Role</th>
-                <th className="px-6 py-2">Dept</th>
-                <th className="px-6 py-2">Status</th>
-                <th className="px-6 py-2">Invited On</th>
-                <th className="px-6 py-2">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invited On</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
-              {pendingInvites.length === 0 && (
+            <tbody className="bg-white divide-y divide-gray-200">
+              {pendingInvites.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     No pending invitations.
                   </td>
                 </tr>
+              ) : (
+                pendingInvites.map(invite => (
+                  <tr key={invite.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {invite.email_sent ? (
+                          <div className="flex items-center space-x-1 text-green-600">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-sm">Email Sent</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-orange-600">Email Pending</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{new Date(invite.invited_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResendEmail(invite)}
+                          className="flex items-center space-x-1"
+                        >
+                          <Mail className="w-3 h-3" />
+                          <span>Resend</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyInvitationUrl(invite.email)}
+                          className="flex items-center space-x-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Copy Link</span>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-
-              {pendingInvites.map(inv => (
-                <tr key={inv.id}>
-                  <td className="px-6 py-4">{inv.email}</td>
-                  <td className="px-6 py-4">{inv.role}</td>
-                  <td className="px-6 py-4">{inv.department}</td>
-                  <td className="px-6 py-4">
-                    {inv.email_sent
-                      ? <span className="inline-flex items-center text-green-600">
-                          <CheckCircle className="w-4 h-4 mr-1" /> Sent
-                        </span>
-                      : <span className="text-orange-600">Pending</span>}
-                  </td>
-                  <td className="px-6 py-4">
-                    {new Date(inv.invited_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleResendEmail(inv)}>
-                      <Mail className="w-3 h-3" /> Resend
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => copyInvitationUrl(inv.email)}>
-                      <ExternalLink className="w-3 h-3" /> Link
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => openEditForm(inv)}>
-                      <Edit3 className="w-3 h-3" /> Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleCancelInvitation(inv.id)}>
-                      <XCircle className="w-3 h-3" /> Cancel
-                    </Button>
-                  </td>
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>
