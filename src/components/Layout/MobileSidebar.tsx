@@ -112,9 +112,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                     <p className="text-white/70 text-xs capitalize">
                       {user.role === 'chairman' ? 'Chairman' : user.role}
                     </p>
-                    {user.department && user.role !== 'chairman' && (
+                    {user.department_id && user.role !== 'chairman' && (
                       <p className="text-white/60 text-xs truncate">
-                        {getDepartmentName(user.department)}
+                        {getDepartmentName(user.department_id)}
                       </p>
                     )}
                   </div>
