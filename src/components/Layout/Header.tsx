@@ -11,7 +11,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -32,10 +32,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             )}
             <div>
               <h1 className="text-xl font-semibold text-gray-800">
-                Welcome back, {user?.name || user?.email}
+                Welcome back, {profile?.name || profile?.email}
               </h1>
               <p className="text-sm text-gray-600 capitalize">
-                {user?.role} Dashboard
+                {profile?.role} Dashboard
               </p>
             </div>
           </div>
@@ -65,18 +65,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             >
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase()}
+                  {profile?.name?.split(' ').map(n => n[0]).join('') || profile?.email?.[0].toUpperCase()}
                 </span>
               </div>
               <span className="hidden md:block text-sm font-medium">
-                {user?.name || user?.email}
+                {profile?.name || profile?.email}
               </span>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Profile Modal */}
       {showProfile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -97,7 +96,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </div>
       )}
 
-      {/* Notifications Modal */}
       {showNotifications && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">

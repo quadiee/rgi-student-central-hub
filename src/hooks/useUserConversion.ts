@@ -1,6 +1,22 @@
 
-import { UserProfile } from '../contexts/SupabaseAuthContext';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User } from '../types';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'student' | 'hod' | 'principal' | 'admin';
+  department_id?: string;
+  department_name?: string;
+  avatar?: string;
+  profile_photo_url?: string;
+  roll_number?: string;
+  rollNumber?: string;
+  employee_id?: string;
+  is_active: boolean;
+  created_at?: string;
+}
 
 export const useUserConversion = () => {
   const convertUserProfileToUser = (userProfile: UserProfile): User => {

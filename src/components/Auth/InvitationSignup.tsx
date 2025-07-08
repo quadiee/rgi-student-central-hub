@@ -9,6 +9,17 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 
+interface InvitationData {
+  id: string;
+  email: string;
+  role: string;
+  department: string;
+  roll_number?: string;
+  employee_id?: string;
+  is_valid: boolean;
+  error_message?: string;
+}
+
 const InvitationSignup: React.FC = () => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -29,7 +40,7 @@ const InvitationSignup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [invitationData, setInvitationData] = useState<any>(null);
+  const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
   const [userExists, setUserExists] = useState<boolean>(false);
@@ -47,7 +58,6 @@ const InvitationSignup: React.FC = () => {
     try {
       setLoadingInvitation(true);
       
-      // Validate invitation token using the database function
       const { data, error } = await supabase.rpc('validate_invitation_token', {
         p_token: token!
       });
@@ -58,7 +68,7 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      const inviteData = data[0];
+      const inviteData = data[0] as InvitationData;
       if (!inviteData.is_valid) {
         setInviteError(inviteData.error_message || "This invitation is invalid or has expired.");
         setLoadingInvitation(false);
@@ -114,8 +124,17 @@ const InvitationSignup: React.FC = () => {
       return;
     }
 
+    if (!invitationData) {
+      toast({
+        title: "Error",
+        description: "Invitation data not found",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Sign up the user (this will create a minimal placeholder profile)
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitationData.email,
         password: formData.password,
@@ -134,7 +153,6 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Now complete the profile with the form data
       const profileData = {
         name: formData.name,
         phone: formData.phone,
@@ -145,7 +163,6 @@ const InvitationSignup: React.FC = () => {
         address: formData.address
       };
 
-      // Complete the invitation profile
       const { data: completionResult, error: completionError } = await supabase.rpc('complete_invitation_profile', {
         p_user_id: authData.user?.id,
         p_invitation_id: invitationData.id,
@@ -178,6 +195,8 @@ const InvitationSignup: React.FC = () => {
   };
 
   const handlePasswordSetup = async () => {
+    if (!invitationData) return;
+    
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(invitationData.email, {
@@ -240,7 +259,7 @@ const InvitationSignup: React.FC = () => {
               <Mail className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800">Complete Your Setup</h2>
-            <p className="text-gray-600">Account exists for <strong>{invitationData.email}</strong></p>
+            <p className="text-gray-600">Account exists for <strong>{invitationData?.email}</strong></p>
             <p className="text-gray-600 mb-6">Click below to receive a password setup link</p>
           </div>
           <div className="space-y-3">

@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
-  const { user, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
     ];
 
-    if (user?.role === 'admin' || user?.role === 'principal') {
+    if (profile?.role === 'admin' || profile?.role === 'principal') {
       return [
         ...baseItems,
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
@@ -40,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         { id: 'reports', label: 'Reports', icon: FileText },
         { id: 'admin', label: 'Admin Panel', icon: Settings }
       ];
-    } else if (user?.role === 'hod') {
+    } else if (profile?.role === 'hod') {
       return [
         ...baseItems,
         { id: 'fees', label: 'Fee Management', icon: CreditCard },
@@ -93,21 +93,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         })}
       </nav>
       
-      {/* User Profile and Logout */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-medium">
-                {user?.name?.split(' ').map(n => n[0]).join('') || user?.email?.[0].toUpperCase()}
+                {profile?.name?.split(' ').map(n => n[0]).join('') || profile?.email?.[0].toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.name || user?.email}
+                {profile?.name || profile?.email}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {user?.role}
+                {profile?.role}
               </p>
             </div>
           </div>
