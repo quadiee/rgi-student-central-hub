@@ -360,7 +360,7 @@ const EnhancedFeeAssignment: React.FC = () => {
                       <SelectValue placeholder="All departments" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Departments</SelectItem>
+                      <SelectItem value="all">All Departments</SelectItem>
                       {departments.map(dept => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.name}
@@ -377,7 +377,7 @@ const EnhancedFeeAssignment: React.FC = () => {
                       <SelectValue placeholder="All years" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Years</SelectItem>
+                      <SelectItem value="all">All Years</SelectItem>
                       <SelectItem value="1">1st Year</SelectItem>
                       <SelectItem value="2">2nd Year</SelectItem>
                       <SelectItem value="3">3rd Year</SelectItem>
