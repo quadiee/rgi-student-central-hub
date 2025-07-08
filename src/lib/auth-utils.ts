@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 
 export interface SignUpData {
@@ -13,18 +12,46 @@ export interface SignUpData {
   address?: string;
 }
 
+export interface ValidationResult {
+  userExists: boolean;
+  invitationValid: boolean;
+  invitationData?: any;
+  error?: string;
+  redirect?: 'signup' | 'login' | 'password-setup' | 'invalid';
+}
+
 export const authUtils = {
-  // Check if user exists in auth system
-  checkUserExists: async (email: string): Promise<boolean> => {
+  // Enhanced validation that checks both user existence and invitation validity
+  validateInvitation: async (email: string, token?: string): Promise<ValidationResult> => {
     try {
       const { data, error } = await supabase.functions.invoke('check-user-exists', {
-        body: { email }
+        body: { email, token }
       });
-      if (error) return false;
-      return !!data?.exists;
-    } catch {
-      return false;
+      
+      if (error) {
+        return {
+          userExists: false,
+          invitationValid: false,
+          error: error.message,
+          redirect: 'invalid'
+        };
+      }
+      
+      return data;
+    } catch (error: any) {
+      return {
+        userExists: false,
+        invitationValid: false,
+        error: error.message,
+        redirect: 'invalid'
+      };
     }
+  },
+
+  // Legacy method for backward compatibility
+  checkUserExists: async (email: string): Promise<boolean> => {
+    const result = await authUtils.validateInvitation(email);
+    return result.userExists;
   },
 
   // Send password reset email
