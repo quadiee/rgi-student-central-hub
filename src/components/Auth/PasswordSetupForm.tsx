@@ -1,24 +1,23 @@
-
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useToast } from '../ui/use-toast';
-import { supabase } from '../../integrations/supabase/client';
+import { authUtils } from '../../lib/auth-utils';
 
 interface PasswordSetupFormProps {
   email?: string;
+  token?: string; // ✅ added
   onSuccess?: () => void;
   onCancel?: () => void;
-  isReset?: boolean;
 }
 
 const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({ 
   email, 
+  token,       // ✅ added
   onSuccess, 
-  onCancel,
-  isReset = false
+  onCancel 
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -54,9 +53,22 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: formData.password
-      });
+      // ✅ Sign in using token first if provided
+      if (token) {
+        const { error: signInError } = await authUtils.signInWithToken(token);
+        if (signInError) {
+          toast({
+            title: "Invalid or Expired Link",
+            description: "The password reset link is no longer valid. Please request a new one.",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ✅ Now update the password
+      const { error } = await authUtils.updatePassword(formData.password);
       
       if (error) {
         toast({
@@ -66,8 +78,8 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
         });
       } else {
         toast({
-          title: isReset ? "Password Reset Successfully" : "Password Set Successfully",
-          description: isReset ? "Your password has been reset." : "Your password has been set. You can now log in.",
+          title: "Password Set Successfully",
+          description: "Your password has been set. You can now log in.",
         });
         onSuccess?.();
       }
@@ -87,13 +99,9 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
         <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">
-          {isReset ? 'Reset Your Password' : 'Set Your Password'}
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-800">Set Your Password</h2>
         {email && (
-          <p className="text-gray-600">
-            {isReset ? `Resetting password for ${email}` : `Creating password for ${email}`}
-          </p>
+          <p className="text-gray-600">Creating password for {email}</p>
         )}
       </div>
 
@@ -154,7 +162,7 @@ const PasswordSetupForm: React.FC<PasswordSetupFormProps> = ({
             className="w-full"
             disabled={loading}
           >
-            {loading ? (isReset ? 'Resetting Password...' : 'Setting Password...') : (isReset ? 'Reset Password' : 'Set Password')}
+            {loading ? 'Setting Password...' : 'Set Password'}
           </Button>
           {onCancel && (
             <Button

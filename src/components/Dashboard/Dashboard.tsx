@@ -7,10 +7,10 @@ import PrincipalDashboard from './PrincipalDashboard';
 import RealTimeStats from './RealTimeStats';
 
 const Dashboard: React.FC = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
 
   const renderDashboard = () => {
-    switch (profile?.role) {
+    switch (user?.role) {
       case 'student':
         return <StudentDashboard />;
       case 'hod':

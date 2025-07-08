@@ -659,7 +659,6 @@ export type Database = {
           name: string
           paid_amount: number | null
           phone: string | null
-          profile_completed: boolean | null
           profile_photo_url: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           roll_number: string | null
@@ -690,7 +689,6 @@ export type Database = {
           name: string
           paid_amount?: number | null
           phone?: string | null
-          profile_completed?: boolean | null
           profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
@@ -721,7 +719,6 @@ export type Database = {
           name?: string
           paid_amount?: number | null
           phone?: string | null
-          profile_completed?: boolean | null
           profile_photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           roll_number?: string | null
@@ -1102,14 +1099,6 @@ export type Database = {
         }
         Returns: number
       }
-      complete_invitation_profile: {
-        Args: {
-          p_user_id: string
-          p_invitation_id: string
-          p_profile_data: Json
-        }
-        Returns: boolean
-      }
       create_admin_invitation_if_not_exists: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1230,19 +1219,6 @@ export type Database = {
           department_id?: string
         }
         Returns: boolean
-      }
-      validate_invitation_token: {
-        Args: { p_token: string }
-        Returns: {
-          id: string
-          email: string
-          role: Database["public"]["Enums"]["user_role"]
-          department: Database["public"]["Enums"]["department"]
-          roll_number: string
-          employee_id: string
-          is_valid: boolean
-          error_message: string
-        }[]
       }
     }
     Enums: {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Users, Upload, FileText, List, Settings, BarChart3 } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -12,10 +13,10 @@ import HODFeeDashboard from './HODFeeDashboard';
 import RealTimeFeeDashboard from './RealTimeFeeDashboard';
 
 const FeeManagementHub: React.FC = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  if (!profile) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -25,16 +26,16 @@ const FeeManagementHub: React.FC = () => {
     );
   }
 
-  const isAdmin = profile.role && ['admin', 'principal'].includes(profile.role);
-  const isHOD = profile.role === 'hod';
-  const isStudent = profile.role === 'student';
+  const isAdmin = user.role && ['admin', 'principal'].includes(user.role);
+  const isHOD = user.role === 'hod';
+  const isStudent = user.role === 'student';
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Fee Management System</h1>
         <div className="text-sm text-gray-600">
-          {profile.name} - {profile.role?.toUpperCase()}
+          {user.name} - {user.role?.toUpperCase()}
         </div>
       </div>
 

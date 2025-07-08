@@ -1,76 +1,123 @@
+
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, Users, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { Student } from '../../types';
+import { useIsMobile } from '../../hooks/use-mobile';
+import { Student } from '../../types/user-student-fees';
 
-const StudentManagement: React.FC = () => {
-  const { profile } = useAuth();
+interface StudentManagementProps {
+  onViewStudent?: (student: Student) => void;
+}
+
+const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) => {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [departments, setDepartments] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [profile]);
+    if (user) {
+      fetchStudents();
+      fetchDepartments();
+    }
+  }, [user]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('name, code')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setDepartments(data?.map(d => d.code) || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
 
   const fetchStudents = async () => {
-    if (!profile) return;
+    if (!user) return;
 
     try {
       setLoading(true);
-      
       let query = supabase
         .from('profiles')
         .select(`
-          *,
-          departments(name, code)
+          id, 
+          name, 
+          email, 
+          roll_number,
+          course,
+          year,
+          semester,
+          phone,
+          profile_photo_url,
+          admission_date,
+          guardian_name,
+          guardian_phone,
+          address,
+          blood_group,
+          emergency_contact,
+          department_id,
+          year_section,
+          section,
+          total_fees,
+          paid_amount,
+          due_amount,
+          fee_status,
+          is_active,
+          departments:departments!profiles_department_id_fkey(name, code)
         `)
         .eq('role', 'student')
         .eq('is_active', true);
 
-      // If user is HOD, filter by their department
-      if (profile.role === 'hod' && profile.department_id) {
-        query = query.eq('department_id', profile.department_id);
+      // Apply role-based filtering
+      if (user.role === 'hod') {
+        query = query.eq('department_id', user.department_id);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Transform data to Student type
-      const studentsData = data?.map((profile: any) => ({
+      const transformedStudents: Student[] = (data || []).map((profile: any) => ({
         id: profile.id,
-        name: profile.name,
+        name: profile.name || 'Unknown',
         rollNumber: profile.roll_number || '',
-        course: 'B.Tech', // Default course
-        year: profile.year || 1,
-        semester: profile.semester || 1,
+        course: profile.course || '',
+        year: profile.year || 0,
+        semester: profile.semester || 0,
         email: profile.email,
         phone: profile.phone || '',
-        profileImage: profile.profile_photo_url,
-        admissionDate: profile.created_at?.split('T')[0] || '',
+        profileImage: profile.profile_photo_url || '',
+        admissionDate: profile.admission_date || '',
         guardianName: profile.guardian_name || '',
         guardianPhone: profile.guardian_phone || '',
         address: profile.address || '',
-        bloodGroup: profile.blood_group,
-        emergencyContact: profile.emergency_contact || profile.guardian_phone || '',
-        department: profile.departments?.name || 'Unknown',
+        bloodGroup: profile.blood_group || '',
+        emergencyContact: profile.emergency_contact || '',
+        department: profile.departments?.code || 'Unknown',
         yearSection: profile.year_section || '',
         section: profile.section || '',
         totalFees: profile.total_fees || 0,
         paidAmount: profile.paid_amount || 0,
         dueAmount: profile.due_amount || 0,
         feeStatus: profile.fee_status || 'Pending'
-      })) || [];
+      }));
 
-      setStudents(studentsData as Student[]);
+      setStudents(transformedStudents);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -83,14 +130,65 @@ const StudentManagement: React.FC = () => {
     }
   };
 
+  const handleDeleteStudent = async (studentId: string) => {
+    if (!confirm('Are you sure you want to deactivate this student?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Student deactivated successfully",
+      });
+
+      fetchStudents(); // Refresh the list
+    } catch (error) {
+      console.error('Error deactivating student:', error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate student",
+        variant: "destructive"
+      });
+    }
+  };
+
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || 
-                             student.department.toLowerCase() === selectedDepartment.toLowerCase();
-    return matchesSearch && matchesDepartment;
+      student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = !selectedDepartment || student.department === selectedDepartment;
+    const matchesYear = !selectedYear || student.year.toString() === selectedYear;
+
+    return matchesSearch && matchesDepartment && matchesYear;
   });
+
+  const getStudentStatus = (student: Student) => {
+    if (student.dueAmount === 0) return { label: 'Paid', color: 'bg-green-100 text-green-800' };
+    if (student.paidAmount && student.paidAmount > 0) return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
+    return { label: 'Pending', color: 'bg-red-100 text-red-800' };
+  };
+
+  // Check authentication and authorization
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">Please log in to access this page.</p>
+      </div>
+    );
+  }
+
+  if (!['admin', 'principal', 'hod'].includes(user.role || '')) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">Access denied. Insufficient privileges.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -106,193 +204,306 @@ const StudentManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Student Management</h2>
-        <Button className="flex items-center space-x-2">
-          <Plus className="w-4 h-4" />
-          <span>Add Student</span>
-        </Button>
+        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
+          Student Management
+        </h2>
+        {['admin', 'principal'].includes(user.role || '') && (
+          <Button className="flex items-center space-x-2" size={isMobile ? 'sm' : 'default'}>
+            <UserPlus className="w-4 h-4" />
+            <span>Invite Student</span>
+          </Button>
+        )}
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Summary Stats */}
+      <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
-            <p className="text-xs text-muted-foreground">Active students</p>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Students</p>
+                <p className="text-2xl font-bold text-blue-600">{students.length}</p>
+              </div>
+              <Users className="w-8 h-8 text-blue-600" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Department</CardTitle>
-            <Filter className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {profile?.department_name || 'All'}
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Fees Paid</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {students.filter(s => s.dueAmount === 0).length}
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-green-600 font-bold">✓</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Current filter</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fee Pending</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {students.filter(s => s.feeStatus !== 'Paid').length}
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Partial Payment</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {students.filter(s => s.paidAmount && s.paidAmount > 0 && s.dueAmount && s.dueAmount > 0).length}
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-yellow-600 font-bold">~</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Students with dues</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fee Paid</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {students.filter(s => s.feeStatus === 'Paid').length}
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {students.filter(s => s.dueAmount && s.dueAmount > 0 && (!s.paidAmount || s.paidAmount === 0)).length}
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <span className="text-red-600 font-bold">!</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Students cleared</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search students by name, roll number, or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search students..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map(dept => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {[1, 2, 3, 4].map(year => (
+                  <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" className="flex items-center space-x-2">
+              <Filter className="w-4 h-4" />
+              <span>More Filters</span>
+            </Button>
           </div>
-        </div>
-        <div className="w-48">
-          <select
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2"
-          >
-            <option value="all">All Departments</option>
-            <option value="CSE">Computer Science</option>
-            <option value="ECE">Electronics</option>
-            <option value="MECH">Mechanical</option>
-            <option value="CIVIL">Civil</option>
-            <option value="EEE">Electrical</option>
-          </select>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Students List */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">
-            Students ({filteredStudents.length})
-          </h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Student
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Department
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Year/Semester
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fee Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <img
-                          className="h-10 w-10 rounded-full object-cover"
-                          src={student.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=3b82f6&color=fff`}
-                          alt={student.name}
-                        />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {student.name}
+      {/* Student List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Students ({filteredStudents.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isMobile ? (
+            // Mobile Card View
+            <div className="space-y-4">
+              {filteredStudents.map(student => {
+                const status = getStudentStatus(student);
+                return (
+                  <div key={student.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium">
+                            {student.name.split(' ').map(n => n[0]).join('')}
+                          </span>
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{student.name}</h3>
+                          <p className="text-sm text-gray-500">{student.rollNumber}</p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        {onViewStudent && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onViewStudent(student)}
+                          >
+                            <Eye className="w-3 h-3" />
+                          </Button>
+                        )}
+                        {['admin', 'principal'].includes(user.role || '') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteStudent(student.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Department:</span>
+                        <p className="font-medium">{student.department}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Year:</span>
+                        <p className="font-medium">Year {student.year}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Fee Due:</span>
+                        <p className="font-medium text-red-600">₹{student.dueAmount?.toLocaleString() || 0}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Status:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                          {status.label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            // Desktop Table View
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Student
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Roll Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Year
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fee Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredStudents.map(student => {
+                    const status = getStudentStatus(student);
+                    return (
+                      <tr key={student.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                              <span className="text-white text-sm font-medium">
+                                {student.name.split(' ').map(n => n[0]).join('')}
+                              </span>
+                            </div>
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                              <div className="text-sm text-gray-500">{student.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {student.rollNumber}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{student.department}</div>
-                    <div className="text-sm text-gray-500">{student.course}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">Year {student.year}</div>
-                    <div className="text-sm text-gray-500">Semester {student.semester}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      student.feeStatus === 'Paid' 
-                        ? 'bg-green-100 text-green-800'
-                        : student.feeStatus === 'Partial'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {student.feeStatus}
-                    </span>
-                    {student.dueAmount > 0 && (
-                      <div className="text-sm text-red-600 mt-1">
-                        ₹{student.dueAmount.toLocaleString()} due
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{student.email}</div>
-                    <div className="text-sm text-gray-500">{student.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <Button size="sm" variant="outline">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {student.department}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          Year {student.year}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${status.color} mb-1`}>
+                              {status.label}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Due: ₹{student.dueAmount?.toLocaleString() || 0}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            {onViewStudent && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onViewStudent(student)}
+                                className="flex items-center space-x-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>View</span>
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline">
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            {['admin', 'principal'].includes(user.role || '') && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteStudent(student.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {filteredStudents.length === 0 && (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No students found matching the search criteria.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

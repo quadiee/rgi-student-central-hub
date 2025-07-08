@@ -1,61 +1,176 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { useToast } from '../components/ui/use-toast';
+import type { User, Session } from '@supabase/supabase-js';
 
-interface Profile {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: string;
-  department_id?: string;
+  role: 'student' | 'hod' | 'principal' | 'admin';
+  department_id: string;
   department_name?: string;
-  is_active: boolean;
-  profile_completed?: boolean;
   roll_number?: string;
   employee_id?: string;
+  profile_photo_url?: string;
   phone?: string;
   address?: string;
-  profile_photo_url?: string;
-  created_at?: string;
+  is_active: boolean;
+  created_at: string;
+  avatar: string;
+  rollNumber?: string;
+  department?: string;
 }
 
-interface AuthContextType {
-  user: User | null;
-  profile: Profile | null;
+interface SupabaseAuthContextType {
+  user: UserProfile | null;
+  session: Session | null;
   loading: boolean;
   profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error?: any }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  getInvitationDetails: (email: string) => Promise<any>;
+  signOut: () => Promise<{ error?: any }>;
+  signUp: (email: string, password: string, userData?: any) => Promise<{ error?: any }>;
+  refreshUser: () => Promise<void>;
+  getInvitationDetails: (email: string) => Promise<{ data?: any; error?: any }>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
+  user: null,
+  session: null,
+  loading: true,
+  profileLoading: false,
+  signIn: async () => ({}),
+  signOut: async () => ({}),
+  signUp: async () => ({}),
+  refreshUser: async () => {},
+  getInvitationDetails: async () => ({}),
+});
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(SupabaseAuthContext);
   if (!context) {
     throw new Error('useAuth must be used within a SupabaseAuthProvider');
   }
   return context;
 };
 
+// Enhanced caching system
+const profileCache = new Map<string, UserProfile>();
+const departmentCache = new Map<string, string>();
+
+const getCachedProfile = (userId: string): UserProfile | null => {
+  // Check memory cache first
+  if (profileCache.has(userId)) {
+    return profileCache.get(userId)!;
+  }
+
+  // Check sessionStorage
+  try {
+    const cached = sessionStorage.getItem(`profile_${userId}`);
+    if (cached) {
+      const profile = JSON.parse(cached);
+      profileCache.set(userId, profile);
+      return profile;
+    }
+  } catch (error) {
+    console.error('Error reading cached profile:', error);
+  }
+
+  return null;
+};
+
+const setCachedProfile = (userId: string, profile: UserProfile) => {
+  profileCache.set(userId, profile);
+  try {
+    sessionStorage.setItem(`profile_${userId}`, JSON.stringify(profile));
+  } catch (error) {
+    console.error('Error caching profile:', error);
+  }
+};
+
+const loadDepartmentName = async (departmentId: string): Promise<string> => {
+  // Check cache first
+  if (departmentCache.has(departmentId)) {
+    return departmentCache.get(departmentId)!;
+  }
+
+  // Check localStorage cache
+  try {
+    const cachedName = localStorage.getItem(`dept_${departmentId}`);
+    if (cachedName) {
+      departmentCache.set(departmentId, cachedName);
+      return cachedName;
+    }
+  } catch (error) {
+    console.error('Error reading cached department:', error);
+  }
+
+  // Fetch from database
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('name, code')
+      .eq('id', departmentId)
+      .single();
+
+    if (!error && data) {
+      const deptName = data.name || 'Unknown';
+      departmentCache.set(departmentId, deptName);
+      try {
+        localStorage.setItem(`dept_${departmentId}`, deptName);
+      } catch (error) {
+        console.error('Error caching department:', error);
+      }
+      return deptName;
+    }
+  } catch (error) {
+    console.error('Error loading department:', error);
+  }
+
+  return 'Unknown';
+};
+
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const { toast } = useToast();
 
-  const fetchProfile = async (userId: string) => {
+  const loadUserProfileLazy = async (userId: string, forceRefresh: boolean = false): Promise<UserProfile | null> => {
     try {
       setProfileLoading(true);
-      console.log('Fetching profile for user:', userId);
-      
-      // First, fetch the profile data
+      console.log('Loading user profile for:', userId, forceRefresh ? '(force refresh)' : '');
+
+      // Check cache first for instant loading (unless force refresh)
+      if (!forceRefresh) {
+        const cachedProfile = getCachedProfile(userId);
+        if (cachedProfile) {
+          console.log('Found cached profile:', cachedProfile);
+          setUser(cachedProfile);
+          setProfileLoading(false);
+          
+          // Refresh department name in background if needed
+          if (cachedProfile.department_id) {
+            loadDepartmentName(cachedProfile.department_id).then(deptName => {
+              if (deptName !== cachedProfile.department_name) {
+                const updatedProfile = { ...cachedProfile, department_name: deptName };
+                setCachedProfile(userId, updatedProfile);
+                setUser(updatedProfile);
+              }
+            });
+          }
+          
+          return cachedProfile;
+        }
+      }
+
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        profileCache.delete(userId);
+        sessionStorage.removeItem(`profile_${userId}`);
+      }
+
+      // Fetch basic profile without JOIN for speed
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -63,200 +178,251 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .single();
 
       if (profileError) {
-        console.error('Profile fetch error:', profileError);
+        console.error('Error loading user profile:', profileError);
+        
+        // If profile doesn't exist and this is the authenticated user, try to create it
         if (profileError.code === 'PGRST116') {
-          console.log('No profile found for user, this might be expected for new users');
-          setProfile(null);
-        } else {
-          toast({
-            title: "Profile Error",
-            description: "Failed to load profile data",
-            variant: "destructive"
-          });
-          setProfile(null);
+          console.log('Profile not found, attempting to create one...');
+          
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser && authUser.id === userId) {
+            // Create a basic profile for the authenticated user
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                name: authUser.email?.split('@')[0] || 'User',
+                email: authUser.email || '',
+                role: 'admin', // Default to admin since they're trying to access admin panel
+                is_active: true
+              })
+              .select()
+              .single();
+
+            if (!createError && newProfile) {
+              console.log('Created new profile:', newProfile);
+              const userProfile: UserProfile = {
+                ...newProfile,
+                role: newProfile.role as 'student' | 'hod' | 'principal' | 'admin',
+                department_name: 'Administration',
+                avatar: newProfile.profile_photo_url || '',
+                rollNumber: newProfile.roll_number,
+                department: 'ADMIN',
+                phone: newProfile.phone || '',
+                address: newProfile.address || ''
+              };
+
+              setCachedProfile(userId, userProfile);
+              setUser(userProfile);
+              setProfileLoading(false);
+              return userProfile;
+            }
+          }
         }
-        return;
+        
+        setProfileLoading(false);
+        return null;
       }
 
-      console.log('Profile data fetched:', profileData);
+      console.log('Loaded profile data:', profileData);
 
-      // Then, fetch department name if department_id exists
-      let departmentName = null;
+      // Load department name asynchronously
+      let departmentName = 'Unknown';
+      let departmentCode = 'Unknown';
+      
       if (profileData.department_id) {
         try {
-          const { data: deptData, error: deptError } = await supabase
+          departmentName = await loadDepartmentName(profileData.department_id);
+          const { data: deptData } = await supabase
             .from('departments')
-            .select('name')
+            .select('code')
             .eq('id', profileData.department_id)
             .single();
-          
-          if (!deptError && deptData) {
-            departmentName = deptData.name;
+          if (deptData) {
+            departmentCode = deptData.code;
           }
-        } catch (deptErr) {
-          console.warn('Could not fetch department name:', deptErr);
+        } catch (error) {
+          console.error('Error loading department details:', error);
         }
       }
 
-      // Combine profile data with department name
-      const profileWithDepartment = {
+      const userProfile: UserProfile = {
         ...profileData,
-        department_name: departmentName
+        role: profileData.role as 'student' | 'hod' | 'principal' | 'admin',
+        department_name: departmentName,
+        avatar: profileData.profile_photo_url || '',
+        rollNumber: profileData.roll_number,
+        department: departmentCode,
+        phone: profileData.phone || '',
+        address: profileData.address || ''
       };
 
-      console.log('Final profile data:', profileWithDepartment);
-      setProfile(profileWithDepartment);
-    } catch (error) {
-      console.error('Unexpected error in fetchProfile:', error);
-      toast({
-        title: "Profile Error",
-        description: "An unexpected error occurred while loading your profile",
-        variant: "destructive"
-      });
-      setProfile(null);
-    } finally {
+      console.log('Created user profile:', userProfile);
+
+      // Cache the profile
+      setCachedProfile(userId, userProfile);
+      setUser(userProfile);
       setProfileLoading(false);
-    }
-  };
 
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error };
+      return userProfile;
     } catch (error) {
-      return { error };
-    }
-  };
-
-  const signUp = async (email: string, password: string, metadata?: any) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: metadata,
-          emailRedirectTo: `${window.location.origin}/auth`
-        }
-      });
-      return { error };
-    } catch (error) {
-      return { error };
+      console.error('Error in loadUserProfileLazy:', error);
+      setProfileLoading(false);
+      return null;
     }
   };
 
   const getInvitationDetails = async (email: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
-      
-      return { data, error };
+      const { data, error } = await supabase.rpc('get_invitation_details', {
+        invitation_email: email
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      return { data: data?.[0] || null };
     } catch (error) {
-      return { data: null, error };
+      return { error };
     }
   };
 
-  const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Sign out error:', error);
-        toast({
-          title: "Sign Out Error",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        setUser(null);
-        setProfile(null);
-        toast({
-          title: "Signed Out",
-          description: "You have been signed out successfully."
-        });
-      }
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast({
-        title: "Sign Out Error",
-        description: "An error occurred while signing out.",
-        variant: "destructive"
-      });
+  const refreshUser = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) {
+      // Force refresh to get latest data
+      await loadUserProfileLazy(currentSession.user.id, true);
+      setSession(currentSession);
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('Auth state changed:', event, currentSession?.user?.email);
+      
+      if (!mounted) return;
+
+      setSession(currentSession);
+      setLoading(false); // Set loading to false immediately after auth check
+      
+      if (currentSession?.user) {
+        console.log('User authenticated, loading profile...');
+        // Load profile asynchronously without blocking UI
+        setTimeout(() => {
+          if (mounted) {
+            loadUserProfileLazy(currentSession.user.id);
+          }
+        }, 0);
+      } else {
+        console.log('User not authenticated, clearing profile');
+        setUser(null);
+        setProfileLoading(false);
+        // Clear all caches on logout
+        profileCache.clear();
+        departmentCache.clear();
+        try {
+          sessionStorage.clear();
+        } catch (error) {
+          console.error('Error clearing session storage:', error);
+        }
+      }
+    });
+
+    // Get initial session
     const getInitialSession = async () => {
       try {
-        console.log('Getting initial session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Session error:', error);
-        }
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          console.log('Initial session found for user:', session.user.email);
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else {
-          console.log('No initial session found');
+        if (!mounted) return;
+
+        console.log('Initial session:', initialSession?.user?.email);
+        setSession(initialSession);
+        setLoading(false); // Set loading to false immediately
+        
+        if (initialSession?.user) {
+          console.log('Initial user found, loading profile...');
+          // Load profile asynchronously
+          setTimeout(() => {
+            if (mounted) {
+              loadUserProfileLazy(initialSession.user.id);
+            }
+          }, 0);
         }
       } catch (error) {
-        console.error('Initial session error:', error);
-      } finally {
-        setLoading(false);
+        console.error('Error getting initial session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const value = {
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setSession(null);
+      setProfileLoading(false);
+      // Clear all caches
+      profileCache.clear();
+      departmentCache.clear();
+      try {
+        sessionStorage.clear();
+      } catch (error) {
+        console.error('Error clearing storage on signOut:', error);
+      }
+    }
+    return { error };
+  };
+
+  const signUp = async (email: string, password: string, userData?: any) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: userData,
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
+    return { error };
+  };
+
+  const value: SupabaseAuthContextType = {
     user,
-    profile,
+    session,
     loading,
     profileLoading,
     signIn,
-    signUp,
     signOut,
-    refreshProfile,
-    getInvitationDetails
+    signUp,
+    refreshUser,
+    getInvitationDetails,
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <SupabaseAuthContext.Provider value={value}>
       {children}
-    </AuthContext.Provider>
+    </SupabaseAuthContext.Provider>
   );
 };
+
+export const AuthProvider = SupabaseAuthProvider;

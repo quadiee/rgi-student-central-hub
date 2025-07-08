@@ -87,6 +87,7 @@ const UserInvitationManager: React.FC = () => {
 
   useEffect(() => {
     loadPendingInvites();
+    // eslint-disable-next-line
   }, []);
 
   const sendInvitationEmail = async (invitationId: string, email: string, role: string, department: string) => {
@@ -120,10 +121,7 @@ const UserInvitationManager: React.FC = () => {
     setLoading(true);
 
     try {
-      // Generate a unique token
-      const token = crypto.randomUUID();
-
-      // Create the invitation record with token
+      // First create the invitation record
       const { data: inviteData, error: inviteError } = await supabase
         .from('user_invitations')
         .insert({
@@ -134,7 +132,6 @@ const UserInvitationManager: React.FC = () => {
           employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
           invited_by: user.id,
           is_active: true,
-          token: token,
           expires_at: toSupabaseTimestamp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
         })
         .select()
@@ -157,7 +154,7 @@ const UserInvitationManager: React.FC = () => {
         return;
       }
 
-      // Send invitation email with the invite link
+      // Send invitation email
       const emailSent = await sendInvitationEmail(
         inviteData.id,
         formData.email.trim().toLowerCase(),
@@ -165,10 +162,35 @@ const UserInvitationManager: React.FC = () => {
         formData.department
       );
 
-      toast({
-        title: "Invitation Created",
-        description: `Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'Please share the invitation link manually.'}`,
+      // Create the user in auth.users with metadata
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email.trim().toLowerCase(),
+        password: 'TempPassword123!', // Temporary password - user will be prompted to change
+        options: {
+          data: {
+            name: formData.email.split('@')[0], // Use email prefix as initial name
+            role: formData.role,
+            department: formData.department,
+            roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
+            employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
+            invitation_id: inviteData.id
+          },
+          emailRedirectTo: `${window.location.origin}/auth?mode=invited`
+        }
       });
+
+      if (signUpError) {
+        console.error('Sign up error:', signUpError);
+        toast({
+          title: "Invitation Created",
+          description: `Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'}`,
+        });
+      } else {
+        toast({
+          title: "Invitation Sent Successfully",
+          description: `User account created and invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : ''}`,
+        });
+      }
 
       // Reset form and reload invites
       setFormData({
@@ -216,37 +238,13 @@ const UserInvitationManager: React.FC = () => {
     }
   };
 
-  const copyInvitationUrl = async (inviteId: string) => {
-    try {
-      // Get the invitation token
-      const { data: invite, error } = await supabase
-        .from('user_invitations')
-        .select('token')
-        .eq('id', inviteId)
-        .single();
-
-      if (error || !invite?.token) {
-        toast({
-          title: "Error",
-          description: "Could not get invitation link",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const invitationUrl = `${window.location.origin}/invite/${invite.token}`;
-      await navigator.clipboard.writeText(invitationUrl);
-      toast({
-        title: "Link Copied",
-        description: "Invitation link copied to clipboard",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to copy invitation link",
-        variant: "destructive"
-      });
-    }
+  const copyInvitationUrl = (email: string) => {
+    const invitationUrl = `${window.location.origin}/auth?mode=invited&email=${encodeURIComponent(email)}`;
+    navigator.clipboard.writeText(invitationUrl);
+    toast({
+      title: "Link Copied",
+      description: "Invitation link copied to clipboard",
+    });
   };
 
   return (
@@ -418,7 +416,7 @@ const UserInvitationManager: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => copyInvitationUrl(invite.id)}
+                          onClick={() => copyInvitationUrl(invite.email)}
                           className="flex items-center space-x-1"
                         >
                           <ExternalLink className="w-3 h-3" />

@@ -1,36 +1,36 @@
+
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Clock, CheckCircle, AlertTriangle, Calendar, CreditCard } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { CreditCard, Calendar, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
-import { SupabaseFeeService } from '../../services/supabaseFeeService';
+import { RealFeeService } from '../../services/realFeeService';
 import { FeeRecord } from '../../types';
 import { useIsMobile } from '../../hooks/use-mobile';
-import { useUserConversion } from '../../hooks/useUserConversion';
 
 const StudentFeeView: React.FC = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { convertProfileToUser } = useUserConversion();
   const [feeRecords, setFeeRecords] = useState<FeeRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedFee, setSelectedFee] = useState<FeeRecord | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Online');
 
   useEffect(() => {
-    fetchStudentFees();
-  }, [profile]);
+    fetchFeeRecords();
+  }, [user]);
 
-  const fetchStudentFees = async () => {
-    if (!profile) return;
+  const fetchFeeRecords = async () => {
+    if (!user) return;
     
     try {
       setLoading(true);
-      const user = convertProfileToUser(profile);
-      const records = await SupabaseFeeService.getFeeRecords(user);
+      const records = await RealFeeService.getFeeRecords(user);
       setFeeRecords(records);
     } catch (error) {
-      console.error('Error fetching student fees:', error);
+      console.error('Error fetching fee records:', error);
       toast({
         title: "Error",
         description: "Failed to fetch fee records",
@@ -41,170 +41,244 @@ const StudentFeeView: React.FC = () => {
     }
   };
 
-  const handlePayment = async (feeRecord: FeeRecord) => {
-    if (!profile) return;
-    
-    try {
-      const user = convertProfileToUser(profile);
-      const payment = {
-        studentId: profile.id,
-        feeRecordId: feeRecord.id,
-        amount: feeRecord.amount - (feeRecord.paidAmount || 0),
-        paymentMethod: 'Online' as const,
-        status: 'Success' as const
-      };
+  const handlePayment = async () => {
+    if (!selectedFee || !paymentAmount) return;
 
-      const result = await SupabaseFeeService.processPayment(user, payment);
-      
-      if (result.status === 'Success') {
-        toast({
-          title: "Payment Successful",
-          description: `Payment of ₹${payment.amount} processed successfully`,
-        });
-        await fetchStudentFees();
-      }
+    try {
+      await RealFeeService.processPayment(user!, {
+        feeRecordId: selectedFee.id,
+        studentId: user!.id,
+        amount: parseFloat(paymentAmount),
+        paymentMethod: paymentMethod as any
+      });
+
+      toast({
+        title: "Success",
+        description: "Payment processed successfully",
+      });
+
+      setSelectedFee(null);
+      setPaymentAmount('');
+      fetchFeeRecords();
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({
-        title: "Payment Failed",
+        title: "Error",
         description: "Failed to process payment",
         variant: "destructive"
       });
     }
   };
 
+  const totalDue = feeRecords.reduce((sum, record) => 
+    record.status !== 'Paid' ? sum + record.amount : sum, 0
+  );
+  const totalPaid = feeRecords.reduce((sum, record) => 
+    record.status === 'Paid' ? sum + record.amount : sum, 0
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your fee records...</p>
+          <p className="text-gray-600">Loading fee records...</p>
         </div>
       </div>
     );
   }
 
-  const totalFees = feeRecords.reduce((sum, record) => sum + record.amount, 0);
-  const totalPaid = feeRecords.reduce((sum, record) => sum + (record.paidAmount || 0), 0);
-  const totalOutstanding = totalFees - totalPaid;
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
-          My Fee Records
+          My Fee Status
         </h2>
       </div>
 
-      {/* Fee Summary Cards */}
+      {/* Summary Cards */}
       <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Fees</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              ₹{totalFees.toLocaleString()}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Total Fees</p>
+              <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-blue-600`}>
+                ₹{(totalDue + totalPaid).toLocaleString()}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Current semester
-            </p>
-          </CardContent>
-        </Card>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <DollarSign className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-blue-600`} />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid Amount</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ₹{totalPaid.toLocaleString()}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Amount Paid</p>
+              <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-green-600`}>
+                ₹{totalPaid.toLocaleString()}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Successfully paid
-            </p>
-          </CardContent>
-        </Card>
+            <div className="p-3 bg-green-100 rounded-lg">
+              <CheckCircle className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-green-600`} />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              ₹{totalOutstanding.toLocaleString()}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Amount Due</p>
+              <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-red-600`}>
+                ₹{totalDue.toLocaleString()}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Pending payment
-            </p>
-          </CardContent>
-        </Card>
+            <div className="p-3 bg-red-100 rounded-lg">
+              <AlertTriangle className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-red-600`} />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Fee Records List */}
+      {/* Fee Records */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Fee Details</h3>
         
         {feeRecords.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-600">No fee records found</p>
+            <p className="text-gray-500">No fee records found</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {feeRecords.map((record) => (
-              <div key={record.id} className="border border-gray-200 rounded-lg p-4">
-                <div className={`${isMobile ? 'space-y-3' : 'flex items-center justify-between'}`}>
-                  <div className={`${isMobile ? '' : 'flex-1'}`}>
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h4 className="font-medium text-gray-900">{record.feeType}</h4>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        record.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                        record.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {record.status}
-                      </span>
+            {feeRecords.map(record => {
+              const isOverdue = record.status === 'Overdue' || 
+                (record.status === 'Pending' && new Date(record.dueDate) < new Date());
+              
+              return (
+                <div key={record.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-center justify-between'}`}>
+                    <div className={`${isMobile ? '' : 'flex-1'}`}>
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="font-medium text-gray-900">{record.feeType}</h4>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          record.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                          record.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </div>
+                      <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-2 text-sm text-gray-600`}>
+                        <div>
+                          <span className="font-medium">Amount: </span>
+                          ₹{record.amount.toLocaleString()}
+                        </div>
+                        <div>
+                          <span className="font-medium">Due Date: </span>
+                          <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                            {new Date(record.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Semester: </span>
+                          {record.semester}
+                        </div>
+                      </div>
                     </div>
-                    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-4'} gap-2 text-sm text-gray-600`}>
-                      <div className="flex items-center">
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        Total: ₹{record.amount.toLocaleString()}
+                    
+                    {record.status !== 'Paid' && (
+                      <div className={`${isMobile ? 'w-full' : 'flex-shrink-0'}`}>
+                        <Button 
+                          onClick={() => setSelectedFee(record)}
+                          size={isMobile ? 'sm' : 'default'}
+                          className={`${isMobile ? 'w-full' : ''}`}
+                        >
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Pay Now
+                        </Button>
                       </div>
-                      <div className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Paid: ₹{(record.paidAmount || 0).toLocaleString()}
-                      </div>
-                      <div className="flex items-center">
-                        <AlertTriangle className="w-4 h-4 mr-1" />
-                        Due: ₹{(record.amount - (record.paidAmount || 0)).toLocaleString()}
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        Due Date: {new Date(record.dueDate).toLocaleDateString()}
-                      </div>
-                    </div>
+                    )}
                   </div>
-                  
-                  {record.status !== 'Paid' && (
-                    <div className={`${isMobile ? 'w-full' : 'flex-shrink-0'}`}>
-                      <Button 
-                        onClick={() => handlePayment(record)}
-                        className={`${isMobile ? 'w-full' : ''}`}
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Pay Now
-                      </Button>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {selectedFee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Process Payment</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fee Type
+                </label>
+                <p className="text-gray-900">{selectedFee.feeType}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Amount
+                </label>
+                <p className="text-gray-900 font-medium">₹{selectedFee.amount.toLocaleString()}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Amount
+                </label>
+                <input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  max={selectedFee.amount}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Enter amount"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Method
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="Online">Online Payment</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="DD">Demand Draft</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedFee(null)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePayment}
+                disabled={!paymentAmount}
+                className="flex-1"
+              >
+                Process Payment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

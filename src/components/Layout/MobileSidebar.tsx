@@ -1,114 +1,159 @@
 
 import React from 'react';
-import { X, Home, Users, DollarSign, FileText, Settings, ChevronRight } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { Button } from '../ui/button';
+import { INSTITUTION, DEPARTMENT_CODES } from '../../constants/institutional';
 
 interface MobileSidebarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
   isOpen: boolean;
   onClose: () => void;
-  navigation: Array<{
-    name: string;
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-    current: boolean;
-  }>;
-  onNavigate: (href: string) => void;
 }
 
 const MobileSidebar: React.FC<MobileSidebarProps> = ({
+  activeTab,
+  onTabChange,
   isOpen,
-  onClose,
-  navigation,
-  onNavigate
+  onClose
 }) => {
-  const { profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
-  if (!isOpen) return null;
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'hod', 'principal', 'admin'] },
+    { id: 'fees', label: 'Fee Management', icon: CreditCard, roles: ['student', 'hod', 'principal', 'admin'] },
+    { id: 'students', label: 'Students', icon: Users, roles: ['hod', 'principal', 'admin'] },
+    { id: 'attendance', label: 'Attendance', icon: UserCheck, roles: ['hod', 'principal', 'admin'] },
+    { id: 'exams', label: 'Exams', icon: BookOpen, roles: ['hod', 'principal', 'admin'] },
+    { id: 'reports', label: 'Reports', icon: FileText, roles: ['hod', 'principal', 'admin'] },
+    { id: 'admin', label: 'Admin Panel', icon: Settings, roles: ['principal', 'admin'] }
+  ];
+
+  const visibleItems = menuItems.filter(item => 
+    user && item.roles.includes(user.role)
+  );
+
+  const getDepartmentName = (deptCode: string) => {
+    return DEPARTMENT_CODES[deptCode as keyof typeof DEPARTMENT_CODES] || deptCode;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={onClose} />
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
       
-      <div className="relative flex w-full max-w-xs flex-col bg-white">
-        <div className="flex h-16 items-center justify-between px-4 border-b">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">R</span>
-            </div>
-            <span className="font-semibold text-gray-900">RGCE</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <nav className="space-y-1 px-2 py-4">
-            {navigation.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => {
-                  onNavigate(item.href);
-                  onClose();
-                }}
-                className={`
-                  w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors
-                  ${item.current
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }
-                `}
-              >
-                <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                {item.name}
-                <ChevronRight className="ml-auto h-4 w-4" />
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {profile && (
-          <div className="border-t border-gray-200 p-4">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                {profile.profile_photo_url ? (
-                  <img src={profile.profile_photo_url} alt={profile.name} className="w-10 h-10 rounded-full" />
-                ) : (
-                  <span className="text-gray-600 font-medium">
-                    {profile.name?.split(' ').map(n => n[0]).join('') || profile.email[0].toUpperCase()}
-                  </span>
-                )}
+      {/* Sidebar */}
+      <div className={`
+        fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">R</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {profile.name || 'User'}
-                </p>
-                <p className="text-xs text-gray-500 capitalize">
-                  {profile.role || 'Student'}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {profile.department_name || 'Department'}
-                </p>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">{INSTITUTION.shortName}</h2>
+                <p className="text-xs text-gray-600">Student Portal</p>
               </div>
             </div>
-            <Button 
-              onClick={signOut} 
-              variant="outline" 
-              size="sm" 
-              className="w-full"
+            <button 
+              onClick={onClose}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
             >
-              Sign Out
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Institution Info */}
+          <div className="px-6 py-4 bg-blue-50 border-b border-blue-100">
+            <h3 className="text-sm font-semibold text-blue-900">{INSTITUTION.name}</h3>
+            <p className="text-xs text-blue-700">{INSTITUTION.tagline}</p>
+            <p className="text-xs text-blue-600 mt-1">
+              Affiliated to {INSTITUTION.academic.affiliation.split(',')[0]}
+            </p>
+          </div>
+
+          {/* User Info */}
+          {user && (
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <img 
+                  src={user.avatar} 
+                  alt={user.name}
+                  className="w-10 h-10 rounded-full"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  {user.department && (
+                    <p className="text-xs text-gray-400 truncate">
+                      {getDepartmentName(user.department)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4">
+            <ul className="space-y-2">
+              {visibleItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => {
+                        onTabChange(item.id);
+                        onClose();
+                      }}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                        activeTab === item.id
+                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="mb-3">
+              <p className="text-xs text-gray-500">Contact Support:</p>
+              <p className="text-xs text-gray-600">{INSTITUTION.contact.emails[0]}</p>
+              <p className="text-xs text-gray-600">{INSTITUTION.contact.phones[0]}</p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleSignOut}
+              className="w-full flex items-center space-x-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
             </Button>
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

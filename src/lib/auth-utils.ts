@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 
 export interface SignUpData {
@@ -14,7 +13,7 @@ export interface SignUpData {
 }
 
 export const authUtils = {
-  // Check if user exists in auth system
+  // ✅ Check if user exists in auth system
   checkUserExists: async (email: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase.functions.invoke('check-user-exists', {
@@ -27,7 +26,7 @@ export const authUtils = {
     }
   },
 
-  // Send password reset email
+  // ✅ Send password reset email
   sendPasswordReset: async (email: string): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.functions.invoke('send-password-reset', {
@@ -42,7 +41,30 @@ export const authUtils = {
     }
   },
 
-  // Send magic link
+  // ✅ Sign in user using token from password reset link
+  signInWithToken: async (token: string): Promise<{ error?: any }> => {
+    try {
+      const { error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: '' // Required, but empty for one-time use
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // ✅ Update user password (after token-based login)
+  updatePassword: async (password: string): Promise<{ error?: any }> => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  // ✅ Send magic link
   sendMagicLink: async (email: string): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -57,17 +79,7 @@ export const authUtils = {
     }
   },
 
-  // Update user password (for existing users)
-  updatePassword: async (password: string): Promise<{ error?: any }> => {
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  // Sign up new user with complete profile data
+  // ✅ Sign up new user with additional profile data
   signUpWithProfile: async (email: string, password: string, userData: SignUpData): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.auth.signUp({
@@ -75,17 +87,7 @@ export const authUtils = {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            name: userData.name,
-            role: userData.role,
-            department: userData.department,
-            phone: userData.phone,
-            roll_number: userData.roll_number,
-            employee_id: userData.employee_id,
-            guardian_name: userData.guardian_name,
-            guardian_phone: userData.guardian_phone,
-            address: userData.address
-          }
+          data: userData
         }
       });
       return { error };
@@ -94,33 +96,7 @@ export const authUtils = {
     }
   },
 
-  // Validate invitation token
-  validateInvitationToken: async (token: string): Promise<{ data?: any; error?: any }> => {
-    try {
-      const { data, error } = await supabase.rpc('validate_invitation_token', {
-        p_token: token
-      });
-      return { data: data?.[0], error };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  // Complete invitation profile
-  completeInvitationProfile: async (userId: string, invitationId: string, profileData: any): Promise<{ error?: any }> => {
-    try {
-      const { data, error } = await supabase.rpc('complete_invitation_profile', {
-        p_user_id: userId,
-        p_invitation_id: invitationId,
-        p_profile_data: profileData
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  // Remove user (admin function)
+  // ✅ Remove user (admin only)
   removeUser: async (userId: string): Promise<{ error?: any }> => {
     try {
       const { error } = await supabase.functions.invoke('remove-user', {

@@ -4,37 +4,24 @@ import { useAuth } from '../contexts/SupabaseAuthContext';
 import { SupabaseFeeService } from '../services/supabaseFeeService';
 import { FeeRecord, PaymentTransaction } from '../types';
 import { useToast } from '../components/ui/use-toast';
+import { useUserConversion } from './useUserConversion';
 
 export const useFeeManagement = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
+  const { convertUserProfileToUser } = useUserConversion();
   const { toast } = useToast();
   const [feeRecords, setFeeRecords] = useState<FeeRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const convertProfileToUser = (profile: any) => {
-    return {
-      id: profile.id,
-      name: profile.name,
-      email: profile.email,
-      role: profile.role as 'student' | 'hod' | 'principal' | 'admin',
-      department_id: profile.department_id || '',
-      department_name: profile.department_name,
-      avatar: profile.profile_photo_url || '',
-      rollNumber: profile.roll_number,
-      employeeId: profile.employee_id,
-      isActive: profile.is_active
-    };
-  };
-
   const loadFeeRecords = async (filters?: any) => {
-    if (!profile) return;
+    if (!user) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const convertedUser = convertProfileToUser(profile);
+      const convertedUser = convertUserProfileToUser(user);
       const records = await SupabaseFeeService.getFeeRecords(convertedUser, filters);
       setFeeRecords(records);
     } catch (err) {
@@ -51,11 +38,11 @@ export const useFeeManagement = () => {
   };
 
   const processPayment = async (payment: Partial<PaymentTransaction>): Promise<boolean> => {
-    if (!profile) return false;
+    if (!user) return false;
 
     setLoading(true);
     try {
-      const convertedUser = convertProfileToUser(profile);
+      const convertedUser = convertUserProfileToUser(user);
       const result = await SupabaseFeeService.processPayment(convertedUser, payment);
       
       if (result.status === 'Success') {
@@ -90,11 +77,11 @@ export const useFeeManagement = () => {
   };
 
   const generateReport = async (reportConfig: any) => {
-    if (!profile) return null;
+    if (!user) return null;
 
     setLoading(true);
     try {
-      const convertedUser = convertProfileToUser(profile);
+      const convertedUser = convertUserProfileToUser(user);
       const report = await SupabaseFeeService.generateReport(convertedUser, reportConfig);
       
       toast({
@@ -118,17 +105,17 @@ export const useFeeManagement = () => {
   };
 
   const getPermissions = () => {
-    if (!profile) return null;
-    const convertedUser = convertProfileToUser(profile);
+    if (!user) return null;
+    const convertedUser = convertUserProfileToUser(user);
     return SupabaseFeeService.getFeePermissions(convertedUser);
   };
 
-  // Load initial data when profile changes
+  // Load initial data when user changes
   useEffect(() => {
-    if (profile) {
+    if (user) {
       loadFeeRecords();
     }
-  }, [profile?.id]);
+  }, [user?.id]);
 
   return {
     feeRecords,

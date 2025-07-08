@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuickAuth } from '../../hooks/useQuickAuth';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -11,7 +12,6 @@ import SecureAdminButton from './SecureAdminButton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ProfileLoadingSkeleton, ProgressiveLoader } from './LoadingStates';
 import { supabase } from '../../integrations/supabase/client';
-import { resetPassword } from '../../lib/resetPassword';
 
 const SupabaseAuthPage = () => {
   const { isAuthenticated, loading: quickAuthLoading } = useQuickAuth();
@@ -21,7 +21,6 @@ const SupabaseAuthPage = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
 
   // Show progressive loading for authenticated users while profile loads
   if (isAuthenticated && profileLoading) {
@@ -100,53 +99,6 @@ const SupabaseAuthPage = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!loginEmail) {
-      toast({
-        title: "Email Required",
-        description: "Please enter your email address first",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!loginEmail.endsWith('@rgce.edu.in')) {
-      toast({
-        title: "Invalid Email",
-        description: "Please use your RGCE email address (@rgce.edu.in)",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setResetLoading(true);
-    
-    try {
-      const error = await resetPassword(loginEmail);
-      
-      if (error) {
-        toast({
-          title: "Reset Failed",
-          description: error.message || "Failed to send reset email",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Reset Email Sent",
-          description: "Check your email for password reset instructions",
-        });
-      }
-    } catch (err: any) {
-      toast({
-        title: "Reset Error",
-        description: "An error occurred while sending reset email",
-        variant: "destructive"
-      });
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -222,16 +174,6 @@ const SupabaseAuthPage = () => {
                   ) : (
                     'Sign In'
                   )}
-                </Button>
-
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  className="w-full text-sm"
-                  onClick={handleForgotPassword}
-                  disabled={resetLoading}
-                >
-                  {resetLoading ? 'Sending...' : 'Forgot Password?'}
                 </Button>
               </form>
               
