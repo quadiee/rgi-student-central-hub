@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Users, DollarSign, AlertCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -24,22 +25,22 @@ interface StudentFeeSummary {
 }
 
 const EnhancedHODDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [departmentSummary, setDepartmentSummary] = useState<HODDepartmentSummary | null>(null);
   const [topPendingStudents, setTopPendingStudents] = useState<StudentFeeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!profile) return;
       
       try {
         setLoading(true);
         // Mock data since we don't have the enhanced fee service
         const mockDepartmentSummary: HODDepartmentSummary = {
-          department_id: user.department_id,
-          department_name: user.department_name === 'CSE' ? 'Computer Science Engineering' : user.department_name || 'Unknown',
-          department_code: user.department_name || 'CSE',
+          department_id: profile.department_id || '',
+          department_name: profile.department_name === 'CSE' ? 'Computer Science Engineering' : profile.department_name || 'Unknown',
+          department_code: profile.department_name || 'CSE',
           total_students: 120,
           total_department_fees: 6000000,
           total_collected: 4500000,
@@ -64,7 +65,7 @@ const EnhancedHODDashboard: React.FC = () => {
     };
 
     loadData();
-  }, [user]);
+  }, [profile]);
 
   if (loading) {
     return (

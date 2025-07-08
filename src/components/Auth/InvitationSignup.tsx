@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, GraduationCap, Mail } from 'lucide-react';
@@ -79,7 +78,7 @@ const InvitationSignup: React.FC = () => {
 
       // Check if user already exists in auth.users
       const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
-      if (!userError) {
+      if (!userError && users) {
         const existingUser = users.find(u => u.email === inviteData.email);
         setUserExists(!!existingUser);
       }

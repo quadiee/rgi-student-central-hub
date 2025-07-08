@@ -24,8 +24,8 @@ export const useUserConversion = () => {
       id: userProfile.id,
       name: userProfile.name,
       email: userProfile.email,
-      role: userProfile.role, // Already properly typed as 'student' | 'hod' | 'principal' | 'admin'
-      department_id: userProfile.department_id,
+      role: userProfile.role,
+      department_id: userProfile.department_id || '',
       department_name: userProfile.department_name,
       avatar: userProfile.profile_photo_url || userProfile.avatar || '',
       rollNumber: userProfile.roll_number || userProfile.rollNumber,
