@@ -400,6 +400,13 @@ export type Database = {
             referencedRelation: "hod_department_summary"
             referencedColumns: ["department_id"]
           },
+          {
+            foreignKeyName: "fee_structures_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "scholarship_summary"
+            referencedColumns: ["department_id"]
+          },
         ]
       }
       fee_templates: {
@@ -684,6 +691,7 @@ export type Database = {
           address: string | null
           admission_date: string | null
           blood_group: string | null
+          community: string | null
           course: string | null
           created_at: string | null
           department_id: string | null
@@ -692,6 +700,7 @@ export type Database = {
           emergency_contact: string | null
           employee_id: string | null
           fee_status: string | null
+          first_generation: boolean | null
           guardian_name: string | null
           guardian_phone: string | null
           id: string
@@ -715,6 +724,7 @@ export type Database = {
           address?: string | null
           admission_date?: string | null
           blood_group?: string | null
+          community?: string | null
           course?: string | null
           created_at?: string | null
           department_id?: string | null
@@ -723,6 +733,7 @@ export type Database = {
           emergency_contact?: string | null
           employee_id?: string | null
           fee_status?: string | null
+          first_generation?: boolean | null
           guardian_name?: string | null
           guardian_phone?: string | null
           id: string
@@ -746,6 +757,7 @@ export type Database = {
           address?: string | null
           admission_date?: string | null
           blood_group?: string | null
+          community?: string | null
           course?: string | null
           created_at?: string | null
           department_id?: string | null
@@ -754,6 +766,7 @@ export type Database = {
           emergency_contact?: string | null
           employee_id?: string | null
           fee_status?: string | null
+          first_generation?: boolean | null
           guardian_name?: string | null
           guardian_phone?: string | null
           id?: string
@@ -793,6 +806,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "scholarship_summary"
             referencedColumns: ["department_id"]
           },
         ]
@@ -856,6 +876,86 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      scholarships: {
+        Row: {
+          academic_year: string
+          application_date: string | null
+          applied_status: boolean | null
+          created_at: string | null
+          created_by: string | null
+          eligible_amount: number
+          id: string
+          receipt_date: string | null
+          received_by_institution: boolean | null
+          remarks: string | null
+          scholarship_type: string
+          semester: number | null
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year: string
+          application_date?: string | null
+          applied_status?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          eligible_amount: number
+          id?: string
+          receipt_date?: string | null
+          received_by_institution?: boolean | null
+          remarks?: string | null
+          scholarship_type: string
+          semester?: number | null
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string
+          application_date?: string | null
+          applied_status?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          eligible_amount?: number
+          id?: string
+          receipt_date?: string | null
+          received_by_institution?: boolean | null
+          remarks?: string | null
+          scholarship_type?: string
+          semester?: number | null
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scholarships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scholarships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "scholarships_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scholarships_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
       }
       user_activity_logs: {
         Row: {
@@ -1021,6 +1121,13 @@ export type Database = {
             referencedColumns: ["department_id"]
           },
           {
+            foreignKeyName: "user_roles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "scholarship_summary"
+            referencedColumns: ["department_id"]
+          },
+          {
             foreignKeyName: "user_roles_role_id_fkey"
             columns: ["role_id"]
             isOneToOne: false
@@ -1074,6 +1181,18 @@ export type Database = {
         }
         Relationships: []
       }
+      institution_scholarship_summary: {
+        Row: {
+          academic_year: string | null
+          applied_scholarships: number | null
+          received_scholarships: number | null
+          total_eligible_amount: number | null
+          total_received_amount: number | null
+          total_scholarship_students: number | null
+          total_scholarships: number | null
+        }
+        Relationships: []
+      }
       principal_institution_summary: {
         Row: {
           overall_collection_percentage: number | null
@@ -1084,6 +1203,21 @@ export type Database = {
           total_institution_fees: number | null
           total_pending: number | null
           total_students: number | null
+        }
+        Relationships: []
+      }
+      scholarship_summary: {
+        Row: {
+          academic_year: string | null
+          applied_scholarships: number | null
+          department_code: string | null
+          department_id: string | null
+          department_name: string | null
+          received_scholarships: number | null
+          total_eligible_amount: number | null
+          total_received_amount: number | null
+          total_scholarship_students: number | null
+          total_scholarships: number | null
         }
         Relationships: []
       }
@@ -1122,6 +1256,13 @@ export type Database = {
             referencedRelation: "hod_department_summary"
             referencedColumns: ["department_id"]
           },
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "scholarship_summary"
+            referencedColumns: ["department_id"]
+          },
         ]
       }
     }
@@ -1142,6 +1283,10 @@ export type Database = {
           penalty_percentage: number
         }
         Returns: number
+      }
+      calculate_scholarship_eligibility: {
+        Args: { p_student_id: string; p_academic_year?: string }
+        Returns: undefined
       }
       check_hod_department: {
         Args: { user_id: string; dept_id: string }

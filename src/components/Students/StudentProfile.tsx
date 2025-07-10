@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, FileText, Edit, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, FileText, Edit, DollarSign, Award, Users, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Student } from '../../types/user-student-fees';
+import { Student, Scholarship } from '../../types/user-student-fees';
 import { mockFeeRecords } from '../../data/mockData';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { supabase } from '../../integrations/supabase/client';
+import { Badge } from '../ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface StudentProfileProps {
   student: Student;
@@ -12,12 +15,43 @@ interface StudentProfileProps {
 
 const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
 
   const studentFeeRecords = mockFeeRecords.filter(record => record.studentId === student.id);
   const totalFees = studentFeeRecords.reduce((sum, record) => sum + record.amount, 0);
   const totalPaid = studentFeeRecords.reduce((sum, record) => sum + (record.paidAmount || 0), 0);
   const totalDue = totalFees - totalPaid;
+
+  useEffect(() => {
+    fetchScholarships();
+  }, [student.id]);
+
+  const fetchScholarships = async () => {
+    if (!student.id) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('scholarships')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setScholarships(data || []);
+    } catch (error) {
+      console.error('Error fetching scholarships:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalEligibleAmount = scholarships.reduce((sum, s) => sum + s.eligible_amount, 0);
+  const totalReceivedAmount = scholarships
+    .filter(s => s.received_by_institution)
+    .reduce((sum, s) => sum + s.eligible_amount, 0);
 
   return (
     <div className="space-y-6">
@@ -71,6 +105,13 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                 <span className="text-gray-500">Year & Section:</span>
                 <span className="font-medium">{student.yearSection || '-'}</span>
               </div>
+              <div className="flex items-center space-x-2">
+                <Users className="w-4 h-4 text-gray-400" />
+                <span className="font-medium">{student.community || 'Not specified'}</span>
+                {student.first_generation && (
+                  <Badge variant="secondary" className="text-xs">FG</Badge>
+                )}
+              </div>
             </div>
           </div>
 
@@ -85,12 +126,43 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
         </div>
       </div>
 
+      {/* Scholarship Summary Card */}
+      {scholarships.length > 0 && (
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-lg p-6 border border-green-200">
+          <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+            <Award className="w-5 h-5" />
+            Scholarship Summary
+          </h3>
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                ₹{totalEligibleAmount.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-600">Total Eligible</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                ₹{totalReceivedAmount.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-600">Received by Institution</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {scholarships.filter(s => s.applied_status).length}
+              </div>
+              <div className="text-sm text-gray-600">Applications Submitted</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-lg p-1">
         <div className={`flex ${isMobile ? 'overflow-x-auto' : 'flex-wrap'} gap-1`}>
           {[
             { id: 'overview', label: 'Overview', icon: TrendingUp },
             { id: 'fees', label: 'Fee Details', icon: DollarSign },
+            { id: 'scholarships', label: 'Scholarships', icon: Award },
             { id: 'profile', label: 'Personal Info', icon: FileText },
           ].map(tab => {
             const Icon = tab.icon;
@@ -160,6 +232,90 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'scholarships' && (
+          <div className="space-y-6">
+            {scholarships.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Award className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Scholarships Found</h3>
+                  <p className="text-gray-600">
+                    No scholarship records found for this student. Check eligibility criteria.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {scholarships.map((scholarship) => (
+                  <Card key={scholarship.id} className="relative">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Award className="w-5 h-5" />
+                          {scholarship.scholarship_type === 'PMSS' ? 'Post Metric Scholarship (SC/ST)' : 'First Generation Scholarship'}
+                        </CardTitle>
+                        <Badge 
+                          variant={scholarship.received_by_institution ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {scholarship.received_by_institution ? 'Received' : 'Pending'}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Eligible Amount:</span>
+                          <div className="font-semibold text-lg text-green-600">
+                            ₹{scholarship.eligible_amount.toLocaleString()}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Academic Year:</span>
+                          <div className="font-medium">{scholarship.academic_year}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Application Status:</span>
+                          <div className={`font-medium ${scholarship.applied_status ? 'text-green-600' : 'text-orange-600'}`}>
+                            {scholarship.applied_status ? 'Applied' : 'Not Applied'}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Institution Receipt:</span>
+                          <div className={`font-medium ${scholarship.received_by_institution ? 'text-green-600' : 'text-red-600'}`}>
+                            {scholarship.received_by_institution ? 'Received' : 'Pending'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {scholarship.application_date && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          Applied on: {new Date(scholarship.application_date).toLocaleDateString()}
+                        </div>
+                      )}
+                      
+                      {scholarship.receipt_date && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <Calendar className="w-4 h-4" />
+                          Received on: {new Date(scholarship.receipt_date).toLocaleDateString()}
+                        </div>
+                      )}
+                      
+                      {scholarship.remarks && (
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm font-medium text-gray-700">Remarks:</span>
+                          <p className="text-sm text-gray-600 mt-1">{scholarship.remarks}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

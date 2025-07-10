@@ -1,203 +1,128 @@
-
 import React, { useState } from 'react';
-import { Users, Upload, FileText, List, Settings, BarChart3, PieChart } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { BarChart3, FileText, Award, User, CreditCard, TrendingUp, PieChart, Users, Download } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import EnhancedFeeAssignment from './EnhancedFeeAssignment';
-import CSVFeeUploader from './CSVFeeUploader';
-import FeeListManagement from './FeeListManagement';
-import StudentFeeDashboard from './StudentFeeDashboard';
-import HODFeeDashboard from './HODFeeDashboard';
-import RealTimeFeeDashboard from './RealTimeFeeDashboard';
+import { useIsMobile } from '../../hooks/use-mobile';
+import RealTimeFeeDashboard from '../Dashboard/RealTimeFeeDashboard';
+import EnhancedFeeManagement from './EnhancedFeeManagement';
+import ScholarshipManagement from './ScholarshipManagement';
+import StudentFeeView from './StudentFeeView';
+import StudentPaymentPortal from './StudentPaymentPortal';
 import DepartmentAnalytics from './DepartmentAnalytics';
 import FeeTypeAnalytics from './FeeTypeAnalytics';
+import BatchFeeProcessor from './BatchFeeProcessor';
+import AdminReportGenerator from './AdminReportGenerator';
+
+interface Tab {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  component: React.FC<any>;
+  roles: string[];
+}
 
 const FeeManagementHub: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('overview');
+  const isMobile = useIsMobile();
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-gray-600">Please log in to access fee management</p>
-        </div>
-      </div>
-    );
-  }
+  const canAccess = (roles: string[]) => {
+    return user?.role && roles.includes(user.role);
+  };
 
-  // Strict role-based access control
-  const isAdmin = user.role === 'admin';
-  const isHOD = user.role === 'hod';
-  const isChairmanOrPrincipal = user.role === 'chairman' || user.role === 'principal';
-  const isStudent = user.role === 'student';
+  const tabs = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: BarChart3,
+      component: () => <RealTimeFeeDashboard />,
+      roles: ['student', 'hod', 'principal', 'admin', 'chairman']
+    },
+    {
+      id: 'fees',
+      label: 'Fee Records',
+      icon: FileText,
+      component: () => <EnhancedFeeManagement />,
+      roles: ['hod', 'principal', 'admin', 'chairman']
+    },
+    {
+      id: 'scholarships',
+      label: 'Scholarships',
+      icon: Award,
+      component: () => <ScholarshipManagement />,
+      roles: ['hod', 'principal', 'admin', 'chairman']
+    },
+    {
+      id: 'student-view',
+      label: 'My Fees',
+      icon: User,
+      component: () => <StudentFeeView />,
+      roles: ['student']
+    },
+    {
+      id: 'payment',
+      label: 'Payment Portal',
+      icon: CreditCard,
+      component: () => <StudentPaymentPortal />,
+      roles: ['student']
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      icon: TrendingUp,
+      component: () => <DepartmentAnalytics />,
+      roles: ['hod', 'principal', 'admin', 'chairman']
+    },
+    {
+      id: 'fee-analytics',
+      label: 'Fee Type Analytics',
+      icon: PieChart,
+      component: () => <FeeTypeAnalytics />,
+      roles: ['principal', 'admin', 'chairman']
+    },
+    {
+      id: 'batch-operations',
+      label: 'Batch Operations',
+      icon: Users,
+      component: () => <BatchFeeProcessor />,
+      roles: ['admin', 'principal', 'chairman']
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: Download,
+      component: () => <AdminReportGenerator />,
+      roles: ['hod', 'principal', 'admin', 'chairman']
+    }
+  ].filter(tab => canAccess(tab.roles));
+
+  const ActiveTabComponent = tabs.find(tab => tab.id === activeTab)?.component || (() => <p>Tab not found</p>);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Fee Management System</h1>
-        <div className="text-sm text-gray-600">
-          {user.name} - {user.role?.toUpperCase()}
+    <div className="min-h-screen">
+      <div className="container mx-auto px-4 py-6">
+        <h1 className="text-3xl font-semibold mb-4">Fee Management Hub</h1>
+
+        {/* Tab Navigation */}
+        <div className={`flex ${isMobile ? 'overflow-x-auto' : 'flex-wrap'} mb-6`}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`px-4 py-2 rounded-lg ${activeTab === tab.id
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} mr-2 mb-2 flex items-center`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <tab.icon className="h-5 w-5 mr-2" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Active Tab Content */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <ActiveTabComponent />
         </div>
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Dashboard
-          </TabsTrigger>
-          
-          {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-            <TabsTrigger value="list-management" className="flex items-center gap-2">
-              <List className="w-4 h-4" />
-              Fee Records
-            </TabsTrigger>
-          )}
-          
-          {/* Only Admin gets advanced features */}
-          {isAdmin && (
-            <>
-              <TabsTrigger value="assign-fees" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Assign Fees
-              </TabsTrigger>
-              <TabsTrigger value="csv-upload" className="flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                CSV Upload
-              </TabsTrigger>
-            </>
-          )}
-          
-          {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-            <>
-              <TabsTrigger value="real-time" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Real-time Stats
-              </TabsTrigger>
-              <TabsTrigger value="dept-analytics" className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Dept Analytics
-              </TabsTrigger>
-              <TabsTrigger value="fee-type-analytics" className="flex items-center gap-2">
-                <PieChart className="w-4 h-4" />
-                Fee Type Analytics
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
-
-        <TabsContent value="dashboard" className="space-y-6">
-          {isStudent && <StudentFeeDashboard />}
-          {isHOD && <HODFeeDashboard />}
-          {(isAdmin || isChairmanOrPrincipal) && <RealTimeFeeDashboard />}
-        </TabsContent>
-
-        {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-          <TabsContent value="list-management" className="space-y-6">
-            <FeeListManagement />
-          </TabsContent>
-        )}
-
-        {/* Admin-only features */}
-        {isAdmin && (
-          <>
-            <TabsContent value="assign-fees" className="space-y-6">
-              <EnhancedFeeAssignment />
-            </TabsContent>
-
-            <TabsContent value="csv-upload" className="space-y-6">
-              <CSVFeeUploader />
-            </TabsContent>
-          </>
-        )}
-
-        {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-          <>
-            <TabsContent value="real-time" className="space-y-6">
-              <RealTimeFeeDashboard />
-            </TabsContent>
-
-            <TabsContent value="dept-analytics" className="space-y-6">
-              <DepartmentAnalytics />
-            </TabsContent>
-
-            <TabsContent value="fee-type-analytics" className="space-y-6">
-              <FeeTypeAnalytics />
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
-
-      {/* Quick Stats for Overview - Only for authorized roles */}
-      {activeTab === 'dashboard' && (isAdmin || isHOD || isChairmanOrPrincipal) && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {/* Only Admin gets assign fees and CSV upload */}
-              {isAdmin && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('assign-fees')}
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    Assign Fees
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('csv-upload')}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload CSV
-                  </Button>
-                </>
-              )}
-              {/* All authorized roles can manage records */}
-              {(isAdmin || isHOD || isChairmanOrPrincipal) && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('list-management')}
-                  >
-                    <List className="w-4 h-4 mr-2" />
-                    Manage Records
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('dept-analytics')}
-                  >
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Department Analytics
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('fee-type-analytics')}
-                  >
-                    <PieChart className="w-4 h-4 mr-2" />
-                    Fee Type Analytics
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };
