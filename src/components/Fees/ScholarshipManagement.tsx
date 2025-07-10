@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Award, Users, DollarSign, Calendar, Search, Download, CheckCircle, Clock, AlertCircle, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Award, Users, DollarSign, Calendar, Search, Download, CheckCircle, Clock, AlertCircle, Edit, Trash2, MoreHorizontal, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Checkbox } from '../ui/checkbox';
+import { Dialog, DialogContent } from '../ui/dialog';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -14,6 +16,8 @@ import { ScholarshipWithProfile, ScholarshipSummary } from '../../types/user-stu
 import ScholarshipCreateDialog from './ScholarshipCreateDialog';
 import ScholarshipEditDialog from './ScholarshipEditDialog';
 import ScholarshipDeleteDialog from './ScholarshipDeleteDialog';
+import AdminDataEditor from './AdminDataEditor';
+import AdminBulkEditor from './AdminBulkEditor';
 
 const ScholarshipManagement: React.FC = () => {
   const { user } = useAuth();
@@ -26,11 +30,14 @@ const ScholarshipManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [academicYear] = useState('2024-25');
+  const [selectedScholarships, setSelectedScholarships] = useState<string[]>([]);
 
   // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedScholarship, setSelectedScholarship] = useState<ScholarshipWithProfile | null>(null);
+  const [adminEditingScholarship, setAdminEditingScholarship] = useState<ScholarshipWithProfile | null>(null);
+  const [showBulkEditor, setShowBulkEditor] = useState(false);
 
   useEffect(() => {
     fetchScholarshipData();
@@ -127,14 +134,69 @@ const ScholarshipManagement: React.FC = () => {
     }
   };
 
+  const handleSelectScholarship = (scholarshipId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedScholarships(prev => [...prev, scholarshipId]);
+    } else {
+      setSelectedScholarships(prev => prev.filter(id => id !== scholarshipId));
+    }
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedScholarships(filteredScholarships.map(s => s.id));
+    } else {
+      setSelectedScholarships([]);
+    }
+  };
+
   const handleEdit = (scholarship: ScholarshipWithProfile) => {
     setSelectedScholarship(scholarship);
     setEditDialogOpen(true);
   };
 
+  const handleAdminEdit = (scholarship: ScholarshipWithProfile) => {
+    setAdminEditingScholarship(scholarship);
+  };
+
   const handleDelete = (scholarship: ScholarshipWithProfile) => {
     setSelectedScholarship(scholarship);
     setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!user || !['admin', 'principal', 'chairman'].includes(user.role)) {
+      toast({
+        title: "Access Denied",
+        description: "Only admins can delete scholarships",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('scholarships')
+        .delete()
+        .in('id', selectedScholarships);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Deleted ${selectedScholarships.length} scholarships successfully`
+      });
+
+      setSelectedScholarships([]);
+      fetchScholarshipData();
+    } catch (error) {
+      console.error('Error deleting scholarships:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete scholarships",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredScholarships = scholarships.filter(scholarship => {
@@ -186,6 +248,7 @@ const ScholarshipManagement: React.FC = () => {
   }), { totalStudents: 0, totalAmount: 0, totalReceived: 0, totalScholarships: 0 });
 
   const canManageScholarships = user?.role && ['admin', 'principal', 'hod'].includes(user.role);
+  const canEdit = user?.role && ['admin', 'principal', 'chairman'].includes(user.role);
 
   return (
     <div className="space-y-6">
@@ -196,6 +259,25 @@ const ScholarshipManagement: React.FC = () => {
           <p className="text-gray-600">Manage student scholarships and government disbursements</p>
         </div>
         <div className="flex gap-2">
+          {canEdit && selectedScholarships.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkEditor(true)}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Bulk Edit ({selectedScholarships.length})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDeleteSelected}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected
+              </Button>
+            </>
+          )}
           {canManageScholarships && (
             <ScholarshipCreateDialog onScholarshipCreated={fetchScholarshipData} />
           )}
@@ -304,6 +386,17 @@ const ScholarshipManagement: React.FC = () => {
                 <SelectItem value="FG">First Generation</SelectItem>
               </SelectContent>
             </Select>
+
+            {canEdit && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="select-all"
+                  checked={selectedScholarships.length === filteredScholarships.length && filteredScholarships.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <label htmlFor="select-all" className="text-sm">Select All</label>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -335,56 +428,64 @@ const ScholarshipManagement: React.FC = () => {
               <Card key={scholarship.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-lg font-semibold">{scholarship.profiles?.name}</h3>
-                        <Badge variant="outline">{scholarship.profiles?.roll_number}</Badge>
-                        <Badge variant={scholarship.scholarship_type === 'PMSS' ? 'default' : 'secondary'}>
-                          {scholarship.scholarship_type === 'PMSS' ? 'PMSS (SC/ST)' : 'First Generation'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Department:</span>
-                          <div className="font-medium">{scholarship.profiles?.departments?.name}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Amount:</span>
-                          <div className="font-medium text-green-600">₹{scholarship.eligible_amount.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Application:</span>
-                          <div className={`flex items-center gap-1 ${scholarship.applied_status ? 'text-green-600' : 'text-orange-600'}`}>
-                            {scholarship.applied_status ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                            {scholarship.applied_status ? 'Applied' : 'Not Applied'}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Institution Receipt:</span>
-                          <div className={`flex items-center gap-1 ${scholarship.received_by_institution ? 'text-green-600' : 'text-red-600'}`}>
-                            {scholarship.received_by_institution ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                            {scholarship.received_by_institution ? 'Received' : 'Pending'}
-                          </div>
-                        </div>
-                      </div>
-
-                      {(scholarship.application_date || scholarship.receipt_date) && (
-                        <div className="flex gap-4 mt-3 text-sm text-gray-600">
-                          {scholarship.application_date && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              Applied: {new Date(scholarship.application_date).toLocaleDateString()}
-                            </div>
-                          )}
-                          {scholarship.receipt_date && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              Received: {new Date(scholarship.receipt_date).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
+                    <div className="flex items-center gap-4">
+                      {canEdit && (
+                        <Checkbox
+                          checked={selectedScholarships.includes(scholarship.id)}
+                          onCheckedChange={(checked) => handleSelectScholarship(scholarship.id, checked as boolean)}
+                        />
                       )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-2">
+                          <h3 className="text-lg font-semibold">{scholarship.profiles?.name}</h3>
+                          <Badge variant="outline">{scholarship.profiles?.roll_number}</Badge>
+                          <Badge variant={scholarship.scholarship_type === 'PMSS' ? 'default' : 'secondary'}>
+                            {scholarship.scholarship_type === 'PMSS' ? 'PMSS (SC/ST)' : 'First Generation'}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Department:</span>
+                            <div className="font-medium">{scholarship.profiles?.departments?.name}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Amount:</span>
+                            <div className="font-medium text-green-600">₹{scholarship.eligible_amount.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Application:</span>
+                            <div className={`flex items-center gap-1 ${scholarship.applied_status ? 'text-green-600' : 'text-orange-600'}`}>
+                              {scholarship.applied_status ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                              {scholarship.applied_status ? 'Applied' : 'Not Applied'}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Institution Receipt:</span>
+                            <div className={`flex items-center gap-1 ${scholarship.received_by_institution ? 'text-green-600' : 'text-red-600'}`}>
+                              {scholarship.received_by_institution ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                              {scholarship.received_by_institution ? 'Received' : 'Pending'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {(scholarship.application_date || scholarship.receipt_date) && (
+                          <div className="flex gap-4 mt-3 text-sm text-gray-600">
+                            {scholarship.application_date && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                Applied: {new Date(scholarship.application_date).toLocaleDateString()}
+                              </div>
+                            )}
+                            {scholarship.receipt_date && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                Received: {new Date(scholarship.receipt_date).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Action Buttons */}
@@ -423,8 +524,14 @@ const ScholarshipManagement: React.FC = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleEdit(scholarship)}>
                               <Edit className="w-4 h-4 mr-2" />
-                              Edit Details
+                              Basic Edit
                             </DropdownMenuItem>
+                            {canEdit && (
+                              <DropdownMenuItem onClick={() => handleAdminEdit(scholarship)}>
+                                <Settings className="w-4 h-4 mr-2" />
+                                Admin Edit
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem 
                               onClick={() => handleDelete(scholarship)}
                               className="text-red-600"
@@ -459,6 +566,39 @@ const ScholarshipManagement: React.FC = () => {
         onOpenChange={setDeleteDialogOpen}
         onScholarshipDeleted={fetchScholarshipData}
       />
+
+      {/* Admin Edit Dialog */}
+      <Dialog open={!!adminEditingScholarship} onOpenChange={() => setAdminEditingScholarship(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {adminEditingScholarship && (
+            <AdminDataEditor
+              type="scholarship"
+              data={adminEditingScholarship}
+              onSave={() => {
+                setAdminEditingScholarship(null);
+                fetchScholarshipData();
+              }}
+              onCancel={() => setAdminEditingScholarship(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Edit Dialog */}
+      <Dialog open={showBulkEditor} onOpenChange={setShowBulkEditor}>
+        <DialogContent className="max-w-2xl">
+          <AdminBulkEditor
+            selectedIds={selectedScholarships}
+            type="scholarship"
+            onComplete={() => {
+              setShowBulkEditor(false);
+              setSelectedScholarships([]);
+              fetchScholarshipData();
+            }}
+            onCancel={() => setShowBulkEditor(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

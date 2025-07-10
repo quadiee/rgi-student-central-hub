@@ -1,13 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
 import { useToast } from '../ui/use-toast';
-import { Search, Filter, Download, FileText, DollarSign, Users, TrendingUp } from 'lucide-react';
+import { Search, Filter, Download, FileText, DollarSign, Users, TrendingUp, Edit, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import AdminDataEditor from './AdminDataEditor';
+import AdminBulkEditor from './AdminBulkEditor';
+import { Dialog, DialogContent } from '../ui/dialog';
 
 interface FeeRecord {
   id: string;
@@ -22,6 +27,7 @@ interface FeeRecord {
   status: string;
   due_date: string;
   created_at: string;
+  student_id: string;
 }
 
 const FeeListManagement: React.FC = () => {
@@ -33,6 +39,9 @@ const FeeListManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+  const [editingRecord, setEditingRecord] = useState<FeeRecord | null>(null);
+  const [showBulkEditor, setShowBulkEditor] = useState(false);
   
   // Summary stats
   const [stats, setStats] = useState({
@@ -51,66 +60,58 @@ const FeeListManagement: React.FC = () => {
 
     setLoading(true);
     try {
-      // Use the simpler function signature without conflicting parameters
-      const { data, error } = await supabase.rpc('get_fee_records_with_filters', {
-        p_user_id: user.id,
-        p_limit: 100,
-        p_offset: 0
-      });
+      // Use direct query with proper joins
+      const { data, error } = await supabase
+        .from('fee_records')
+        .select(`
+          id,
+          student_id,
+          academic_year,
+          semester,
+          original_amount,
+          final_amount,
+          paid_amount,
+          status,
+          due_date,
+          created_at,
+          profiles!fee_records_student_id_fkey(
+            name,
+            roll_number,
+            departments!profiles_department_id_fkey(name)
+          )
+        `)
+        .limit(100);
 
       if (error) {
         console.error('Error loading fee records:', error);
-        // Try direct query as fallback
-        const { data: directData, error: directError } = await supabase
-          .from('fee_records')
-          .select(`
-            id,
-            academic_year,
-            semester,
-            original_amount,
-            final_amount,
-            paid_amount,
-            status,
-            due_date,
-            created_at,
-            profiles!fee_records_student_id_fkey(
-              name,
-              roll_number,
-              departments!profiles_department_id_fkey(name)
-            )
-          `)
-          .limit(100);
-
-        if (directError) throw directError;
-
-        // Transform the data to match expected format
-        const transformedData = directData?.map(record => ({
-          id: record.id,
-          student_name: record.profiles?.name || 'Unknown',
-          roll_number: record.profiles?.roll_number || '',
-          department_name: record.profiles?.departments?.name || '',
-          academic_year: record.academic_year,
-          semester: record.semester,
-          original_amount: record.original_amount,
-          final_amount: record.final_amount,
-          paid_amount: record.paid_amount || 0,
-          status: record.status || 'Pending',
-          due_date: record.due_date,
-          created_at: record.created_at
-        })) || [];
-
-        setFeeRecords(transformedData);
-      } else {
-        setFeeRecords(data || []);
+        throw error;
       }
+
+      // Transform the data to match expected format
+      const transformedData = data?.map(record => ({
+        id: record.id,
+        student_id: record.student_id,
+        student_name: record.profiles?.name || 'Unknown',
+        roll_number: record.profiles?.roll_number || '',
+        department_name: record.profiles?.departments?.name || '',
+        academic_year: record.academic_year,
+        semester: record.semester,
+        original_amount: record.original_amount,
+        final_amount: record.final_amount,
+        paid_amount: record.paid_amount || 0,
+        status: record.status || 'Pending',
+        due_date: record.due_date,
+        created_at: record.created_at
+      })) || [];
+
+      setFeeRecords(transformedData);
       
       // Calculate summary stats
-      const records = data || feeRecords;
-      const totalAmount = records.reduce((sum: number, record: FeeRecord) => sum + record.final_amount, 0);
-      const collectedAmount = records.reduce((sum: number, record: FeeRecord) => sum + (record.paid_amount || 0), 0);
+      const totalAmount = transformedData.reduce((sum, record) => sum + record.final_amount, 0);
+      const collectedAmount = transformedData.reduce((sum, record) => sum + (record.paid_amount || 0), 0);
       
       setStats({
-        totalRecords: records.length,
+        totalRecords: transformedData.length,
         totalAmount,
         collectedAmount,
         pendingAmount: totalAmount - collectedAmount
@@ -125,6 +126,56 @@ const FeeListManagement: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectRecord = (recordId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedRecords(prev => [...prev, recordId]);
+    } else {
+      setSelectedRecords(prev => prev.filter(id => id !== recordId));
+    }
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedRecords(filteredRecords.map(record => record.id));
+    } else {
+      setSelectedRecords([]);
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (!user || !['admin', 'principal', 'chairman'].includes(user.role)) {
+      toast({
+        title: "Access Denied",
+        description: "Only admins can delete records",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('fee_records')
+        .delete()
+        .eq('id', recordId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Fee record deleted successfully"
+      });
+
+      loadFeeRecords();
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete record",
+        variant: "destructive"
+      });
     }
   };
 
@@ -175,6 +226,7 @@ const FeeListManagement: React.FC = () => {
   };
 
   const uniqueDepartments = [...new Set(feeRecords.map(record => record.department_name))].filter(Boolean);
+  const canEdit = user?.role && ['admin', 'principal', 'chairman'].includes(user.role);
 
   return (
     <div className="space-y-6">
@@ -185,6 +237,15 @@ const FeeListManagement: React.FC = () => {
           <p className="text-gray-600">Manage and track student fee records</p>
         </div>
         <div className="flex gap-2">
+          {canEdit && selectedRecords.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkEditor(true)}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Bulk Edit ({selectedRecords.length})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={exportToCSV}
@@ -287,6 +348,17 @@ const FeeListManagement: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            {canEdit && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="select-all"
+                  checked={selectedRecords.length === filteredRecords.length && filteredRecords.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <label htmlFor="select-all" className="text-sm">Select All</label>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -313,53 +385,82 @@ const FeeListManagement: React.FC = () => {
               <Card key={record.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-lg font-semibold">{record.student_name}</h3>
-                        <Badge variant="outline">{record.roll_number}</Badge>
-                        <Badge className={getStatusColor(record.status)}>
-                          {record.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Department:</span>
-                          <div className="font-medium">{record.department_name}</div>
+                    <div className="flex items-center gap-4">
+                      {canEdit && (
+                        <Checkbox
+                          checked={selectedRecords.includes(record.id)}
+                          onCheckedChange={(checked) => handleSelectRecord(record.id, checked as boolean)}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-2">
+                          <h3 className="text-lg font-semibold">{record.student_name}</h3>
+                          <Badge variant="outline">{record.roll_number}</Badge>
+                          <Badge className={getStatusColor(record.status)}>
+                            {record.status}
+                          </Badge>
                         </div>
-                        <div>
-                          <span className="text-gray-600">Academic Year:</span>
-                          <div className="font-medium">{record.academic_year}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Semester:</span>
-                          <div className="font-medium">{record.semester}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Final Amount:</span>
-                          <div className="font-medium text-blue-600">₹{record.final_amount?.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Paid Amount:</span>
-                          <div className="font-medium text-green-600">₹{(record.paid_amount || 0).toLocaleString()}</div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-4 mt-3 text-sm text-gray-600">
-                        <div>
-                          <span>Due Date: </span>
-                          <span className="font-medium">
-                            {record.due_date ? new Date(record.due_date).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                        {record.original_amount !== record.final_amount && (
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                           <div>
-                            <span>Original: </span>
-                            <span className="font-medium">₹{record.original_amount?.toLocaleString()}</span>
+                            <span className="text-gray-600">Department:</span>
+                            <div className="font-medium">{record.department_name}</div>
                           </div>
-                        )}
+                          <div>
+                            <span className="text-gray-600">Academic Year:</span>
+                            <div className="font-medium">{record.academic_year}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Semester:</span>
+                            <div className="font-medium">{record.semester}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Final Amount:</span>
+                            <div className="font-medium text-blue-600">₹{record.final_amount?.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Paid Amount:</span>
+                            <div className="font-medium text-green-600">₹{(record.paid_amount || 0).toLocaleString()}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-3 text-sm text-gray-600">
+                          <div>
+                            <span>Due Date: </span>
+                            <span className="font-medium">
+                              {record.due_date ? new Date(record.due_date).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
+                          {record.original_amount !== record.final_amount && (
+                            <div>
+                              <span>Original: </span>
+                              <span className="font-medium">₹{record.original_amount?.toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {canEdit && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingRecord(record)}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteRecord(record.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -367,6 +468,39 @@ const FeeListManagement: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {editingRecord && (
+            <AdminDataEditor
+              type="fee_record"
+              data={editingRecord}
+              onSave={() => {
+                setEditingRecord(null);
+                loadFeeRecords();
+              }}
+              onCancel={() => setEditingRecord(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Edit Dialog */}
+      <Dialog open={showBulkEditor} onOpenChange={setShowBulkEditor}>
+        <DialogContent className="max-w-2xl">
+          <AdminBulkEditor
+            selectedIds={selectedRecords}
+            type="fee_record"
+            onComplete={() => {
+              setShowBulkEditor(false);
+              setSelectedRecords([]);
+              loadFeeRecords();
+            }}
+            onCancel={() => setShowBulkEditor(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
