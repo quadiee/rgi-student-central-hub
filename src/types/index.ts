@@ -41,12 +41,13 @@ export interface Student {
   emergencyContact: string;
   department: string;
   yearSection: string;
-  // Add missing fee-related properties
   section?: string;
   totalFees?: number;
   paidAmount?: number;
   dueAmount?: number;
   feeStatus?: string;
+  community?: 'SC' | 'ST' | 'OBC' | 'General' | 'EWS';
+  first_generation?: boolean;
 }
 
 export interface FeeRecord {
