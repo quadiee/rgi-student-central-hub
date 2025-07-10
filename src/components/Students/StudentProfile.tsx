@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, FileText, Edit, DollarSign, Award, Users, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -41,7 +40,14 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setScholarships(data || []);
+      
+      // Cast the scholarship_type to the correct union type
+      const typedScholarships = (data || []).map(scholarship => ({
+        ...scholarship,
+        scholarship_type: scholarship.scholarship_type as 'PMSS' | 'FG'
+      }));
+      
+      setScholarships(typedScholarships);
     } catch (error) {
       console.error('Error fetching scholarships:', error);
     } finally {

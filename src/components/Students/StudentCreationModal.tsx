@@ -52,26 +52,26 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
     setLoading(true);
 
     try {
-      // Create the student profile
+      // Create the student profile with correct database field names
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          roll_number: formData.rollNumber,
+          roll_number: formData.rollNumber, // snake_case for database
           course: formData.course,
           year: formData.year,
           semester: formData.semester,
           section: formData.section,
-          guardian_name: formData.guardianName,
-          guardian_phone: formData.guardianPhone,
+          guardian_name: formData.guardianName, // snake_case for database
+          guardian_phone: formData.guardianPhone, // snake_case for database
           address: formData.address,
-          blood_group: formData.bloodGroup,
-          emergency_contact: formData.emergencyContact,
+          blood_group: formData.bloodGroup, // snake_case for database
+          emergency_contact: formData.emergencyContact, // snake_case for database
           community: formData.community,
-          first_generation: formData.first_generation,
-          admission_date: formData.admissionDate,
+          first_generation: formData.first_generation, // snake_case for database
+          admission_date: formData.admissionDate, // snake_case for database
           role: 'student',
           is_active: true,
           profile_completed: true

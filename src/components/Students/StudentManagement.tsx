@@ -1,139 +1,99 @@
-
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Users, Eye, Edit, Trash2, Plus, UserPlus, Download, Upload } from 'lucide-react';
+import { Plus, Search, User, Edit, Trash2, FileText, Users, Download } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
-import { supabase } from '../../integrations/supabase/client';
-import { useIsMobile } from '../../hooks/use-mobile';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Student } from '../../types/user-student-fees';
 import StudentCreationModal from './StudentCreationModal';
-import StudentEditModal from './StudentEditModal';
-import StudentDetailsModal from './StudentDetailsModal';
+import StudentProfile from './StudentProfile';
+import { useIsMobile } from '../../hooks/use-mobile';
+import { supabase } from '../../integrations/supabase/client';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import BatchFeeProcessor from '../Fees/BatchFeeProcessor';
+import * as XLSX from 'xlsx';
 
-interface StudentManagementProps {
-  onViewStudent?: (student: Student) => void;
-}
-
-const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) => {
-  const { user } = useAuth();
+const StudentManagement: React.FC = () => {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
-  const [selectedSection, setSelectedSection] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [departments, setDepartments] = useState<string[]>([]);
-  
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCreationModal, setShowCreationModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [showBatchFeeProcessor, setShowBatchFeeProcessor] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
 
   useEffect(() => {
-    if (user) {
-      fetchStudents();
-      fetchDepartments();
-    }
-  }, [user]);
-
-  const fetchDepartments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('name, code')
-        .eq('is_active', true);
-
-      if (error) throw error;
-      setDepartments(data?.map(d => d.code) || []);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-    }
-  };
+    fetchStudents();
+  }, [departmentFilter, yearFilter]);
 
   const fetchStudents = async () => {
-    if (!user) return;
-
+    setLoading(true);
     try {
-      setLoading(true);
       let query = supabase
         .from('profiles')
-        .select(`
-          id, 
-          name, 
-          email, 
-          roll_number,
-          course,
-          year,
-          semester,
-          phone,
-          profile_photo_url,
-          admission_date,
-          guardian_name,
-          guardian_phone,
-          address,
-          blood_group,
-          emergency_contact,
-          department_id,
-          year_section,
-          section,
-          total_fees,
-          paid_amount,
-          due_amount,
-          fee_status,
-          is_active,
-          departments:departments!profiles_department_id_fkey(name, code)
-        `)
-        .eq('role', 'student')
-        .eq('is_active', true);
+        .select('*')
+        .eq('role', 'student');
 
-      // Apply role-based filtering
-      if (user.role === 'hod') {
-        query = query.eq('department_id', user.department_id);
+      if (departmentFilter !== 'all') {
+        query = query.eq('department_id', departmentFilter);
+      }
+
+      if (yearFilter !== 'all') {
+        query = query.eq('year', yearFilter);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      const transformedStudents: Student[] = (data || []).map((profile: any) => ({
-        id: profile.id,
-        name: profile.name || 'Unknown',
-        rollNumber: profile.roll_number || '',
-        course: profile.course || '',
-        year: profile.year || 0,
-        semester: profile.semester || 0,
-        email: profile.email,
-        phone: profile.phone || '',
-        profileImage: profile.profile_photo_url || '',
-        admissionDate: profile.admission_date || '',
-        guardianName: profile.guardian_name || '',
-        guardianPhone: profile.guardian_phone || '',
-        address: profile.address || '',
-        bloodGroup: profile.blood_group || '',
-        emergencyContact: profile.emergency_contact || '',
-        department: profile.departments?.code || 'Unknown',
-        yearSection: profile.year_section || '',
-        section: profile.section || '',
-        totalFees: profile.total_fees || 0,
-        paidAmount: profile.paid_amount || 0,
-        dueAmount: profile.due_amount || 0,
-        feeStatus: profile.fee_status || 'Pending'
-      }));
+      const typedStudents = data?.map(student => ({
+        id: student.id,
+        name: student.name,
+        rollNumber: student.roll_number,
+        email: student.email,
+        phone: student.phone,
+        course: student.course,
+        year: student.year,
+        semester: student.semester,
+        department: student.department_id,
+        section: student.section,
+        guardianName: student.guardian_name,
+        guardianPhone: student.guardian_phone,
+        address: student.address,
+        bloodGroup: student.blood_group,
+        emergencyContact: student.emergency_contact,
+        community: student.community,
+        first_generation: student.first_generation,
+        admissionDate: student.admission_date,
+        feeStatus: 'Pending',
+        yearSection: `${student.year}-${student.section}`
+      })) || [];
 
-      setStudents(transformedStudents);
+      setStudents(typedStudents);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch students",
+        description: "Failed to fetch students. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -141,473 +101,285 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onViewStudent }) 
     }
   };
 
-  const handleDeleteStudent = async (studentId: string) => {
-    if (!confirm('Are you sure you want to deactivate this student?')) return;
+  const handleStudentCreated = (newStudent: Student) => {
+    setStudents(prev => [...prev, newStudent]);
+  };
+
+  const handleViewProfile = (student: Student) => {
+    setSelectedStudent(student);
+    setShowProfile(true);
+  };
+
+  const handleCloseProfile = () => {
+    setShowProfile(false);
+    setSelectedStudent(null);
+  };
+
+  const confirmDeleteStudent = (studentId: string) => {
+    setStudentToDelete(studentId);
+    setShowDeleteConfirmation(true);
+  };
+
+  const cancelDeleteStudent = () => {
+    setStudentToDelete(null);
+    setShowDeleteConfirmation(false);
+  };
+
+  const deleteStudent = async () => {
+    if (!studentToDelete) return;
 
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: false })
-        .eq('id', studentId);
+        .delete()
+        .eq('id', studentToDelete);
 
       if (error) throw error;
 
+      setStudents(prev => prev.filter(student => student.id !== studentToDelete));
       toast({
         title: "Success",
-        description: "Student deactivated successfully",
+        description: "Student deleted successfully.",
       });
-
-      fetchStudents(); // Refresh the list
     } catch (error) {
-      console.error('Error deactivating student:', error);
+      console.error('Error deleting student:', error);
       toast({
         title: "Error",
-        description: "Failed to deactivate student",
+        description: "Failed to delete student. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setStudentToDelete(null);
+      setShowDeleteConfirmation(false);
     }
-  };
-
-  const handleViewStudent = (student: Student) => {
-    setSelectedStudent(student);
-    if (onViewStudent) {
-      onViewStudent(student);
-    } else {
-      setShowDetailsModal(true);
-    }
-  };
-
-  const handleEditStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setShowEditModal(true);
   };
 
   const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || student.department === selectedDepartment;
-    const matchesYear = selectedYear === 'all' || student.year.toString() === selectedYear;
-    const matchesSection = selectedSection === 'all' || student.section === selectedSection;
-    const matchesStatus = selectedStatus === 'all' || student.feeStatus === selectedStatus;
-
-    return matchesSearch && matchesDepartment && matchesYear && matchesSection && matchesStatus;
+    const searchTermLower = searchTerm.toLowerCase();
+    return (
+      student.name?.toLowerCase().includes(searchTermLower) ||
+      student.rollNumber?.toLowerCase().includes(searchTermLower) ||
+      student.email?.toLowerCase().includes(searchTermLower)
+    );
   });
 
-  const getStudentStatus = (student: Student) => {
-    if (student.dueAmount === 0) return { label: 'Paid', color: 'bg-green-100 text-green-800' };
-    if (student.paidAmount && student.paidAmount > 0) return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
-    return { label: 'Pending', color: 'bg-red-100 text-red-800' };
+  const handleSelectStudent = (student: Student) => {
+    setSelectedStudents(prev => {
+      if (prev.find(s => s.id === student.id)) {
+        return prev.filter(s => s.id !== student.id);
+      } else {
+        return [...prev, student];
+      }
+    });
   };
 
-  // Check authentication and authorization
-  if (!user) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-600">Please log in to access this page.</p>
-      </div>
-    );
-  }
+  const isStudentSelected = (student: Student) => {
+    return selectedStudents.some(s => s.id === student.id);
+  };
 
-  if (!['admin', 'principal', 'hod'].includes(user.role || '')) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-600">Access denied. Insufficient privileges.</p>
-      </div>
-    );
-  }
+  const handleProcessComplete = () => {
+    setShowBatchFeeProcessor(false);
+    setSelectedStudents([]);
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading students...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleExportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      ['Name', 'Roll Number', 'Email', 'Phone', 'Course', 'Year', 'Semester', 'Department', 'Section', 'Guardian Name', 'Guardian Phone', 'Address', 'Blood Group', 'Emergency Contact', 'Community', 'First Generation', 'Admission Date'],
+      ...filteredStudents.map(student => [
+        student.name,
+        student.rollNumber,
+        student.email,
+        student.phone,
+        student.course,
+        student.year,
+        student.semester,
+        student.department,
+        student.section,
+        student.guardianName,
+        student.guardianPhone,
+        student.address,
+        student.bloodGroup,
+        student.emergencyContact,
+        student.community,
+        student.first_generation,
+        student.admissionDate,
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Students');
+    XLSX.writeFile(wb, `student_data_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-800`}>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-semibold flex items-center gap-2">
+          <Users className="w-6 h-6" />
           Student Management
         </h2>
-        <div className="flex items-center space-x-2">
-          {['admin', 'principal'].includes(user.role || '') && (
-            <>
-              <Button 
-                variant="outline" 
-                size={isMobile ? 'sm' : 'default'}
-                className="flex items-center space-x-2"
-              >
-                <Upload className="w-4 h-4" />
-                {!isMobile && <span>Import</span>}
-              </Button>
-              <Button 
-                variant="outline" 
-                size={isMobile ? 'sm' : 'default'}
-                className="flex items-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                {!isMobile && <span>Export</span>}
-              </Button>
-              <Button 
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-2" 
-                size={isMobile ? 'sm' : 'default'}
-              >
-                <UserPlus className="w-4 h-4" />
-                {!isMobile && <span>Add Student</span>}
-              </Button>
-            </>
-          )}
+        <Button onClick={() => setShowCreationModal(true)} className="flex items-center space-x-2">
+          <Plus className="w-4 h-4" />
+          <span>Add Student</span>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="md:col-span-2">
+          <Input
+            type="text"
+            placeholder="Search by name, roll number, or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Filter by Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              <SelectItem value="CSE">Computer Science</SelectItem>
+              <SelectItem value="ECE">Electronics & Communication</SelectItem>
+              <SelectItem value="EEE">Electrical & Electronics</SelectItem>
+              <SelectItem value="MECH">Mechanical</SelectItem>
+              <SelectItem value="CIVIL">Civil</SelectItem>
+              <SelectItem value="IT">Information Technology</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Filter by Year" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              <SelectItem value="1">1st Year</SelectItem>
+              <SelectItem value="2">2nd Year</SelectItem>
+              <SelectItem value="3">3rd Year</SelectItem>
+              <SelectItem value="4">4th Year</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-4`}>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold text-blue-600">{students.length}</p>
-              </div>
-              <Users className="w-8 h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Fees Paid</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {students.filter(s => s.dueAmount === 0).length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600 font-bold">✓</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Partial Payment</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {students.filter(s => s.paidAmount && s.paidAmount > 0 && s.dueAmount && s.dueAmount > 0).length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span className="text-yellow-600 font-bold">~</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {students.filter(s => s.dueAmount && s.dueAmount > 0 && (!s.paidAmount || s.paidAmount === 0)).length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <span className="text-red-600 font-bold">!</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mb-4 flex justify-between items-center">
+        <Button
+          variant="outline"
+          onClick={() => setShowBatchFeeProcessor(true)}
+          disabled={selectedStudents.length === 0}
+        >
+          Batch Fee Process ({selectedStudents.length} Selected)
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleExportToExcel}
+          disabled={students.length === 0}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Export to Excel
+        </Button>
       </div>
 
-      {/* Enhanced Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-6'} gap-4`}>
-            <div className="relative col-span-2">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search students..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <Table>
+          <TableCaption>A list of your registered students.</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">Select</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Roll Number</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Year & Section</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredStudents.map((student) => (
+              <TableRow key={student.id}>
+                <TableCell className="font-medium">
+                  <Input
+                    type="checkbox"
+                    checked={isStudentSelected(student)}
+                    onChange={() => handleSelectStudent(student)}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">{student.name}</TableCell>
+                <TableCell>{student.rollNumber}</TableCell>
+                <TableCell>{student.email}</TableCell>
+                <TableCell>{student.department}</TableCell>
+                <TableCell>{student.yearSection}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewProfile(student)}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => confirmDeleteStudent(student.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Years" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                {[1, 2, 3, 4].map(year => (
-                  <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedSection} onValueChange={setSelectedSection}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Sections" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sections</SelectItem>
-                {['A', 'B', 'C', 'D'].map(section => (
-                  <SelectItem key={section} value={section}>Section {section}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Fee Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Partial">Partial</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Student List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Students ({filteredStudents.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isMobile ? (
-            // Mobile Card View
-            <div className="space-y-4">
-              {filteredStudents.map(student => {
-                const status = getStudentStatus(student);
-                return (
-                  <div key={student.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                          {student.profileImage ? (
-                            <img src={student.profileImage} alt={student.name} className="w-full h-full object-cover rounded-full" />
-                          ) : (
-                            <span className="text-white font-medium">
-                              {student.name.split(' ').map(n => n[0]).join('')}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{student.name}</h3>
-                          <p className="text-sm text-gray-500">{student.rollNumber}</p>
-                        </div>
-                      </div>
-                      <div className="flex space-x-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewStudent(student)}
-                        >
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditStudent(student)}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        {['admin', 'principal'].includes(user.role || '') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => handleDeleteStudent(student.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Department:</span>
-                        <p className="font-medium">{student.department}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Year:</span>
-                        <p className="font-medium">Year {student.year}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Fee Due:</span>
-                        <p className="font-medium text-red-600">₹{student.dueAmount?.toLocaleString() || 0}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Status:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            // Desktop Table View
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Roll Number
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Department
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Year
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fee Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredStudents.map(student => {
-                    const status = getStudentStatus(student);
-                    return (
-                      <tr key={student.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                              {student.profileImage ? (
-                                <img src={student.profileImage} alt={student.name} className="w-full h-full object-cover rounded-full" />
-                              ) : (
-                                <span className="text-white text-sm font-medium">
-                                  {student.name.split(' ').map(n => n[0]).join('')}
-                                </span>
-                              )}
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                              <div className="text-sm text-gray-500">{student.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {student.rollNumber}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {student.department}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          Year {student.year}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${status.color} mb-1`}>
-                              {status.label}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Due: ₹{student.dueAmount?.toLocaleString() || 0}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewStudent(student)}
-                              className="flex items-center space-x-1"
-                            >
-                              <Eye className="w-3 h-3" />
-                              <span>View</span>
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleEditStudent(student)}
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            {['admin', 'principal'].includes(user.role || '') && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => handleDeleteStudent(student.id)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {filteredStudents.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No students found matching the search criteria.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Modals */}
+      {/* Student Creation Modal */}
       <StudentCreationModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={fetchStudents}
+        isOpen={showCreationModal}
+        onClose={() => setShowCreationModal(false)}
+        onStudentCreated={(newStudent) => {
+          setStudents(prev => [...prev, newStudent]);
+          setShowCreationModal(false);
+        }}
       />
 
-      <StudentEditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSuccess={fetchStudents}
-        student={selectedStudent}
-      />
+      {/* Student Profile Modal */}
+      {selectedStudent && (
+        <StudentProfile
+          student={selectedStudent}
+          onBack={handleCloseProfile}
+        />
+      )}
 
-      <StudentDetailsModal
-        isOpen={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        student={selectedStudent}
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the student from our
+              servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDeleteStudent}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteStudent}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Batch Fee Processor Modal */}
+      <BatchFeeProcessor
+        open={showBatchFeeProcessor}
+        onOpenChange={setShowBatchFeeProcessor}
+        selectedStudents={selectedStudents}
+        onProcessComplete={handleProcessComplete}
       />
     </div>
   );

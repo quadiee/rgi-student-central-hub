@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Award, Users, DollarSign, Calendar, Search, Filter, Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -54,7 +53,13 @@ const ScholarshipManagement: React.FC = () => {
       const { data: scholarshipData, error: scholarshipError } = await scholarshipQuery;
       if (scholarshipError) throw scholarshipError;
 
-      setScholarships(scholarshipData || []);
+      // Cast the scholarship_type to the correct union type
+      const typedScholarships = (scholarshipData || []).map(scholarship => ({
+        ...scholarship,
+        scholarship_type: scholarship.scholarship_type as 'PMSS' | 'FG'
+      }));
+
+      setScholarships(typedScholarships);
 
       // Fetch scholarship summary
       const { data: summaryData, error: summaryError } = await supabase
