@@ -1,8 +1,8 @@
+
 import React, { useState } from 'react';
 import { BarChart3, FileText, Award, User, CreditCard, TrendingUp, PieChart, Users, Download } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
-import RealTimeFeeDashboard from '../Dashboard/RealTimeFeeDashboard';
 import EnhancedFeeManagement from './EnhancedFeeManagement';
 import ScholarshipManagement from './ScholarshipManagement';
 import StudentFeeView from './StudentFeeView';
@@ -11,6 +11,7 @@ import DepartmentAnalytics from './DepartmentAnalytics';
 import FeeTypeAnalytics from './FeeTypeAnalytics';
 import BatchFeeProcessor from './BatchFeeProcessor';
 import AdminReportGenerator from './AdminReportGenerator';
+import RealTimeStats from '../Dashboard/RealTimeStats';
 
 interface Tab {
   id: string;
@@ -34,7 +35,7 @@ const FeeManagementHub: React.FC = () => {
       id: 'overview',
       label: 'Overview',
       icon: BarChart3,
-      component: () => <RealTimeFeeDashboard />,
+      component: () => <RealTimeStats />,
       roles: ['student', 'hod', 'principal', 'admin', 'chairman']
     },
     {
@@ -83,7 +84,7 @@ const FeeManagementHub: React.FC = () => {
       id: 'batch-operations',
       label: 'Batch Operations',
       icon: Users,
-      component: () => <BatchFeeProcessor />,
+      component: () => <BatchFeeProcessor open={false} onOpenChange={() => {}} selectedStudents={[]} onProcessComplete={() => {}} />,
       roles: ['admin', 'principal', 'chairman']
     },
     {

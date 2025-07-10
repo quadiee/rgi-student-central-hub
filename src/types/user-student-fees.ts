@@ -43,6 +43,17 @@ export interface Scholarship {
   created_by?: string;
 }
 
+export interface ScholarshipWithProfile extends Scholarship {
+  profiles?: {
+    name: string;
+    roll_number: string;
+    departments?: {
+      name: string;
+      code: string;
+    };
+  };
+}
+
 export interface ScholarshipSummary {
   department_id: string;
   department_name: string;

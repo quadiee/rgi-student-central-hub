@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Phone, MapPin, TrendingUp, FileText, Edit, DollarSign, Award, Users, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Student, Scholarship } from '../../types/user-student-fees';
+import { Student, ScholarshipWithProfile } from '../../types/user-student-fees';
 import { mockFeeRecords } from '../../data/mockData';
 import { useIsMobile } from '../../hooks/use-mobile';
 import { supabase } from '../../integrations/supabase/client';
@@ -15,7 +16,7 @@ interface StudentProfileProps {
 
 const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [scholarships, setScholarships] = useState<ScholarshipWithProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
 

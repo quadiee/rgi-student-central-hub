@@ -9,13 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { Scholarship, ScholarshipSummary } from '../../types/user-student-fees';
+import { ScholarshipWithProfile, ScholarshipSummary } from '../../types/user-student-fees';
 
 const ScholarshipManagement: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [scholarships, setScholarships] = useState<ScholarshipWithProfile[]>([]);
   const [summary, setSummary] = useState<ScholarshipSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

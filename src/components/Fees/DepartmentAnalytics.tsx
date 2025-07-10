@@ -8,7 +8,6 @@ import { Progress } from '../ui/progress';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import DepartmentAnalyticsFilters from './DepartmentAnalyticsFilters';
 
 interface Department {
   id: string;
@@ -62,7 +61,6 @@ const DepartmentAnalytics: React.FC = () => {
   const [scholarshipAnalytics, setScholarshipAnalytics] = useState<ScholarshipAnalytics[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
 
   const [filters, setFilters] = useState<Filters>({
     fromDate: '',
@@ -232,13 +230,6 @@ const DepartmentAnalytics: React.FC = () => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            {showFilters ? 'Hide' : 'Show'} Filters
-          </Button>
-          <Button
-            variant="outline"
             onClick={exportToCSV}
             disabled={analytics.length === 0}
           >
@@ -247,18 +238,6 @@ const DepartmentAnalytics: React.FC = () => {
           </Button>
         </div>
       </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <DepartmentAnalyticsFilters
-          departments={departments}
-          filters={filters}
-          onFiltersChange={setFilters}
-          onApplyFilters={handleApplyFilters}
-          onClearFilters={handleClearFilters}
-          loading={loading}
-        />
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
