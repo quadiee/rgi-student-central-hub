@@ -69,7 +69,7 @@ const StudentManagement: React.FC = () => {
         id: student.id,
         name: student.name || student.email,
         rollNumber: student.roll_number || '',
-        roll_number: student.roll_number || '', // Add for compatibility
+        roll_number: student.roll_number || '',
         email: student.email,
         phone: student.phone || '',
         course: student.course || '',
