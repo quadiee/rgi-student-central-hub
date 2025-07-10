@@ -65,7 +65,7 @@ const StudentManagement: React.FC = () => {
 
       if (error) throw error;
 
-      const typedStudents: Student[] = data?.map(student => ({
+      const transformedStudents: Student[] = (data || []).map(student => ({
         id: student.id,
         name: student.name || student.email,
         rollNumber: student.roll_number || '',
@@ -90,9 +90,9 @@ const StudentManagement: React.FC = () => {
         totalFees: student.total_fees || 0,
         paidAmount: student.paid_amount || 0,
         dueAmount: student.due_amount || 0
-      })) || [];
+      }));
 
-      setStudents(typedStudents);
+      setStudents(transformedStudents);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
