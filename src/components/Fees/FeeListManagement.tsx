@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, Edit, Trash2, Eye, Users, Calendar, BarChart3, Award, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Search, Filter, Download, Plus, Edit, Trash2, Eye, Users, Calendar, BarChart3, Award, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -20,6 +19,7 @@ import UserActivityLogs from '../Admin/UserActivityLogs';
 import EnhancedFeeFilters, { FeeFilterOptions } from './EnhancedFeeFilters';
 import EnhancedCSVUploader from './EnhancedCSVUploader';
 import { ScholarshipWithProfile } from '../../types/user-student-fees';
+import { initializeScholarshipEligibility, getScholarshipStats } from '../../utils/scholarshipUtils';
 
 interface FeeRecord {
   id: string;
@@ -58,6 +58,7 @@ const FeeListManagement: React.FC = () => {
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [loading, setLoading] = useState(true);
   const [scholarshipLoading, setScholarshipLoading] = useState(false);
+  const [scholarshipInitializing, setScholarshipInitializing] = useState(false);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [editingRecord, setEditingRecord] = useState<FeeRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -171,8 +172,16 @@ const FeeListManagement: React.FC = () => {
 
     setScholarshipLoading(true);
     try {
-      // Create scholarship records for eligible students if they don't exist
-      await initializeScholarshipData();
+      // Check scholarship stats first
+      const stats = await getScholarshipStats(academicYear);
+      console.log('Scholarship stats:', stats);
+
+      // If no scholarship records exist but there are eligible students, offer to initialize
+      if (stats.scholarshipRecords === 0 && stats.eligibleStudents === 0) {
+        console.log('No eligible students found, will initialize some for demo');
+        // Auto-initialize for demo purposes
+        await initializeScholarshipEligibility(academicYear);
+      }
 
       // Fetch scholarships based on user role
       let scholarshipQuery = supabase
@@ -183,7 +192,7 @@ const FeeListManagement: React.FC = () => {
             name,
             roll_number,
             department_id,
-            departments(name, code)
+            departments!profiles_department_id_fkey(name, code)
           )
         `)
         .eq('academic_year', academicYear);
@@ -196,51 +205,108 @@ const FeeListManagement: React.FC = () => {
       const { data: scholarshipData, error: scholarshipError } = await scholarshipQuery;
       if (scholarshipError) {
         console.error('Scholarship query error:', scholarshipError);
-        throw scholarshipError;
+        
+        // If it's the ambiguous relationship error, try a simpler query
+        if (scholarshipError.code === 'PGRST201') {
+          const { data: simpleScholarshipData, error: simpleError } = await supabase
+            .from('scholarships')
+            .select('*')
+            .eq('academic_year', academicYear);
+
+          if (simpleError) throw simpleError;
+
+          // Fetch profile data separately
+          const scholarshipIds = simpleScholarshipData?.map(s => s.student_id) || [];
+          if (scholarshipIds.length > 0) {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select(`
+                id,
+                name,
+                roll_number,
+                department_id,
+                departments!profiles_department_id_fkey(name, code)
+              `)
+              .in('id', scholarshipIds);
+
+            if (profileError) throw profileError;
+
+            // Combine the data
+            const combinedData = simpleScholarshipData?.map(scholarship => ({
+              ...scholarship,
+              profiles: profileData?.find(p => p.id === scholarship.student_id)
+            })) || [];
+
+            setScholarships(combinedData.map(s => ({
+              ...s,
+              scholarship_type: s.scholarship_type as 'PMSS' | 'FG'
+            })));
+          } else {
+            setScholarships([]);
+          }
+        } else {
+          throw scholarshipError;
+        }
+      } else {
+        // Cast the scholarship_type to the correct union type
+        const typedScholarships = (scholarshipData || []).map(scholarship => ({
+          ...scholarship,
+          scholarship_type: scholarship.scholarship_type as 'PMSS' | 'FG'
+        }));
+
+        setScholarships(typedScholarships);
       }
-
-      // Cast the scholarship_type to the correct union type
-      const typedScholarships = (scholarshipData || []).map(scholarship => ({
-        ...scholarship,
-        scholarship_type: scholarship.scholarship_type as 'PMSS' | 'FG'
-      }));
-
-      setScholarships(typedScholarships);
 
     } catch (error) {
       console.error('Error fetching scholarship data:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch scholarship data",
+        title: "Warning",
+        description: "Some scholarship data could not be loaded. Fee records will still display.",
         variant: "destructive"
       });
+      setScholarships([]); // Set empty array to prevent further errors
     } finally {
       setScholarshipLoading(false);
     }
   };
 
-  const initializeScholarshipData = async () => {
+  const initializeScholarships = async () => {
+    if (!user || !['admin', 'principal', 'chairman'].includes(user.role)) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to initialize scholarships",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setScholarshipInitializing(true);
     try {
-      // Get all students with community and first_generation data
-      const { data: students, error: studentsError } = await supabase
-        .from('profiles')
-        .select('id, community, first_generation')
-        .eq('role', 'student')
-        .eq('is_active', true);
-
-      if (studentsError) throw studentsError;
-
-      // Calculate scholarship eligibility for each student
-      for (const student of students || []) {
-        if (student.community || student.first_generation) {
-          await supabase.rpc('calculate_scholarship_eligibility', {
-            p_student_id: student.id,
-            p_academic_year: academicYear
-          });
-        }
+      const result = await initializeScholarshipEligibility(academicYear);
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+        // Reload scholarship data
+        await loadScholarshipData();
+      } else {
+        toast({
+          title: "Warning", 
+          description: result.message,
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error('Error initializing scholarship data:', error);
+      console.error('Error initializing scholarships:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize scholarships",
+        variant: "destructive"
+      });
+    } finally {
+      setScholarshipInitializing(false);
     }
   };
 
@@ -424,6 +490,21 @@ const FeeListManagement: React.FC = () => {
               Enhanced Fee Management with Scholarships
             </span>
             <div className="flex gap-2">
+              {user?.role && ['admin', 'principal', 'chairman'].includes(user.role) && (
+                <Button 
+                  onClick={initializeScholarships} 
+                  variant="outline" 
+                  size="sm"
+                  disabled={scholarshipInitializing}
+                >
+                  {scholarshipInitializing ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Award className="w-4 h-4 mr-2" />
+                  )}
+                  {scholarshipInitializing ? 'Initializing...' : 'Initialize Scholarships'}
+                </Button>
+              )}
               <Button onClick={exportToCSV} variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export with Scholarships
@@ -464,6 +545,41 @@ const FeeListManagement: React.FC = () => {
                 filteredRecords={feeRecords.length}
                 loading={loading}
               />
+
+              {/* Scholarship Status Banner */}
+              {scholarshipLoading && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Loading scholarship data...
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {scholarships.length === 0 && !scholarshipLoading && (
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-yellow-700">
+                        <AlertCircle className="w-4 h-4" />
+                        No scholarship data available. Initialize scholarships to enable scholarship tracking.
+                      </div>
+                      {user?.role && ['admin', 'principal', 'chairman'].includes(user.role) && (
+                        <Button 
+                          onClick={initializeScholarships} 
+                          size="sm" 
+                          variant="outline"
+                          disabled={scholarshipInitializing}
+                        >
+                          {scholarshipInitializing ? 'Initializing...' : 'Initialize Now'}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Bulk Actions */}
               {selectedRecords.length > 0 && (
