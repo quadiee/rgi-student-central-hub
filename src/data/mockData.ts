@@ -1,3 +1,4 @@
+
 import { User, Student, FeeRecord } from '../types';
 
 export const mockUsers: User[] = [
@@ -48,6 +49,7 @@ export const mockStudents: Student[] = [
     id: '1',
     name: 'Arun Kumar',
     rollNumber: 'CSE2021001',
+    roll_number: 'CSE2021001',
     course: 'B.Tech Computer Science',
     year: 3,
     semester: 5,
@@ -70,6 +72,7 @@ export const mockStudents: Student[] = [
     id: '5',
     name: 'Priya Sharma',
     rollNumber: 'CSE2021002',
+    roll_number: 'CSE2021002',
     course: 'B.Tech Computer Science',
     year: 3,
     semester: 5,
@@ -92,6 +95,7 @@ export const mockStudents: Student[] = [
     id: '6',
     name: 'Ravi Patel',
     rollNumber: 'CSE2021003',
+    roll_number: 'CSE2021003',
     course: 'B.Tech Computer Science',
     year: 3,
     semester: 5,
