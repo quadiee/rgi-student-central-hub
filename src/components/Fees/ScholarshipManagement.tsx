@@ -1,14 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
-import { Award, Users, DollarSign, Calendar, Search, Filter, Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Award, Users, DollarSign, Calendar, Search, Download, CheckCircle, Clock, AlertCircle, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { ScholarshipWithProfile, ScholarshipSummary } from '../../types/user-student-fees';
+import ScholarshipCreateDialog from './ScholarshipCreateDialog';
+import ScholarshipEditDialog from './ScholarshipEditDialog';
+import ScholarshipDeleteDialog from './ScholarshipDeleteDialog';
 
 const ScholarshipManagement: React.FC = () => {
   const { user } = useAuth();
@@ -21,6 +26,11 @@ const ScholarshipManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [academicYear] = useState('2024-25');
+
+  // Dialog states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedScholarship, setSelectedScholarship] = useState<ScholarshipWithProfile | null>(null);
 
   useEffect(() => {
     fetchScholarshipData();
@@ -117,6 +127,16 @@ const ScholarshipManagement: React.FC = () => {
     }
   };
 
+  const handleEdit = (scholarship: ScholarshipWithProfile) => {
+    setSelectedScholarship(scholarship);
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = (scholarship: ScholarshipWithProfile) => {
+    setSelectedScholarship(scholarship);
+    setDeleteDialogOpen(true);
+  };
+
   const filteredScholarships = scholarships.filter(scholarship => {
     const matchesSearch = 
       scholarship.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -165,6 +185,8 @@ const ScholarshipManagement: React.FC = () => {
     totalScholarships: acc.totalScholarships + dept.total_scholarships
   }), { totalStudents: 0, totalAmount: 0, totalReceived: 0, totalScholarships: 0 });
 
+  const canManageScholarships = user?.role && ['admin', 'principal', 'hod'].includes(user.role);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -174,6 +196,9 @@ const ScholarshipManagement: React.FC = () => {
           <p className="text-gray-600">Manage student scholarships and government disbursements</p>
         </div>
         <div className="flex gap-2">
+          {canManageScholarships && (
+            <ScholarshipCreateDialog onScholarshipCreated={fetchScholarshipData} />
+          )}
           <Button
             variant="outline"
             onClick={exportToCSV}
@@ -298,6 +323,11 @@ const ScholarshipManagement: React.FC = () => {
                 <p className="text-gray-600">
                   No scholarship records match your current filter criteria.
                 </p>
+                {canManageScholarships && (
+                  <div className="mt-4">
+                    <ScholarshipCreateDialog onScholarshipCreated={fetchScholarshipData} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -357,28 +387,55 @@ const ScholarshipManagement: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Action Buttons (only for admin/principal/hod) */}
-                    {user?.role && ['admin', 'principal', 'hod'].includes(user.role) && (
-                      <div className="flex flex-col gap-2 ml-4">
-                        {!scholarship.applied_status && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateScholarshipStatus(scholarship.id, 'applied_status', true)}
-                          >
-                            Mark Applied
-                          </Button>
-                        )}
-                        {scholarship.applied_status && !scholarship.received_by_institution && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateScholarshipStatus(scholarship.id, 'received_by_institution', true)}
-                          >
-                            Mark Received
-                          </Button>
-                        )}
-                      </div>
-                    )}
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 ml-4">
+                      {/* Quick Status Update Buttons */}
+                      {canManageScholarships && (
+                        <>
+                          {!scholarship.applied_status && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateScholarshipStatus(scholarship.id, 'applied_status', true)}
+                            >
+                              Mark Applied
+                            </Button>
+                          )}
+                          {scholarship.applied_status && !scholarship.received_by_institution && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateScholarshipStatus(scholarship.id, 'received_by_institution', true)}
+                            >
+                              Mark Received
+                            </Button>
+                          )}
+                        </>
+                      )}
+
+                      {/* More Actions Menu */}
+                      {canManageScholarships && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(scholarship)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(scholarship)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -386,6 +443,22 @@ const ScholarshipManagement: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <ScholarshipEditDialog
+        scholarship={selectedScholarship}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onScholarshipUpdated={fetchScholarshipData}
+      />
+
+      {/* Delete Dialog */}
+      <ScholarshipDeleteDialog
+        scholarship={selectedScholarship}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onScholarshipDeleted={fetchScholarshipData}
+      />
     </div>
   );
 };
