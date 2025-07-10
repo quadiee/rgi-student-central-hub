@@ -31,7 +31,7 @@ const ScholarshipManagement: React.FC = () => {
 
     setLoading(true);
     try {
-      // Fetch scholarships based on user role
+      // Fetch scholarships based on user role with explicit relationship specification
       let scholarshipQuery = supabase
         .from('scholarships')
         .select(`
@@ -40,7 +40,7 @@ const ScholarshipManagement: React.FC = () => {
             name,
             roll_number,
             department_id,
-            departments(name, code)
+            departments!profiles_department_id_fkey(name, code)
           )
         `)
         .eq('academic_year', academicYear);
