@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, Edit, Trash2, FileText, Users, Download } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -17,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Student } from '../../types/user-student-fees';
+import { Student } from '../../types/index';
 import StudentCreationModal from './StudentCreationModal';
 import StudentProfile from './StudentProfile';
 import { useIsMobile } from '../../hooks/use-mobile';
@@ -82,11 +81,15 @@ const StudentManagement: React.FC = () => {
         address: student.address || '',
         bloodGroup: student.blood_group || '',
         emergencyContact: student.emergency_contact || '',
-        community: (student.community as 'SC' | 'ST' | 'OBC' | 'General' | 'EWS') || 'General',
-        first_generation: student.first_generation || false,
         admissionDate: student.admission_date || '',
         feeStatus: 'Pending',
-        yearSection: `${student.year}-${student.section}`
+        yearSection: `${student.year}-${student.section}`,
+        profileImage: student.profile_photo_url || '',
+        community: (student.community as 'SC' | 'ST' | 'OBC' | 'General' | 'EWS') || 'General',
+        first_generation: student.first_generation || false,
+        totalFees: student.total_fees || 0,
+        paidAmount: student.paid_amount || 0,
+        dueAmount: student.due_amount || 0
       })) || [];
 
       setStudents(typedStudents);
