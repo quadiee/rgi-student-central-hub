@@ -31,6 +31,7 @@ export const initializeScholarshipEligibility = async (academicYear: string = '2
     for (const student of students) {
       // For demo purposes, assign some students SC/ST community and first generation status
       const needsUpdate = !student.community && !student.first_generation;
+      let studentEligibilityUpdated = false;
       
       if (needsUpdate) {
         // Randomly assign some students to have scholarships for demo (30% total eligibility)
@@ -58,12 +59,13 @@ export const initializeScholarshipEligibility = async (academicYear: string = '2
           } else {
             console.log(`Updated ${student.name} with scholarship eligibility`);
             updatedCount++;
+            studentEligibilityUpdated = true;
           }
         }
       }
 
       // Calculate scholarship eligibility for students with eligibility data
-      const hasEligibility = student.community || student.first_generation || Object.keys(updateData || {}).length > 0;
+      const hasEligibility = student.community || student.first_generation || studentEligibilityUpdated;
       
       if (hasEligibility) {
         try {
