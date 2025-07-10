@@ -112,7 +112,13 @@ const FeeRecordEditDialog: React.FC<FeeRecordEditDialogProps> = ({
       }
 
       if (data) {
-        setScholarship(data);
+        // Properly cast the scholarship_type to the expected union type
+        const scholarshipWithTypedType: Scholarship = {
+          ...data,
+          scholarship_type: data.scholarship_type as 'PMSS' | 'FG'
+        };
+        
+        setScholarship(scholarshipWithTypedType);
         setScholarshipData({
           scholarship_type: data.scholarship_type as 'PMSS' | 'FG',
           eligible_amount: data.eligible_amount,
