@@ -1,6 +1,7 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { Database } from '../integrations/supabase/types';
+import { createSampleScholarshipData } from '../utils/scholarshipUtils';
 
 type Department = Database['public']['Enums']['department'];
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -147,16 +148,23 @@ export class SeedDataService {
       // Log sample profiles info
       await this.seedSampleProfiles();
       
+      // Initialize scholarship data
+      console.log('Creating sample scholarship data...');
+      const scholarshipResult = await createSampleScholarshipData('2024-25');
+      console.log('Scholarship initialization result:', scholarshipResult);
+      
       console.log('System initialization completed successfully!');
       console.log('Next steps:');
       console.log('1. Users need to sign up through the authentication system');
       console.log('2. Admin users can create fee records for students');
       console.log('3. Students can view and pay their fees');
       console.log('4. HODs and Admins can generate reports');
+      console.log('5. Scholarship data has been initialized for eligible students');
       
       return {
         success: true,
-        message: 'Finance system initialized with sample data'
+        message: 'Finance system initialized with sample data including scholarships',
+        scholarshipResult
       };
     } catch (error) {
       console.error('Error initializing system:', error);

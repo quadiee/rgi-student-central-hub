@@ -104,6 +104,128 @@ export const initializeScholarshipEligibility = async (academicYear: string = '2
   }
 };
 
+export const createSampleScholarshipData = async (academicYear: string = '2024-25') => {
+  try {
+    console.log('Creating sample scholarship data...');
+    
+    // Get students with fee records
+    const { data: studentsWithFees, error: studentsError } = await supabase
+      .from('fee_records')
+      .select(`
+        student_id,
+        profiles!fee_records_student_id_fkey(
+          id, name, roll_number, community, first_generation
+        )
+      `)
+      .eq('academic_year', academicYear);
+
+    if (studentsError) {
+      console.error('Error fetching students with fees:', studentsError);
+      throw studentsError;
+    }
+
+    const uniqueStudents = Array.from(
+      new Map(studentsWithFees?.map(item => [item.student_id, item.profiles]) || []).values()
+    );
+
+    console.log(`Found ${uniqueStudents.length} unique students with fee records`);
+
+    let scholarshipCount = 0;
+
+    for (const student of uniqueStudents) {
+      if (!student) continue;
+
+      // Check if scholarship already exists
+      const { data: existingScholarship } = await supabase
+        .from('scholarships')
+        .select('id')
+        .eq('student_id', student.id)
+        .eq('academic_year', academicYear)
+        .single();
+
+      if (existingScholarship) {
+        console.log(`Scholarship already exists for ${student.name}`);
+        continue;
+      }
+
+      // Determine scholarship type and amount based on existing community/first_generation
+      let scholarshipType: 'PMSS' | 'FG' | null = null;
+      let eligibleAmount = 0;
+
+      if (student.community === 'SC' || student.community === 'ST') {
+        scholarshipType = 'PMSS';
+        eligibleAmount = 50000;
+      } else if (student.first_generation) {
+        scholarshipType = 'FG';
+        eligibleAmount = 25000;
+      } else {
+        // For demo, randomly assign some scholarships
+        const random = Math.random();
+        if (random < 0.3) { // 30% chance
+          if (random < 0.2) {
+            scholarshipType = 'PMSS';
+            eligibleAmount = 50000;
+            // Update student community
+            await supabase
+              .from('profiles')
+              .update({ community: 'SC' })
+              .eq('id', student.id);
+          } else {
+            scholarshipType = 'FG';  
+            eligibleAmount = 25000;
+            // Update student first_generation status
+            await supabase
+              .from('profiles')
+              .update({ first_generation: true })
+              .eq('id', student.id);
+          }
+        }
+      }
+
+      if (scholarshipType) {
+        // Create scholarship record
+        const random = Math.random();
+        const appliedStatus = random < 0.7; // 70% applied
+        const receivedStatus = appliedStatus && random < 0.5; // 50% of applied are received
+
+        const { error: scholarshipError } = await supabase
+          .from('scholarships')
+          .insert({
+            student_id: student.id,
+            scholarship_type: scholarshipType,
+            eligible_amount: eligibleAmount,
+            academic_year: academicYear,
+            applied_status: appliedStatus,
+            application_date: appliedStatus ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+            received_by_institution: receivedStatus,
+            receipt_date: receivedStatus ? new Date(Date.now() - Math.random() * 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+            remarks: appliedStatus ? 'Auto-generated sample data' : null
+          });
+
+        if (scholarshipError) {
+          console.error(`Error creating scholarship for ${student.name}:`, scholarshipError);
+        } else {
+          console.log(`Created ${scholarshipType} scholarship for ${student.name}: ₹${eligibleAmount}`);
+          scholarshipCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Successfully created ${scholarshipCount} scholarship records`,
+      scholarshipsCreated: scholarshipCount
+    };
+  } catch (error) {
+    console.error('Error creating sample scholarship data:', error);
+    return {
+      success: false,
+      message: `Failed to create scholarship data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error
+    };
+  }
+};
+
 export const getScholarshipStats = async (academicYear: string = '2024-25') => {
   try {
     // Get eligible students count
