@@ -1,16 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
-import { SupabaseFeeService } from '../services/supabaseFeeService';
-import { FeeRecord, PaymentTransaction } from '../types';
+import { supabase } from '../integrations/supabase/client';
 import { useToast } from '../components/ui/use-toast';
-import { useUserConversion } from './useUserConversion';
 
 export const useFeeManagement = () => {
   const { user } = useAuth();
-  const { convertUserProfileToUser } = useUserConversion();
   const { toast } = useToast();
-  const [feeRecords, setFeeRecords] = useState<FeeRecord[]>([]);
+  const [feeRecords, setFeeRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,47 +18,78 @@ export const useFeeManagement = () => {
     setError(null);
 
     try {
-      const convertedUser = convertUserProfileToUser(user);
-      const records = await SupabaseFeeService.getFeeRecords(convertedUser, filters);
-      setFeeRecords(records);
+      // Direct query to fee_records with proper joins
+      const { data, error: queryError } = await supabase
+        .from('fee_records')
+        .select(`
+          id,
+          academic_year,
+          semester,
+          original_amount,
+          final_amount,
+          paid_amount,
+          status,
+          due_date,
+          created_at,
+          profiles!fee_records_student_id_fkey(
+            name,
+            roll_number,
+            departments!profiles_department_id_fkey(name)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (queryError) throw queryError;
+
+      // Transform the data
+      const transformedRecords = data?.map(record => ({
+        id: record.id,
+        student_name: record.profiles?.name || 'Unknown',
+        roll_number: record.profiles?.roll_number || '',
+        department_name: record.profiles?.departments?.name || '',
+        academic_year: record.academic_year,
+        semester: record.semester,
+        original_amount: record.original_amount,
+        final_amount: record.final_amount,
+        paid_amount: record.paid_amount || 0,
+        status: record.status || 'Pending',
+        due_date: record.due_date,
+        created_at: record.created_at
+      })) || [];
+
+      setFeeRecords(transformedRecords);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load fee records';
       setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      console.error('Error loading fee records:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const processPayment = async (payment: Partial<PaymentTransaction>): Promise<boolean> => {
+  const processPayment = async (payment: any): Promise<boolean> => {
     if (!user) return false;
 
     setLoading(true);
     try {
-      const convertedUser = convertUserProfileToUser(user);
-      const result = await SupabaseFeeService.processPayment(convertedUser, payment);
-      
-      if (result.status === 'Success') {
-        toast({
-          title: "Payment Processed",
-          description: `Payment of ₹${payment.amount} processed successfully`,
+      const { error } = await supabase
+        .from('payment_transactions')
+        .insert({
+          ...payment,
+          student_id: user.id,
+          processed_by: user.id,
+          status: 'Success'
         });
 
-        // Reload fee records to reflect the payment
-        await loadFeeRecords();
-        return true;
-      } else {
-        toast({
-          title: "Payment Failed",
-          description: result.failureReason || "Payment processing failed",
-          variant: "destructive"
-        });
-        return false;
-      }
+      if (error) throw error;
+
+      toast({
+        title: "Payment Processed",
+        description: `Payment of ₹${payment.amount} processed successfully`,
+      });
+
+      await loadFeeRecords();
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Payment processing failed';
       setError(errorMessage);
@@ -81,9 +109,14 @@ export const useFeeManagement = () => {
 
     setLoading(true);
     try {
-      const convertedUser = convertUserProfileToUser(user);
-      const report = await SupabaseFeeService.generateReport(convertedUser, reportConfig);
-      
+      // Simple report generation based on current fee records
+      const report = {
+        totalRecords: feeRecords.length,
+        totalAmount: feeRecords.reduce((sum, record) => sum + record.final_amount, 0),
+        paidAmount: feeRecords.reduce((sum, record) => sum + (record.paid_amount || 0), 0),
+        pendingAmount: feeRecords.reduce((sum, record) => sum + (record.final_amount - (record.paid_amount || 0)), 0)
+      };
+
       toast({
         title: "Report Generated",
         description: "Fee report has been generated successfully",
@@ -106,8 +139,14 @@ export const useFeeManagement = () => {
 
   const getPermissions = () => {
     if (!user) return null;
-    const convertedUser = convertUserProfileToUser(user);
-    return SupabaseFeeService.getFeePermissions(convertedUser);
+    
+    return {
+      canCreate: ['admin', 'principal', 'chairman'].includes(user.role || ''),
+      canEdit: ['admin', 'principal', 'chairman'].includes(user.role || ''),
+      canDelete: ['admin', 'principal'].includes(user.role || ''),
+      canViewAll: ['admin', 'principal', 'chairman'].includes(user.role || ''),
+      canViewDepartment: user.role === 'hod'
+    };
   };
 
   // Load initial data when user changes

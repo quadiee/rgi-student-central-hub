@@ -9,13 +9,12 @@ import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { Plus } from 'lucide-react';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 
 interface Student {
   id: string;
   name: string;
   roll_number: string;
-  community: string;
-  first_generation: boolean;
   department_name: string;
 }
 
@@ -24,6 +23,7 @@ interface ScholarshipCreateDialogProps {
 }
 
 const ScholarshipCreateDialog: React.FC<ScholarshipCreateDialogProps> = ({ onScholarshipCreated }) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -39,65 +39,65 @@ const ScholarshipCreateDialog: React.FC<ScholarshipCreateDialogProps> = ({ onSch
 
   useEffect(() => {
     if (open) {
-      fetchEligibleStudents();
+      fetchStudents();
     }
   }, [open]);
 
-  const fetchEligibleStudents = async () => {
+  const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select(`
           id,
           name,
           roll_number,
-          community,
-          first_generation,
           departments!profiles_department_id_fkey(name)
         `)
         .eq('role', 'student')
-        .eq('is_active', true)
-        .or('community.in.(SC,ST),first_generation.eq.true');
+        .eq('is_active', true);
+
+      // Apply role-based filtering
+      if (user?.role === 'hod') {
+        query = query.eq('department_id', user.department_id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
-      const studentsData = data.map(student => ({
-        ...student,
+      const studentsData = data?.map(student => ({
+        id: student.id,
+        name: student.name,
+        roll_number: student.roll_number,
         department_name: student.departments?.name || 'Unknown'
-      }));
+      })) || [];
 
       setStudents(studentsData);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch eligible students",
+        description: "Failed to fetch students",
         variant: "destructive"
       });
     }
   };
 
-  const handleStudentChange = (studentId: string) => {
-    const selectedStudent = students.find(s => s.id === studentId);
-    if (selectedStudent) {
-      let scholarshipType = '';
-      let eligibleAmount = 0;
-
-      if (selectedStudent.community === 'SC' || selectedStudent.community === 'ST') {
-        scholarshipType = 'PMSS';
-        eligibleAmount = 50000;
-      } else if (selectedStudent.first_generation) {
-        scholarshipType = 'FG';
-        eligibleAmount = 25000;
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        student_id: studentId,
-        scholarship_type: scholarshipType,
-        eligible_amount: eligibleAmount
-      }));
+  const handleScholarshipTypeChange = (scholarshipType: string) => {
+    let eligibleAmount = 0;
+    
+    // Set default amounts for scholarship types
+    if (scholarshipType === 'PMSS') {
+      eligibleAmount = 50000;
+    } else if (scholarshipType === 'FG') {
+      eligibleAmount = 25000;
     }
+
+    setFormData(prev => ({
+      ...prev,
+      scholarship_type: scholarshipType,
+      eligible_amount: eligibleAmount
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,7 +123,8 @@ const ScholarshipCreateDialog: React.FC<ScholarshipCreateDialogProps> = ({ onSch
           semester: formData.semester,
           applied_status: false,
           received_by_institution: false,
-          remarks: formData.remarks || null
+          remarks: formData.remarks || null,
+          created_by: user?.id
         });
 
       if (error) throw error;
@@ -170,7 +171,7 @@ const ScholarshipCreateDialog: React.FC<ScholarshipCreateDialogProps> = ({ onSch
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="student">Student</Label>
-            <Select value={formData.student_id} onValueChange={handleStudentChange}>
+            <Select value={formData.student_id} onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select student" />
               </SelectTrigger>
@@ -186,12 +187,15 @@ const ScholarshipCreateDialog: React.FC<ScholarshipCreateDialogProps> = ({ onSch
 
           <div>
             <Label htmlFor="scholarship_type">Scholarship Type</Label>
-            <Input
-              id="scholarship_type"
-              value={formData.scholarship_type === 'PMSS' ? 'PMSS (SC/ST)' : formData.scholarship_type === 'FG' ? 'First Generation' : ''}
-              readOnly
-              placeholder="Auto-selected based on student eligibility"
-            />
+            <Select value={formData.scholarship_type} onValueChange={handleScholarshipTypeChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select scholarship type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PMSS">PMSS (SC/ST) - ₹50,000</SelectItem>
+                <SelectItem value="FG">First Generation - ₹25,000</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

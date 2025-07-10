@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
-import { Checkbox } from '../ui/checkbox';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { ScholarshipWithProfile } from '../../types/user-student-fees';
@@ -27,24 +26,24 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    scholarship_type: scholarship?.scholarship_type || '',
-    eligible_amount: scholarship?.eligible_amount || 0,
-    academic_year: scholarship?.academic_year || '',
-    semester: scholarship?.semester || 5,
-    applied_status: scholarship?.applied_status || false,
-    application_date: scholarship?.application_date || '',
-    received_by_institution: scholarship?.received_by_institution || false,
-    receipt_date: scholarship?.receipt_date || '',
-    remarks: scholarship?.remarks || ''
+    scholarship_type: '',
+    eligible_amount: 0,
+    academic_year: '',
+    semester: 1,
+    applied_status: false,
+    application_date: '',
+    received_by_institution: false,
+    receipt_date: '',
+    remarks: ''
   });
 
-  React.useEffect(() => {
-    if (scholarship) {
+  useEffect(() => {
+    if (scholarship && open) {
       setFormData({
-        scholarship_type: scholarship.scholarship_type,
-        eligible_amount: scholarship.eligible_amount,
-        academic_year: scholarship.academic_year,
-        semester: scholarship.semester || 5,
+        scholarship_type: scholarship.scholarship_type || '',
+        eligible_amount: scholarship.eligible_amount || 0,
+        academic_year: scholarship.academic_year || '',
+        semester: scholarship.semester || 1,
         applied_status: scholarship.applied_status || false,
         application_date: scholarship.application_date || '',
         received_by_institution: scholarship.received_by_institution || false,
@@ -52,7 +51,26 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
         remarks: scholarship.remarks || ''
       });
     }
-  }, [scholarship]);
+  }, [scholarship, open]);
+
+  const handleScholarshipTypeChange = (scholarshipType: string) => {
+    let eligibleAmount = formData.eligible_amount;
+    
+    // Set default amounts for scholarship types if amount is 0
+    if (formData.eligible_amount === 0) {
+      if (scholarshipType === 'PMSS') {
+        eligibleAmount = 50000;
+      } else if (scholarshipType === 'FG') {
+        eligibleAmount = 25000;
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      scholarship_type: scholarshipType,
+      eligible_amount: eligibleAmount
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +89,11 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
         updated_at: new Date().toISOString()
       };
 
-      if (formData.applied_status && formData.application_date) {
+      // Only set dates if they have values
+      if (formData.application_date) {
         updateData.application_date = formData.application_date;
       }
-
-      if (formData.received_by_institution && formData.receipt_date) {
+      if (formData.receipt_date) {
         updateData.receipt_date = formData.receipt_date;
       }
 
@@ -114,27 +132,21 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
           <DialogTitle>Edit Scholarship</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Student</Label>
-            <Input
-              value={`${scholarship.profiles?.name} (${scholarship.profiles?.roll_number})`}
-              readOnly
-              className="bg-gray-50"
-            />
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <strong>Student:</strong> {scholarship.profiles?.name} ({scholarship.profiles?.roll_number})
+            </p>
           </div>
 
           <div>
             <Label htmlFor="scholarship_type">Scholarship Type</Label>
-            <Select 
-              value={formData.scholarship_type} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, scholarship_type: value }))}
-            >
+            <Select value={formData.scholarship_type} onValueChange={handleScholarshipTypeChange}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select scholarship type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PMSS">PMSS (SC/ST)</SelectItem>
-                <SelectItem value="FG">First Generation</SelectItem>
+                <SelectItem value="PMSS">PMSS (SC/ST) - ₹50,000</SelectItem>
+                <SelectItem value="FG">First Generation - ₹25,000</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -160,10 +172,7 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
 
           <div>
             <Label htmlFor="semester">Semester</Label>
-            <Select 
-              value={formData.semester?.toString() || '5'} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, semester: parseInt(value) }))}
-            >
+            <Select value={formData.semester.toString()} onValueChange={(value) => setFormData(prev => ({ ...prev, semester: parseInt(value) }))}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -175,20 +184,23 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
             </Select>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="applied_status"
-              checked={formData.applied_status}
-              onCheckedChange={(checked) => setFormData(prev => ({ 
-                ...prev, 
-                applied_status: !!checked,
-                application_date: checked ? (prev.application_date || new Date().toISOString().split('T')[0]) : ''
-              }))}
-            />
-            <Label htmlFor="applied_status">Application Submitted</Label>
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Applied Status</Label>
+              <Select 
+                value={formData.applied_status.toString()} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, applied_status: value === 'true' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Not Applied</SelectItem>
+                  <SelectItem value="true">Applied</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {formData.applied_status && (
             <div>
               <Label htmlFor="application_date">Application Date</Label>
               <Input
@@ -198,22 +210,25 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, application_date: e.target.value }))}
               />
             </div>
-          )}
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="received_by_institution"
-              checked={formData.received_by_institution}
-              onCheckedChange={(checked) => setFormData(prev => ({ 
-                ...prev, 
-                received_by_institution: !!checked,
-                receipt_date: checked ? (prev.receipt_date || new Date().toISOString().split('T')[0]) : ''
-              }))}
-            />
-            <Label htmlFor="received_by_institution">Received by Institution</Label>
           </div>
 
-          {formData.received_by_institution && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Received by Institution</Label>
+              <Select 
+                value={formData.received_by_institution.toString()} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, received_by_institution: value === 'true' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Not Received</SelectItem>
+                  <SelectItem value="true">Received</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="receipt_date">Receipt Date</Label>
               <Input
@@ -223,7 +238,7 @@ const ScholarshipEditDialog: React.FC<ScholarshipEditDialogProps> = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, receipt_date: e.target.value }))}
               />
             </div>
-          )}
+          </div>
 
           <div>
             <Label htmlFor="remarks">Remarks</Label>

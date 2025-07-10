@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -52,22 +51,66 @@ const FeeListManagement: React.FC = () => {
 
     setLoading(true);
     try {
+      // Use the simpler function signature without conflicting parameters
       const { data, error } = await supabase.rpc('get_fee_records_with_filters', {
         p_user_id: user.id,
         p_limit: 100,
         p_offset: 0
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading fee records:', error);
+        // Try direct query as fallback
+        const { data: directData, error: directError } = await supabase
+          .from('fee_records')
+          .select(`
+            id,
+            academic_year,
+            semester,
+            original_amount,
+            final_amount,
+            paid_amount,
+            status,
+            due_date,
+            created_at,
+            profiles!fee_records_student_id_fkey(
+              name,
+              roll_number,
+              departments!profiles_department_id_fkey(name)
+            )
+          `)
+          .limit(100);
 
-      setFeeRecords(data || []);
+        if (directError) throw directError;
+
+        // Transform the data to match expected format
+        const transformedData = directData?.map(record => ({
+          id: record.id,
+          student_name: record.profiles?.name || 'Unknown',
+          roll_number: record.profiles?.roll_number || '',
+          department_name: record.profiles?.departments?.name || '',
+          academic_year: record.academic_year,
+          semester: record.semester,
+          original_amount: record.original_amount,
+          final_amount: record.final_amount,
+          paid_amount: record.paid_amount || 0,
+          status: record.status || 'Pending',
+          due_date: record.due_date,
+          created_at: record.created_at
+        })) || [];
+
+        setFeeRecords(transformedData);
+      } else {
+        setFeeRecords(data || []);
+      }
       
       // Calculate summary stats
-      const totalAmount = data?.reduce((sum: number, record: FeeRecord) => sum + record.final_amount, 0) || 0;
-      const collectedAmount = data?.reduce((sum: number, record: FeeRecord) => sum + (record.paid_amount || 0), 0) || 0;
+      const records = data || feeRecords;
+      const totalAmount = records.reduce((sum: number, record: FeeRecord) => sum + record.final_amount, 0);
+      const collectedAmount = records.reduce((sum: number, record: FeeRecord) => sum + (record.paid_amount || 0), 0);
       
       setStats({
-        totalRecords: data?.length || 0,
+        totalRecords: records.length,
         totalAmount,
         collectedAmount,
         pendingAmount: totalAmount - collectedAmount
