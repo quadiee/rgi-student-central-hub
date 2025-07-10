@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -28,7 +27,7 @@ export interface Student {
   id: string;
   name: string;
   rollNumber: string;
-  roll_number?: string; // Add for backward compatibility
+  roll_number: string; // Make this required to match database
   course: string;
   year: number;
   semester: number;
