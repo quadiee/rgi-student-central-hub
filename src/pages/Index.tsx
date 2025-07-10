@@ -68,7 +68,7 @@ const Index = () => {
           <ProtectedRoute allowedRoles={['admin', 'principal', 'hod']}>
             <div className="px-4">
               {!selectedStudent ? (
-                <StudentManagement onViewStudent={handleViewStudent} />
+                <StudentManagement />
               ) : (
                 <div>
                   <button

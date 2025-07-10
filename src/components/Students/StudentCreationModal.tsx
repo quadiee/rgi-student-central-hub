@@ -56,25 +56,25 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert({
-          name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          roll_number: formData.rollNumber, // snake_case for database
+          roll_number: formData.rollNumber,
           course: formData.course,
           year: formData.year,
           semester: formData.semester,
           section: formData.section,
-          guardian_name: formData.guardianName, // snake_case for database
-          guardian_phone: formData.guardianPhone, // snake_case for database
+          guardian_name: formData.guardianName,
+          guardian_phone: formData.guardianPhone,
           address: formData.address,
-          blood_group: formData.bloodGroup, // snake_case for database
-          emergency_contact: formData.emergencyContact, // snake_case for database
+          blood_group: formData.bloodGroup,
+          emergency_contact: formData.emergencyContact,
           community: formData.community,
-          first_generation: formData.first_generation, // snake_case for database
-          admission_date: formData.admissionDate, // snake_case for database
+          first_generation: formData.first_generation,
+          admission_date: formData.admissionDate,
           role: 'student',
           is_active: true,
-          profile_completed: true
+          profile_completed: true,
+          department_id: formData.department || null
         })
         .select()
         .single();
@@ -96,7 +96,7 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
 
       const newStudent: Student = {
         id: profile.id,
-        name: formData.name,
+        name: profile.email, // Will be updated when profile is completed
         rollNumber: formData.rollNumber,
         email: formData.email,
         phone: formData.phone,
@@ -119,7 +119,7 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
       onStudentCreated(newStudent);
       toast({
         title: "Success",
-        description: `Student ${formData.name} has been created successfully. Scholarship eligibility has been calculated.`,
+        description: `Student profile has been created successfully. Scholarship eligibility has been calculated.`,
       });
       onClose();
     } catch (error) {
@@ -153,11 +153,12 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
                 required
               />
             </div>
@@ -167,16 +168,6 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
                 id="rollNumber"
                 value={formData.rollNumber}
                 onChange={(e) => handleInputChange('rollNumber', e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
                 required
               />
             </div>

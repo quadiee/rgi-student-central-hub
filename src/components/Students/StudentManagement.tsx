@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, Edit, Trash2, FileText, Users, Download } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -58,32 +59,32 @@ const StudentManagement: React.FC = () => {
       }
 
       if (yearFilter !== 'all') {
-        query = query.eq('year', yearFilter);
+        query = query.eq('year', parseInt(yearFilter));
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      const typedStudents = data?.map(student => ({
+      const typedStudents: Student[] = data?.map(student => ({
         id: student.id,
-        name: student.name,
-        rollNumber: student.roll_number,
+        name: student.name || student.email,
+        rollNumber: student.roll_number || '',
         email: student.email,
-        phone: student.phone,
-        course: student.course,
-        year: student.year,
-        semester: student.semester,
-        department: student.department_id,
-        section: student.section,
-        guardianName: student.guardian_name,
-        guardianPhone: student.guardian_phone,
-        address: student.address,
-        bloodGroup: student.blood_group,
-        emergencyContact: student.emergency_contact,
-        community: student.community,
-        first_generation: student.first_generation,
-        admissionDate: student.admission_date,
+        phone: student.phone || '',
+        course: student.course || '',
+        year: student.year || 1,
+        semester: student.semester || 1,
+        department: student.department_id || '',
+        section: student.section || '',
+        guardianName: student.guardian_name || '',
+        guardianPhone: student.guardian_phone || '',
+        address: student.address || '',
+        bloodGroup: student.blood_group || '',
+        emergencyContact: student.emergency_contact || '',
+        community: (student.community as 'SC' | 'ST' | 'OBC' | 'General' | 'EWS') || 'General',
+        first_generation: student.first_generation || false,
+        admissionDate: student.admission_date || '',
         feeStatus: 'Pending',
         yearSection: `${student.year}-${student.section}`
       })) || [];
@@ -343,10 +344,7 @@ const StudentManagement: React.FC = () => {
       <StudentCreationModal
         isOpen={showCreationModal}
         onClose={() => setShowCreationModal(false)}
-        onStudentCreated={(newStudent) => {
-          setStudents(prev => [...prev, newStudent]);
-          setShowCreationModal(false);
-        }}
+        onStudentCreated={handleStudentCreated}
       />
 
       {/* Student Profile Modal */}
