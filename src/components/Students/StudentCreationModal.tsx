@@ -9,6 +9,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Student } from '../../types/user-student-fees';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../ui/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 interface StudentCreationModalProps {
   isOpen: boolean;
@@ -52,10 +53,15 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
     setLoading(true);
 
     try {
+      // Generate a UUID for the new profile
+      const profileId = uuidv4();
+      
       // Create the student profile with correct database field names
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: profileId,
+          name: formData.name,
           email: formData.email,
           phone: formData.phone,
           roll_number: formData.rollNumber,
@@ -96,7 +102,7 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
 
       const newStudent: Student = {
         id: profile.id,
-        name: profile.email, // Will be updated when profile is completed
+        name: formData.name,
         rollNumber: formData.rollNumber,
         email: formData.email,
         phone: formData.phone,
@@ -152,6 +158,15 @@ const StudentCreationModal: React.FC<StudentCreationModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Full Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required
+              />
+            </div>
             <div>
               <Label htmlFor="email">Email *</Label>
               <Input
