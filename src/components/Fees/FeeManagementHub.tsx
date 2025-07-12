@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart3, Receipt, GraduationCap, TrendingUp, FileText, Upload, Lock, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import RealTimeFeeDashboard from './RealTimeFeeDashboard';
 import FeeListManagement from './FeeListManagement';
 import ScholarshipManagement from './ScholarshipManagement';
 import DepartmentAnalytics from './DepartmentAnalytics';
@@ -13,7 +12,7 @@ import EnhancedFeeAssignment from './EnhancedFeeAssignment';
 
 const FeeManagementHub: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [permissions, setPermissions] = useState({
     canCreate: false,
@@ -26,7 +25,7 @@ const FeeManagementHub: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      const canModify = ['admin', 'principal', 'chairman'].includes(user.role || '');
+      const canModify = ['admin', 'principal'].includes(user.role || '');
       setPermissions({
         canCreate: canModify,
         canEdit: canModify,
@@ -43,12 +42,10 @@ const FeeManagementHub: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    // Implement refresh logic here, e.g., reload data
     console.log('Data Refreshed!');
   };
 
   const handleBulkUpdate = () => {
-    // Handle bulk update completion
     setSelectedRecords([]);
   };
 
@@ -56,20 +53,39 @@ const FeeManagementHub: React.FC = () => {
     setSelectedRecords([]);
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'assign', label: 'Assign Fees', icon: Plus },
-    { id: 'records', label: 'Fee Records', icon: Receipt },
-    { id: 'scholarships', label: 'Scholarships', icon: GraduationCap },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'bulk', label: 'Bulk Operations', icon: Upload },
-  ];
+  // Define tabs based on user role
+  const getAllTabs = () => {
+    const baseTabs = [
+      { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+      { id: 'scholarships', label: 'Scholarships', icon: GraduationCap },
+      { id: 'records', label: 'Fee Records', icon: Receipt },
+    ];
+
+    // Chairman only sees basic tabs
+    if (user?.role === 'chairman') {
+      return baseTabs;
+    }
+
+    // Admin and Principal see all tabs
+    if (['admin', 'principal'].includes(user?.role || '')) {
+      return [
+        ...baseTabs,
+        { id: 'assign', label: 'Assign Fees', icon: Plus },
+        { id: 'reports', label: 'Reports', icon: FileText },
+        { id: 'bulk', label: 'Bulk Operations', icon: Upload },
+      ];
+    }
+
+    // Default for other roles (HOD, etc.)
+    return baseTabs;
+  };
+
+  const tabs = getAllTabs();
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'overview':
-        return <RealTimeFeeDashboard />;
+      case 'analytics':
+        return <DepartmentAnalytics />;
       case 'assign':
         return permissions.canModifyFeeStructure ? (
           <EnhancedFeeAssignment />
@@ -83,8 +99,6 @@ const FeeManagementHub: React.FC = () => {
         return <FeeListManagement />;
       case 'scholarships':
         return <ScholarshipManagement />;
-      case 'analytics':
-        return <DepartmentAnalytics />;
       case 'reports':
         return <AdminReportGenerator />;
       case 'bulk':
@@ -101,7 +115,7 @@ const FeeManagementHub: React.FC = () => {
           </div>
         );
       default:
-        return <RealTimeFeeDashboard />;
+        return <DepartmentAnalytics />;
     }
   };
 

@@ -262,7 +262,7 @@ const EnhancedFeeAssignment: React.FC = () => {
       const scholarshipAmount = applyScholarship && scholarship ? scholarship.amount : 0;
       const finalAmount = Math.max(0, originalAmount - scholarshipAmount);
 
-      // Step 1: Create scholarship records if scholarship is applied
+      // Step 1: Create scholarship records if scholarship is applied (with duplicate handling)
       let scholarshipRecords: any[] = [];
       if (applyScholarship && scholarship) {
         const scholarshipData = selectedStudents.map(studentId => ({
@@ -278,29 +278,60 @@ const EnhancedFeeAssignment: React.FC = () => {
           remarks: `Scholarship applied during fee assignment`
         }));
 
-        const { data: scholarshipResult, error: scholarshipError } = await supabase
+        // First, check for existing scholarships and only insert new ones
+        const { data: existingScholarships } = await supabase
           .from('scholarships')
-          .insert(scholarshipData)
-          .select();
+          .select('student_id, scholarship_type, academic_year')
+          .in('student_id', selectedStudents)
+          .eq('scholarship_type', scholarship.id)
+          .eq('academic_year', feeData.academic_year);
 
-        if (scholarshipError) throw scholarshipError;
-        scholarshipRecords = scholarshipResult || [];
+        const existingKeys = new Set(
+          existingScholarships?.map(s => `${s.student_id}-${s.scholarship_type}-${s.academic_year}`) || []
+        );
+
+        const newScholarshipData = scholarshipData.filter(
+          s => !existingKeys.has(`${s.student_id}-${s.scholarship_type}-${s.academic_year}`)
+        );
+
+        if (newScholarshipData.length > 0) {
+          const { data: scholarshipResult, error: scholarshipError } = await supabase
+            .from('scholarships')
+            .insert(newScholarshipData)
+            .select();
+
+          if (scholarshipError) throw scholarshipError;
+          scholarshipRecords = scholarshipResult || [];
+        }
+
+        // Get all scholarship records (existing + new) for linking
+        const { data: allScholarships } = await supabase
+          .from('scholarships')
+          .select('*')
+          .in('student_id', selectedStudents)
+          .eq('scholarship_type', scholarship.id)
+          .eq('academic_year', feeData.academic_year);
+
+        scholarshipRecords = allScholarships || [];
       }
 
       // Step 2: Create fee records with scholarship linkage
-      const feeRecords = selectedStudents.map((studentId, index) => ({
-        student_id: studentId,
-        academic_year: feeData.academic_year,
-        semester: feeData.semester,
-        fee_type_id: feeData.fee_type_id,
-        original_amount: originalAmount,
-        final_amount: finalAmount,
-        scholarship_id: scholarshipRecords[index]?.id || null,
-        discount_amount: scholarshipAmount,
-        due_date: feeData.due_date,
-        status: (finalAmount === 0 ? 'Paid' : 'Pending') as 'Paid' | 'Pending',
-        paid_amount: finalAmount === 0 ? originalAmount : 0
-      }));
+      const feeRecords = selectedStudents.map((studentId) => {
+        const linkedScholarship = scholarshipRecords.find(s => s.student_id === studentId);
+        return {
+          student_id: studentId,
+          academic_year: feeData.academic_year,
+          semester: feeData.semester,
+          fee_type_id: feeData.fee_type_id,
+          original_amount: originalAmount,
+          final_amount: finalAmount,
+          scholarship_id: linkedScholarship?.id || null,
+          discount_amount: scholarshipAmount,
+          due_date: feeData.due_date,
+          status: (finalAmount === 0 ? 'Paid' : 'Pending') as 'Paid' | 'Pending',
+          paid_amount: finalAmount === 0 ? originalAmount : 0
+        };
+      });
 
       const { data: feeResult, error: feeError } = await supabase
         .from('fee_records')
