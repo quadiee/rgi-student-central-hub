@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, Receipt, GraduationCap, TrendingUp, FileText, Upload, Lock, Link } from 'lucide-react';
+import { BarChart3, Receipt, GraduationCap, TrendingUp, FileText, Upload, Lock, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import RealTimeFeeDashboard from './RealTimeFeeDashboard';
 import FeeListManagement from './FeeListManagement';
@@ -9,7 +9,7 @@ import ScholarshipManagement from './ScholarshipManagement';
 import DepartmentAnalytics from './DepartmentAnalytics';
 import AdminReportGenerator from './AdminReportGenerator';
 import BulkFeeActions from './BulkFeeActions';
-import ScholarshipFeeConnector from './ScholarshipFeeConnector';
+import EnhancedFeeAssignment from './EnhancedFeeAssignment';
 
 const FeeManagementHub: React.FC = () => {
   const { user } = useAuth();
@@ -58,9 +58,9 @@ const FeeManagementHub: React.FC = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'assign', label: 'Assign Fees', icon: Plus },
     { id: 'records', label: 'Fee Records', icon: Receipt },
     { id: 'scholarships', label: 'Scholarships', icon: GraduationCap },
-    { id: 'connect', label: 'Connect Scholarships', icon: Link },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'bulk', label: 'Bulk Operations', icon: Upload },
@@ -70,19 +70,19 @@ const FeeManagementHub: React.FC = () => {
     switch (activeTab) {
       case 'overview':
         return <RealTimeFeeDashboard />;
+      case 'assign':
+        return permissions.canModifyFeeStructure ? (
+          <EnhancedFeeAssignment />
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <Lock className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>You don't have permission to assign fees</p>
+          </div>
+        );
       case 'records':
         return <FeeListManagement />;
       case 'scholarships':
         return <ScholarshipManagement />;
-      case 'connect':
-        return permissions.canModifyFeeStructure ? (
-          <ScholarshipFeeConnector onConnectionUpdate={handleRefresh} />
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Lock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>You don't have permission to connect scholarships</p>
-          </div>
-        );
       case 'analytics':
         return <DepartmentAnalytics />;
       case 'reports':

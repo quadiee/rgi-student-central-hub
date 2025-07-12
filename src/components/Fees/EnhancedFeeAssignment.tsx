@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Upload, Filter, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Plus, Upload, Filter, Download, CheckCircle, AlertCircle, Award } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -8,6 +7,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { Badge } from '../ui/badge';
+import { Switch } from '../ui/switch';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -41,6 +41,18 @@ interface Department {
   code: string;
 }
 
+interface ScholarshipType {
+  id: string;
+  name: string;
+  amount: number;
+  description: string;
+}
+
+const scholarshipTypes: ScholarshipType[] = [
+  { id: 'PMSS', name: 'PMSS (SC/ST)', amount: 50000, description: 'Post Matric Scholarship Scheme' },
+  { id: 'FG', name: 'First Generation', amount: 25000, description: 'First Generation College Student' }
+];
+
 const EnhancedFeeAssignment: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -64,6 +76,10 @@ const EnhancedFeeAssignment: React.FC = () => {
     description: ''
   });
 
+  // New scholarship-related state
+  const [applyScholarship, setApplyScholarship] = useState(false);
+  const [selectedScholarshipType, setSelectedScholarshipType] = useState('');
+
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBatchProcessor, setShowBatchProcessor] = useState(false);
 
@@ -85,7 +101,6 @@ const EnhancedFeeAssignment: React.FC = () => {
       setLoading(true);
       console.log('Fetching students using secure function...');
       
-      // Use the new secure function to get filtered student data
       const { data, error } = await supabase.rpc('get_students_with_filters', {
         p_user_id: user.id,
         p_department_filter: departmentFilter || null,
@@ -111,7 +126,6 @@ const EnhancedFeeAssignment: React.FC = () => {
         return;
       }
 
-      // Transform the data to match our Student interface
       const transformedStudents: Student[] = data.map(student => ({
         id: student.id,
         name: student.name,
@@ -209,6 +223,18 @@ const EnhancedFeeAssignment: React.FC = () => {
     }
   };
 
+  // Calculate final amount after scholarship
+  const calculateFinalAmount = () => {
+    const originalAmount = parseFloat(feeData.amount || '0');
+    if (!applyScholarship || !selectedScholarshipType) {
+      return originalAmount;
+    }
+    
+    const scholarship = scholarshipTypes.find(s => s.id === selectedScholarshipType);
+    const scholarshipAmount = scholarship ? scholarship.amount : 0;
+    return Math.max(0, originalAmount - scholarshipAmount);
+  };
+
   const handleAssignFees = async () => {
     if (selectedStudents.length === 0) {
       toast({
@@ -231,27 +257,85 @@ const EnhancedFeeAssignment: React.FC = () => {
     try {
       setLoading(true);
 
-      const feeRecords = selectedStudents.map(studentId => ({
+      const originalAmount = parseFloat(feeData.amount);
+      const scholarship = scholarshipTypes.find(s => s.id === selectedScholarshipType);
+      const scholarshipAmount = applyScholarship && scholarship ? scholarship.amount : 0;
+      const finalAmount = Math.max(0, originalAmount - scholarshipAmount);
+
+      // Step 1: Create scholarship records if scholarship is applied
+      let scholarshipRecords: any[] = [];
+      if (applyScholarship && scholarship) {
+        const scholarshipData = selectedStudents.map(studentId => ({
+          student_id: studentId,
+          scholarship_type: scholarship.id,
+          eligible_amount: scholarship.amount,
+          academic_year: feeData.academic_year,
+          semester: feeData.semester,
+          applied_status: true,
+          application_date: new Date().toISOString().split('T')[0],
+          received_by_institution: true,
+          receipt_date: new Date().toISOString().split('T')[0],
+          remarks: `Scholarship applied during fee assignment`
+        }));
+
+        const { data: scholarshipResult, error: scholarshipError } = await supabase
+          .from('scholarships')
+          .insert(scholarshipData)
+          .select();
+
+        if (scholarshipError) throw scholarshipError;
+        scholarshipRecords = scholarshipResult || [];
+      }
+
+      // Step 2: Create fee records with scholarship linkage
+      const feeRecords = selectedStudents.map((studentId, index) => ({
         student_id: studentId,
         academic_year: feeData.academic_year,
         semester: feeData.semester,
         fee_type_id: feeData.fee_type_id,
-        original_amount: parseFloat(feeData.amount),
-        final_amount: parseFloat(feeData.amount),
+        original_amount: originalAmount,
+        final_amount: finalAmount,
+        scholarship_id: scholarshipRecords[index]?.id || null,
+        discount_amount: scholarshipAmount,
         due_date: feeData.due_date,
-        status: 'Pending' as const
+        status: finalAmount === 0 ? 'Paid' : 'Pending',
+        paid_amount: finalAmount === 0 ? originalAmount : 0
       }));
 
-      const { data, error } = await supabase
+      const { data: feeResult, error: feeError } = await supabase
         .from('fee_records')
         .insert(feeRecords)
         .select();
 
-      if (error) throw error;
+      if (feeError) throw feeError;
+
+      // Step 3: Create payment transactions for scholarship amounts if fee is fully covered
+      if (applyScholarship && finalAmount === 0 && feeResult) {
+        const paymentTransactions = feeResult.map(feeRecord => ({
+          fee_record_id: feeRecord.id,
+          student_id: feeRecord.student_id,
+          amount: scholarshipAmount,
+          payment_method: 'Scholarship' as const,
+          transaction_id: `SCH-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          status: 'Success' as const,
+          receipt_number: `SCH-RCP-${new Date().toISOString().split('T')[0]}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+          processed_by: user.id,
+          processed_at: new Date().toISOString()
+        }));
+
+        const { error: paymentError } = await supabase
+          .from('payment_transactions')
+          .insert(paymentTransactions);
+
+        if (paymentError) {
+          console.error('Error creating payment transactions:', paymentError);
+          // Don't throw here as the main operation succeeded
+        }
+      }
 
       toast({
         title: "Success",
-        description: `Fee assigned to ${selectedStudents.length} students successfully`,
+        description: `Fee assigned to ${selectedStudents.length} students successfully${applyScholarship ? ' with scholarship applied' : ''}`,
       });
 
       // Reset form and selections
@@ -264,6 +348,8 @@ const EnhancedFeeAssignment: React.FC = () => {
         due_date: '',
         description: ''
       });
+      setApplyScholarship(false);
+      setSelectedScholarshipType('');
 
     } catch (error: any) {
       console.error('Error assigning fees:', error);
@@ -309,7 +395,7 @@ const EnhancedFeeAssignment: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Enhanced Fee Assignment</h2>
+        <h2 className="text-2xl font-bold">Fee Assignment</h2>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -503,13 +589,49 @@ const EnhancedFeeAssignment: React.FC = () => {
               </div>
 
               <div>
-                <Label>Amount *</Label>
+                <Label>Original Amount *</Label>
                 <Input
                   type="number"
                   placeholder="Enter amount"
                   value={feeData.amount}
                   onChange={(e) => setFeeData({...feeData, amount: e.target.value})}
                 />
+              </div>
+
+              {/* Scholarship Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Switch
+                    id="apply-scholarship"
+                    checked={applyScholarship}
+                    onCheckedChange={setApplyScholarship}
+                  />
+                  <Label htmlFor="apply-scholarship" className="flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Apply Scholarship?
+                  </Label>
+                </div>
+
+                {applyScholarship && (
+                  <div>
+                    <Label>Scholarship Type</Label>
+                    <Select value={selectedScholarshipType} onValueChange={setSelectedScholarshipType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select scholarship type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {scholarshipTypes.map(scholarship => (
+                          <SelectItem key={scholarship.id} value={scholarship.id}>
+                            <div className="flex flex-col">
+                              <span>{scholarship.name}</span>
+                              <span className="text-sm text-gray-500">₹{scholarship.amount.toLocaleString()}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -537,9 +659,16 @@ const EnhancedFeeAssignment: React.FC = () => {
                     <CheckCircle className="w-4 h-4" />
                     <span className="font-medium">Assignment Summary</span>
                   </div>
-                  <div className="text-sm text-blue-700">
+                  <div className="text-sm text-blue-700 space-y-1">
                     <p>Students: {selectedStudents.length}</p>
-                    <p>Total Amount: ₹{(parseFloat(feeData.amount || '0') * selectedStudents.length).toLocaleString()}</p>
+                    <p>Original Amount: ₹{(parseFloat(feeData.amount || '0')).toLocaleString()}</p>
+                    {applyScholarship && selectedScholarshipType && (
+                      <>
+                        <p>Scholarship: {scholarshipTypes.find(s => s.id === selectedScholarshipType)?.name} - ₹{scholarshipTypes.find(s => s.id === selectedScholarshipType)?.amount.toLocaleString()}</p>
+                        <p className="font-medium">Final Amount: ₹{calculateFinalAmount().toLocaleString()}</p>
+                      </>
+                    )}
+                    <p className="font-medium">Total Collection: ₹{(calculateFinalAmount() * selectedStudents.length).toLocaleString()}</p>
                     <p>Due Date: {feeData.due_date}</p>
                   </div>
                 </div>
