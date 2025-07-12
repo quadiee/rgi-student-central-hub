@@ -24,7 +24,7 @@ export interface PaymentTransaction {
   studentId: string;
   feeRecordId: string;
   amount: number;
-  paymentMethod: 'Online' | 'Cash' | 'Cheque' | 'DD' | 'UPI';
+  paymentMethod: 'Online' | 'Cash' | 'Cheque' | 'DD' | 'UPI' | 'Scholarship';
   transactionId?: string;
   status: 'Pending' | 'Success' | 'Failed' | 'Cancelled';
   processedAt: string;

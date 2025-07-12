@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart3, Receipt, GraduationCap, TrendingUp, FileText, Upload, Lock, Link } from 'lucide-react';
@@ -13,22 +14,26 @@ import ScholarshipFeeConnector from './ScholarshipFeeConnector';
 const FeeManagementHub: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   const [permissions, setPermissions] = useState({
     canCreate: false,
     canEdit: false,
     canDelete: false,
     canViewAll: false,
-    canViewDepartment: false
+    canViewDepartment: false,
+    canModifyFeeStructure: false
   });
 
   useEffect(() => {
     if (user) {
+      const canModify = ['admin', 'principal', 'chairman'].includes(user.role || '');
       setPermissions({
-        canCreate: ['admin', 'principal', 'chairman'].includes(user.role || ''),
-        canEdit: ['admin', 'principal', 'chairman'].includes(user.role || ''),
+        canCreate: canModify,
+        canEdit: canModify,
         canDelete: ['admin', 'principal'].includes(user.role || ''),
-        canViewAll: ['admin', 'principal', 'chairman'].includes(user.role || ''),
-        canViewDepartment: user.role === 'hod'
+        canViewAll: canModify,
+        canViewDepartment: user.role === 'hod',
+        canModifyFeeStructure: canModify
       });
     }
   }, [user]);
@@ -42,11 +47,20 @@ const FeeManagementHub: React.FC = () => {
     console.log('Data Refreshed!');
   };
 
+  const handleBulkUpdate = () => {
+    // Handle bulk update completion
+    setSelectedRecords([]);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedRecords([]);
+  };
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'records', label: 'Fee Records', icon: Receipt },
     { id: 'scholarships', label: 'Scholarships', icon: GraduationCap },
-    { id: 'connect', label: 'Connect Scholarships', icon: Link }, // Add new tab
+    { id: 'connect', label: 'Connect Scholarships', icon: Link },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'bulk', label: 'Bulk Operations', icon: Upload },
@@ -75,7 +89,11 @@ const FeeManagementHub: React.FC = () => {
         return <AdminReportGenerator />;
       case 'bulk':
         return permissions.canModifyFeeStructure ? (
-          <BulkFeeActions />
+          <BulkFeeActions 
+            selectedRecords={selectedRecords}
+            onBulkUpdate={handleBulkUpdate}
+            onClear={handleClearSelection}
+          />
         ) : (
           <div className="text-center py-8 text-gray-500">
             <Lock className="w-12 h-12 mx-auto mb-4 opacity-50" />
