@@ -298,7 +298,7 @@ const EnhancedFeeAssignment: React.FC = () => {
         scholarship_id: scholarshipRecords[index]?.id || null,
         discount_amount: scholarshipAmount,
         due_date: feeData.due_date,
-        status: finalAmount === 0 ? 'Paid' : 'Pending',
+        status: (finalAmount === 0 ? 'Paid' : 'Pending') as 'Paid' | 'Pending',
         paid_amount: finalAmount === 0 ? originalAmount : 0
       }));
 
