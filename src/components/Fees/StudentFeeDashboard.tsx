@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw, Eye, Receipt, Edit, Trash2 } from 'lucide-react';
+import { TrendingUp, Users, IndianRupee, AlertTriangle, RefreshCw, Eye, Receipt, Edit, Trash2, Award } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
@@ -19,6 +19,12 @@ interface FeeRecord {
   paid_amount: number;
   status: string;
   due_date: string;
+  scholarship_id?: string;
+  scholarship?: {
+    id: string;
+    scholarship_type: string;
+    eligible_amount: number;
+  };
   payment_transactions: Array<{
     id: string;
     amount: number;
@@ -54,6 +60,11 @@ const StudentFeeDashboard: React.FC = () => {
         .from('fee_records')
         .select(`
           *,
+          scholarships (
+            id,
+            scholarship_type,
+            eligible_amount
+          ),
           payment_transactions (
             id,
             amount,
@@ -179,6 +190,8 @@ const StudentFeeDashboard: React.FC = () => {
   const totalFees = feeRecords.reduce((sum, record) => sum + record.final_amount, 0);
   const totalPaid = feeRecords.reduce((sum, record) => sum + (record.paid_amount || 0), 0);
   const totalPending = totalFees - totalPaid;
+  const totalScholarshipAmount = feeRecords.reduce((sum, record) => 
+    sum + (record.scholarship?.eligible_amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -191,7 +204,7 @@ const StudentFeeDashboard: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group">
           <div className="flex items-center justify-between">
             <div>
@@ -233,6 +246,19 @@ const StudentFeeDashboard: React.FC = () => {
             <IndianRupee className="w-8 h-8 text-orange-500" />
           </div>
         </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                Scholarships
+                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+              </p>
+              <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalScholarshipAmount)}</p>
+            </div>
+            <Award className="w-8 h-8 text-purple-500" />
+          </div>
+        </div>
       </div>
 
       {/* Fee Records List */}
@@ -245,6 +271,14 @@ const StudentFeeDashboard: React.FC = () => {
                 <div>
                   <h4 className="font-medium">{record.academic_year} - Semester {record.semester}</h4>
                   <p className="text-sm text-gray-600">Due: {new Date(record.due_date).toLocaleDateString()}</p>
+                  {record.scholarship && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Award className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm text-purple-600 font-medium">
+                        {record.scholarship.scholarship_type} - {formatCurrency(record.scholarship.eligible_amount)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -279,12 +313,22 @@ const StudentFeeDashboard: React.FC = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-4 gap-4 text-sm">
                 <div 
                   className="cursor-pointer hover:text-blue-600 transition-colors group"
                   onClick={() => handleAmountClick(record)}
                 >
-                  <span className="text-gray-600">Total: </span>
+                  <span className="text-gray-600">Original: </span>
+                  <span className="font-medium flex items-center gap-1">
+                    {formatCurrency(record.original_amount)}
+                    <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                  </span>
+                </div>
+                <div 
+                  className="cursor-pointer hover:text-blue-600 transition-colors group"
+                  onClick={() => handleAmountClick(record)}
+                >
+                  <span className="text-gray-600">Final: </span>
                   <span className="font-medium flex items-center gap-1">
                     {formatCurrency(record.final_amount)}
                     <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100" />

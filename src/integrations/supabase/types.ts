@@ -260,6 +260,7 @@ export type Database = {
           original_amount: number
           paid_amount: number | null
           penalty_amount: number | null
+          scholarship_id: string | null
           semester: number
           status: Database["public"]["Enums"]["fee_status"] | null
           student_id: string | null
@@ -278,6 +279,7 @@ export type Database = {
           original_amount: number
           paid_amount?: number | null
           penalty_amount?: number | null
+          scholarship_id?: string | null
           semester: number
           status?: Database["public"]["Enums"]["fee_status"] | null
           student_id?: string | null
@@ -296,6 +298,7 @@ export type Database = {
           original_amount?: number
           paid_amount?: number | null
           penalty_amount?: number | null
+          scholarship_id?: string | null
           semester?: number
           status?: Database["public"]["Enums"]["fee_status"] | null
           student_id?: string | null
@@ -314,6 +317,13 @@ export type Database = {
             columns: ["fee_type_id"]
             isOneToOne: false
             referencedRelation: "fee_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_records_scholarship_id_fkey"
+            columns: ["scholarship_id"]
+            isOneToOne: false
+            referencedRelation: "scholarships"
             referencedColumns: ["id"]
           },
           {
@@ -1267,6 +1277,14 @@ export type Database = {
       }
     }
     Functions: {
+      apply_scholarship_to_fee_record: {
+        Args: { p_fee_record_id: string; p_scholarship_id: string }
+        Returns: undefined
+      }
+      auto_apply_scholarships: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       bulk_update_fee_records: {
         Args: {
           p_user_id: string
@@ -1556,7 +1574,13 @@ export type Database = {
         | "CHAIRMAN"
       fee_status: "Paid" | "Pending" | "Overdue" | "Partial"
       installment_status: "Pending" | "Paid" | "Overdue"
-      payment_method: "Online" | "Cash" | "Cheque" | "DD" | "UPI"
+      payment_method:
+        | "Online"
+        | "Cash"
+        | "Cheque"
+        | "DD"
+        | "UPI"
+        | "Scholarship"
       payment_status: "Pending" | "Success" | "Failed" | "Cancelled"
       user_role: "student" | "hod" | "principal" | "admin" | "chairman"
       waiver_status: "Pending" | "Approved" | "Rejected"
@@ -1699,7 +1723,7 @@ export const Constants = {
       ],
       fee_status: ["Paid", "Pending", "Overdue", "Partial"],
       installment_status: ["Pending", "Paid", "Overdue"],
-      payment_method: ["Online", "Cash", "Cheque", "DD", "UPI"],
+      payment_method: ["Online", "Cash", "Cheque", "DD", "UPI", "Scholarship"],
       payment_status: ["Pending", "Success", "Failed", "Cancelled"],
       user_role: ["student", "hod", "principal", "admin", "chairman"],
       waiver_status: ["Pending", "Approved", "Rejected"],

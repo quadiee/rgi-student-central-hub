@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import { User, FeeRecord } from '../types';
 import { FeeStructure, PaymentTransaction, FeeReport, FeePermissions, FeeCategory } from '../types/feeTypes';
@@ -80,6 +81,11 @@ export class SupabaseFeeService {
             academic_year,
             semester,
             fee_categories
+          ),
+          scholarships (
+            id,
+            scholarship_type,
+            eligible_amount
           )
         `)
         .limit(100);
@@ -257,6 +263,50 @@ export class SupabaseFeeService {
       };
     } catch (error) {
       console.error('Error generating report:', error);
+      throw error;
+    }
+  }
+
+  // Add scholarship connection methods
+  static async connectScholarshipToFee(user: User, feeRecordId: string, scholarshipId: string): Promise<boolean> {
+    console.log('Connecting scholarship to fee:', { feeRecordId, scholarshipId });
+    
+    const permissions = this.getFeePermissions(user);
+    
+    if (!permissions.canModifyFeeStructure && !['admin', 'principal', 'chairman'].includes(user.role)) {
+      throw new Error('Insufficient permissions to connect scholarships');
+    }
+
+    try {
+      const { error } = await supabase.rpc('apply_scholarship_to_fee_record', {
+        p_fee_record_id: feeRecordId,
+        p_scholarship_id: scholarshipId
+      });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error connecting scholarship to fee:', error);
+      throw error;
+    }
+  }
+
+  static async autoConnectScholarships(user: User): Promise<boolean> {
+    console.log('Auto-connecting scholarships');
+    
+    const permissions = this.getFeePermissions(user);
+    
+    if (!permissions.canModifyFeeStructure && !['admin', 'principal', 'chairman'].includes(user.role)) {
+      throw new Error('Insufficient permissions to auto-connect scholarships');
+    }
+
+    try {
+      const { error } = await supabase.rpc('auto_apply_scholarships');
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error auto-connecting scholarships:', error);
       throw error;
     }
   }
