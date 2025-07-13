@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Bell, Check, Clock, AlertTriangle, X } from 'lucide-react';
 import { Button } from '../ui/button';
-import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 
 interface Notification {
@@ -22,21 +22,41 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('timestamp', { ascending: false });
+    // Load mock notifications - in a real app, this would come from a notifications table
+    const loadMockNotifications = () => {
+      const mockNotifications: Notification[] = [
+        {
+          id: '1',
+          type: 'fee_reminder',
+          title: 'Fee Payment Due',
+          message: 'Your semester fee payment is due in 3 days',
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          read: false
+        },
+        {
+          id: '2',
+          type: 'attendance_alert',
+          title: 'Attendance Alert',
+          message: 'Your attendance is below 75% in Data Structures',
+          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          read: false
+        },
+        {
+          id: '3',
+          type: 'leave_approved',
+          title: 'Leave Request Approved',
+          message: 'Your leave request for tomorrow has been approved',
+          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          read: true
+        }
+      ];
 
-      if (error) {
-        console.error('Error fetching notifications:', error);
-      } else {
-        setNotifications(data as Notification[]);
-      }
+      setNotifications(mockNotifications);
     };
 
-    if (user?.id) fetchNotifications();
+    if (user?.id) {
+      loadMockNotifications();
+    }
   }, [user?.id]);
 
   const getNotificationIcon = (type: Notification['type']) => {
@@ -54,32 +74,18 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
     }
   };
 
-  const markAsRead = async (id: string) => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', id);
-
-    if (!error) {
-      setNotifications(prev =>
-        prev.map(notif =>
-          notif.id === id ? { ...notif, read: true } : notif
-        )
-      );
-    }
+  const markAsRead = (id: string) => {
+    setNotifications(prev =>
+      prev.map(notif =>
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
   };
 
-  const markAllAsRead = async () => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', user?.id);
-
-    if (!error) {
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, read: true }))
-      );
-    }
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(notif => ({ ...notif, read: true }))
+    );
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
