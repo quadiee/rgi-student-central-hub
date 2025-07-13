@@ -1,7 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Check, Clock, AlertTriangle, X } from 'lucide-react';
 import { Button } from '../ui/button';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 
 interface Notification {
   id: string;
@@ -12,39 +13,31 @@ interface Notification {
   read: boolean;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'leave_approved',
-    title: 'Leave Request Approved',
-    message: 'Your leave request for July 1-3 has been approved by Dr. Rajesh Kumar',
-    timestamp: '2024-06-20T10:00:00',
-    read: false
-  },
-  {
-    id: '2',
-    type: 'attendance_alert',
-    title: 'Low Attendance Alert',
-    message: 'Your attendance in Data Structures is below 75%. Current: 68%',
-    timestamp: '2024-06-20T09:00:00',
-    read: false
-  },
-  {
-    id: '3',
-    type: 'fee_reminder',
-    title: 'Fee Payment Due',
-    message: 'Semester fee payment is due by July 31, 2024',
-    timestamp: '2024-06-19T15:00:00',
-    read: true
-  }
-];
-
 interface NotificationCenterProps {
   onClose: () => void;
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+      } else {
+        setNotifications(data as Notification[]);
+      }
+    };
+
+    if (user?.id) fetchNotifications();
+  }, [user?.id]);
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
@@ -61,18 +54,32 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const markAsRead = async (id: string) => {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id);
+
+    if (!error) {
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notif => ({ ...notif, read: true }))
-    );
+  const markAllAsRead = async () => {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', user?.id);
+
+    if (!error) {
+      setNotifications(prev =>
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
