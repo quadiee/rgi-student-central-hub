@@ -3,9 +3,9 @@ import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import StudentDashboard from './StudentDashboard';
 import HODDashboard from './HODDashboard';
-import ChairmanDashboard from './ChairmanDashboard';
 import PrincipalDashboard from './PrincipalDashboard';
 import RealTimeStats from './RealTimeStats';
+import FeeManagementHub from '../Fees/FeeManagementHub';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -15,9 +15,10 @@ const Dashboard: React.FC = () => {
       case 'student':
         return <StudentDashboard />;
       case 'chairman':
+        // Chairman gets the Fee Management Hub as their main dashboard
+        return <FeeManagementHub />;
       case 'principal':
-        // Both Chairman and Principal get the same view (institution-wide)
-        return <ChairmanDashboard />;
+        return <PrincipalDashboard />;
       case 'hod':
         return (
           <div className="space-y-6">
