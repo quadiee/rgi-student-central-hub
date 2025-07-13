@@ -25,12 +25,13 @@ const FeeManagementHub: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      // Chairman can only view, no editing permissions
       const canModify = ['admin', 'principal'].includes(user.role || '');
       setPermissions({
         canCreate: canModify,
         canEdit: canModify,
         canDelete: ['admin', 'principal'].includes(user.role || ''),
-        canViewAll: canModify,
+        canViewAll: canModify || user.role === 'chairman',
         canViewDepartment: user.role === 'hod',
         canModifyFeeStructure: canModify
       });
@@ -61,7 +62,7 @@ const FeeManagementHub: React.FC = () => {
       { id: 'records', label: 'Fee Records', icon: Receipt },
     ];
 
-    // Chairman only sees basic tabs
+    // Chairman only sees basic tabs (view-only)
     if (user?.role === 'chairman') {
       return baseTabs;
     }
@@ -86,6 +87,10 @@ const FeeManagementHub: React.FC = () => {
     switch (activeTab) {
       case 'analytics':
         return <DepartmentAnalytics />;
+      case 'scholarships':
+        return <ScholarshipManagement />;
+      case 'records':
+        return <FeeListManagement />;
       case 'assign':
         return permissions.canModifyFeeStructure ? (
           <EnhancedFeeAssignment />
@@ -95,10 +100,6 @@ const FeeManagementHub: React.FC = () => {
             <p>You don't have permission to assign fees</p>
           </div>
         );
-      case 'records':
-        return <FeeListManagement />;
-      case 'scholarships':
-        return <ScholarshipManagement />;
       case 'reports':
         return <AdminReportGenerator />;
       case 'bulk':
