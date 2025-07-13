@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import FeeListManagement from './FeeListManagement';
 import ScholarshipManagement from './ScholarshipManagement';
 import DepartmentAnalytics from './DepartmentAnalytics';
+import FeeTypeAnalytics from './FeeTypeAnalytics';
 import AdminReportGenerator from './AdminReportGenerator';
 import BulkFeeActions from './BulkFeeActions';
 import EnhancedFeeAssignment from './EnhancedFeeAssignment';
@@ -59,6 +60,7 @@ const FeeManagementHub: React.FC = () => {
     const baseTabs = [
       { id: 'analytics', label: 'Analytics', icon: TrendingUp },
       { id: 'scholarships', label: 'Scholarships', icon: GraduationCap },
+      { id: 'fee-type-analytics', label: 'Fee Type Analytics', icon: BarChart3 },
       { id: 'records', label: 'Fee Records', icon: Receipt },
     ];
 
@@ -89,6 +91,8 @@ const FeeManagementHub: React.FC = () => {
         return <DepartmentAnalytics />;
       case 'scholarships':
         return <ScholarshipManagement />;
+      case 'fee-type-analytics':
+        return <FeeTypeAnalytics />;
       case 'records':
         return <FeeListManagement />;
       case 'assign':
