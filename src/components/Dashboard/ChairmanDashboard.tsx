@@ -144,7 +144,7 @@ const ChairmanDashboard: React.FC = () => {
               space-y-6 animate-fade-in
               ${isMobile ? 'px-1' : ''}
             `}>
-            <div className="min-h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-soft border border-gray-200 dark:border-gray-800">
+            <div className="min-h-[500px] bg-white dark:bg-gray-900 rounded-2xl shadow-soft border border-gray-200 dark:border-gray-800 py-[29px]">
               <tab.component />
             </div>
           </TabsContent>)}
