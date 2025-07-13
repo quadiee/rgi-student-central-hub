@@ -10,9 +10,9 @@ import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { Button } from '../ui/button';
 import { useState, useEffect } from 'react';
-import { MobileFilterDrawer } from './MobileFilterDrawer';
-import { MobileAnalyticsSummary } from './MobileAnalyticsSummary';
-import { MobileFeeAnalyticsCard } from './MobileFeeAnalyticsCard';
+import MobileFilterDrawer from './MobileFilterDrawer';
+import MobileAnalyticsSummary from './MobileAnalyticsSummary';
+import MobileFeeAnalyticsCard from './MobileFeeAnalyticsCard';
 import FeeTypeAnalyticsFilters from './FeeTypeAnalyticsFilters';
 
 interface DepartmentAnalytics {
