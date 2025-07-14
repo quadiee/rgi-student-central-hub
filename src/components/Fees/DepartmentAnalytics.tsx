@@ -4,7 +4,7 @@ import MobileDepartmentAnalytics from './MobileDepartmentAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
-import { TrendingUp, TrendingDown, Users, DollarSign, AlertCircle, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, DollarSign, AlertCircle, Filter, Award, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
@@ -28,6 +28,13 @@ interface DepartmentAnalytics {
   overdue_records: number;
   avg_fee_per_student: number;
   last_updated: string;
+  // Scholarship data
+  total_scholarships?: number;
+  applied_scholarships?: number;
+  received_scholarships?: number;
+  total_eligible_amount?: number;
+  total_received_amount?: number;
+  total_scholarship_students?: number;
 }
 
 interface Filters {
@@ -48,6 +55,7 @@ const DepartmentAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [departments, setDepartments] = useState<any[]>([]);
+  const [scholarshipData, setScholarshipData] = useState<any[]>([]);
 
   const [filters, setFilters] = useState<Filters>({
     fromDate: '',
@@ -62,6 +70,7 @@ const DepartmentAnalytics: React.FC = () => {
   useEffect(() => {
     fetchDepartments();
     fetchAnalytics();
+    fetchScholarshipData();
   }, []);
 
   const fetchDepartments = async () => {
@@ -76,6 +85,20 @@ const DepartmentAnalytics: React.FC = () => {
       setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchScholarshipData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scholarship_summary')
+        .select('*')
+        .eq('academic_year', '2024-25');
+
+      if (error) throw error;
+      setScholarshipData(data || []);
+    } catch (error) {
+      console.error('Error fetching scholarship data:', error);
     }
   };
 
@@ -99,7 +122,21 @@ const DepartmentAnalytics: React.FC = () => {
 
       if (error) throw error;
 
-      setAnalytics(data || []);
+      // Merge analytics data with scholarship data
+      const mergedData = (data || []).map((dept: any) => {
+        const scholarshipInfo = scholarshipData.find(s => s.department_id === dept.department_id);
+        return {
+          ...dept,
+          total_scholarships: scholarshipInfo?.total_scholarships || 0,
+          applied_scholarships: scholarshipInfo?.applied_scholarships || 0,
+          received_scholarships: scholarshipInfo?.received_scholarships || 0,
+          total_eligible_amount: scholarshipInfo?.total_eligible_amount || 0,
+          total_received_amount: scholarshipInfo?.total_received_amount || 0,
+          total_scholarship_students: scholarshipInfo?.total_scholarship_students || 0
+        };
+      });
+
+      setAnalytics(mergedData);
     } catch (error) {
       console.error('Error fetching department analytics:', error);
       toast({
@@ -133,8 +170,20 @@ const DepartmentAnalytics: React.FC = () => {
     totalCollected: acc.totalCollected + item.total_collected,
     totalPending: acc.totalPending + item.total_pending,
     totalStudents: acc.totalStudents + item.total_students,
-    totalRecords: acc.totalRecords + item.total_fee_records
-  }), { totalFees: 0, totalCollected: 0, totalPending: 0, totalStudents: 0, totalRecords: 0 });
+    totalRecords: acc.totalRecords + item.total_fee_records,
+    totalScholarships: acc.totalScholarships + (item.total_scholarships || 0),
+    totalScholarshipAmount: acc.totalScholarshipAmount + (item.total_received_amount || 0),
+    totalScholarshipStudents: acc.totalScholarshipStudents + (item.total_scholarship_students || 0)
+  }), { 
+    totalFees: 0, 
+    totalCollected: 0, 
+    totalPending: 0, 
+    totalStudents: 0, 
+    totalRecords: 0,
+    totalScholarships: 0,
+    totalScholarshipAmount: 0,
+    totalScholarshipStudents: 0
+  });
 
   const overallCollectionPercentage = totalStats.totalFees > 0
     ? (totalStats.totalCollected / totalStats.totalFees) * 100
@@ -187,12 +236,12 @@ const DepartmentAnalytics: React.FC = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Departments</p>
+                <p className="text-sm font-medium text-gray-600">Departments</p>
                 <p className="text-2xl font-bold">{analytics.length}</p>
               </div>
               <Users className="w-8 h-8 text-blue-600" />
@@ -204,7 +253,7 @@ const DepartmentAnalytics: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Collection</p>
+                <p className="text-sm font-medium text-gray-600">Collection</p>
                 <p className="text-2xl font-bold">₹{totalStats.totalCollected.toLocaleString()}</p>
               </div>
               <DollarSign className="w-8 h-8 text-green-600" />
@@ -216,7 +265,7 @@ const DepartmentAnalytics: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Pending</p>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
                 <p className="text-2xl font-bold">₹{totalStats.totalPending.toLocaleString()}</p>
               </div>
               <AlertCircle className="w-8 h-8 text-red-600" />
@@ -228,10 +277,34 @@ const DepartmentAnalytics: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Overall Collection</p>
+                <p className="text-sm font-medium text-gray-600">Collection %</p>
                 <p className="text-2xl font-bold">{overallCollectionPercentage.toFixed(1)}%</p>
               </div>
               <TrendingUp className="w-8 h-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Scholarships</p>
+                <p className="text-2xl font-bold">{totalStats.totalScholarships}</p>
+              </div>
+              <Award className="w-8 h-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Scholarship ₹</p>
+                <p className="text-2xl font-bold">₹{totalStats.totalScholarshipAmount.toLocaleString()}</p>
+              </div>
+              <GraduationCap className="w-8 h-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -300,13 +373,41 @@ const DepartmentAnalytics: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-purple-600" />
+                    <Award className="w-4 h-4 text-purple-600" />
                     <div>
-                      <div className="font-medium">₹{item.avg_fee_per_student.toLocaleString()}</div>
-                      <div className="text-gray-500">Avg/Student</div>
+                      <div className="font-medium">{item.total_scholarships || 0}</div>
+                      <div className="text-gray-500">Scholarships</div>
                     </div>
                   </div>
                 </div>
+
+                {/* Scholarship Details */}
+                {(item.total_scholarships || 0) > 0 && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-purple-700 mb-2">
+                      <GraduationCap className="w-4 h-4" />
+                      <span className="text-sm font-medium">Scholarship Details</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-purple-600">Applied:</span>
+                        <span className="ml-1 font-medium">{item.applied_scholarships || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-purple-600">Received:</span>
+                        <span className="ml-1 font-medium">{item.received_scholarships || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-purple-600">Students:</span>
+                        <span className="ml-1 font-medium">{item.total_scholarship_students || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-purple-600">Amount:</span>
+                        <span className="ml-1 font-medium">₹{(item.total_received_amount || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Overdue Records */}
                 {item.overdue_records > 0 && (
