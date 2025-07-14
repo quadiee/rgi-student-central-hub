@@ -96,9 +96,16 @@ const DepartmentAnalytics: React.FC = () => {
         .eq('academic_year', '2024-25');
 
       if (error) throw error;
+      
+      console.log('Scholarship data fetched:', data);
       setScholarshipData(data || []);
     } catch (error) {
       console.error('Error fetching scholarship data:', error);
+      toast({
+        title: "Warning",
+        description: "Could not fetch scholarship data",
+        variant: "destructive"
+      });
     }
   };
 
@@ -125,6 +132,8 @@ const DepartmentAnalytics: React.FC = () => {
       // Merge analytics data with scholarship data
       const mergedData = (data || []).map((dept: any) => {
         const scholarshipInfo = scholarshipData.find(s => s.department_id === dept.department_id);
+        console.log(`Department ${dept.department_name} - Scholarship data:`, scholarshipInfo);
+        
         return {
           ...dept,
           total_scholarships: scholarshipInfo?.total_scholarships || 0,
@@ -136,6 +145,7 @@ const DepartmentAnalytics: React.FC = () => {
         };
       });
 
+      console.log('Merged department analytics with scholarships:', mergedData);
       setAnalytics(mergedData);
     } catch (error) {
       console.error('Error fetching department analytics:', error);
@@ -150,6 +160,7 @@ const DepartmentAnalytics: React.FC = () => {
   };
 
   const handleApplyFilters = () => {
+    fetchScholarshipData(); // Refresh scholarship data when filters are applied
     fetchAnalytics();
   };
 
