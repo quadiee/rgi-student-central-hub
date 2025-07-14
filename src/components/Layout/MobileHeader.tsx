@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Menu, Search, Settings, User } from 'lucide-react';
+import { Bell, Menu, Search, Settings, User, LogOut, Edit2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import NotificationCenter from '../Notifications/NotificationCenter';
+import UserProfile from '../Auth/UserProfile';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
@@ -23,8 +24,9 @@ interface Notification {
 }
 
 const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick, activeTab }) => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, signOut } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -161,6 +163,17 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick, activeTab }) =
     return user?.email?.[0].toUpperCase() || 'U';
   };
 
+  const handleLogout = async () => {
+    if (confirm('Are you sure you want to logout?')) {
+      try {
+        await signOut();
+        setShowProfileMenu(false);
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+  };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30 lg:hidden">
       {/* Main Header */}
@@ -206,6 +219,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick, activeTab }) =
             variant="ghost"
             size="sm"
             className="p-1 hover:bg-gray-100 rounded-lg"
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
           >
             <Avatar className="w-8 h-8">
               <AvatarImage 
@@ -307,6 +321,104 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick, activeTab }) =
               className="w-full mt-4 text-sm text-blue-600 font-medium py-2 hover:text-blue-800"
             >
               Close Notifications
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Menu Dropdown */}
+      {showProfileMenu && (
+        <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+          <div className="p-4">
+            {/* User Info Header */}
+            <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
+              <Avatar className="w-12 h-12">
+                <AvatarImage 
+                  src={user?.profile_photo_url || user?.avatar} 
+                  alt={user?.name || 'User'}
+                />
+                <AvatarFallback className={`text-white text-sm font-bold ${
+                  user?.role === 'chairman' 
+                    ? 'bg-gradient-to-r from-purple-500 to-blue-500' 
+                    : user?.role === 'admin'
+                    ? 'bg-gradient-to-r from-red-500 to-pink-500'
+                    : user?.role === 'principal'
+                    ? 'bg-gradient-to-r from-green-500 to-teal-500'
+                    : user?.role === 'hod'
+                    ? 'bg-gradient-to-r from-orange-500 to-yellow-500'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                }`}>
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 truncate">{user?.name}</h3>
+                <p className="text-sm text-gray-600 truncate">{user?.email}</p>
+                <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                  user?.role === 'admin' ? 'bg-red-100 text-red-800' :
+                  user?.role === 'principal' ? 'bg-purple-100 text-purple-800' :
+                  user?.role === 'hod' ? 'bg-blue-100 text-blue-800' :
+                  user?.role === 'chairman' ? 'bg-purple-100 text-purple-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {user?.role}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Info */}
+            <div className="py-3 space-y-2">
+              {user?.department_name && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Department:</span>
+                  <span className="font-medium text-gray-900">{user.department_name}</span>
+                </div>
+              )}
+              {user?.roll_number && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Roll Number:</span>
+                  <span className="font-medium text-gray-900">{user.roll_number}</span>
+                </div>
+              )}
+              {user?.employee_id && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Employee ID:</span>
+                  <span className="font-medium text-gray-900">{user.employee_id}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 border-t border-gray-200 space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  // You can add navigation to profile edit page here
+                }}
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Profile
+              </Button>
+              
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full justify-start"
+                onClick={handleLogout}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+
+            <button
+              onClick={() => setShowProfileMenu(false)}
+              className="w-full mt-3 text-sm text-gray-500 font-medium py-2 hover:text-gray-700"
+            >
+              Close
             </button>
           </div>
         </div>
