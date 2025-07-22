@@ -23,9 +23,12 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <Routes>
+            {/* Public routes - no authentication required */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
+            
+            {/* Protected routes - authentication required */}
             <Route 
               path="/" 
               element={
@@ -106,6 +109,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            
+            {/* Catch all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
