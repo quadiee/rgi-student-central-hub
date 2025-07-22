@@ -121,6 +121,692 @@ export type Database = {
           },
         ]
       }
+      faculty_courses: {
+        Row: {
+          academic_year: string
+          assigned_by: string | null
+          assigned_date: string | null
+          course_code: string
+          course_name: string
+          course_type: string
+          created_at: string | null
+          credits: number | null
+          department_id: string | null
+          faculty_id: string
+          hours_per_week: number | null
+          id: string
+          is_active: boolean | null
+          semester: number
+          student_count: number | null
+        }
+        Insert: {
+          academic_year: string
+          assigned_by?: string | null
+          assigned_date?: string | null
+          course_code: string
+          course_name: string
+          course_type: string
+          created_at?: string | null
+          credits?: number | null
+          department_id?: string | null
+          faculty_id: string
+          hours_per_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          semester: number
+          student_count?: number | null
+        }
+        Update: {
+          academic_year?: string
+          assigned_by?: string | null
+          assigned_date?: string | null
+          course_code?: string
+          course_name?: string
+          course_type?: string
+          created_at?: string | null
+          credits?: number | null
+          department_id?: string | null
+          faculty_id?: string
+          hours_per_week?: number | null
+          id?: string
+          is_active?: boolean | null
+          semester?: number
+          student_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_courses_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_courses_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "faculty_courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "department_fee_analytics"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "faculty_courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "faculty_courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "scholarship_summary"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "faculty_courses_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_development: {
+        Row: {
+          certificate_received: boolean | null
+          certificate_url: string | null
+          cost: number | null
+          created_at: string | null
+          duration_hours: number | null
+          end_date: string | null
+          faculty_id: string
+          feedback_comments: string | null
+          feedback_rating: number | null
+          funding_source: string | null
+          id: string
+          location: string | null
+          organizing_body: string | null
+          program_name: string
+          program_type: string
+          skills_gained: string[] | null
+          start_date: string
+        }
+        Insert: {
+          certificate_received?: boolean | null
+          certificate_url?: string | null
+          cost?: number | null
+          created_at?: string | null
+          duration_hours?: number | null
+          end_date?: string | null
+          faculty_id: string
+          feedback_comments?: string | null
+          feedback_rating?: number | null
+          funding_source?: string | null
+          id?: string
+          location?: string | null
+          organizing_body?: string | null
+          program_name: string
+          program_type: string
+          skills_gained?: string[] | null
+          start_date: string
+        }
+        Update: {
+          certificate_received?: boolean | null
+          certificate_url?: string | null
+          cost?: number | null
+          created_at?: string | null
+          duration_hours?: number | null
+          end_date?: string | null
+          faculty_id?: string
+          feedback_comments?: string | null
+          feedback_rating?: number | null
+          funding_source?: string | null
+          id?: string
+          location?: string | null
+          organizing_body?: string | null
+          program_name?: string
+          program_type?: string
+          skills_gained?: string[] | null
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_development_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_evaluations: {
+        Row: {
+          academic_year: string
+          areas_for_improvement: string | null
+          created_at: string | null
+          evaluated_by: string | null
+          evaluation_date: string | null
+          evaluation_type: string
+          faculty_id: string
+          goals_next_year: string | null
+          id: string
+          overall_rating: number | null
+          peer_review_score: number | null
+          research_rating: number | null
+          self_assessment_score: number | null
+          semester: number | null
+          service_rating: number | null
+          status: string | null
+          strengths: string | null
+          student_feedback_score: number | null
+          teaching_rating: number | null
+        }
+        Insert: {
+          academic_year: string
+          areas_for_improvement?: string | null
+          created_at?: string | null
+          evaluated_by?: string | null
+          evaluation_date?: string | null
+          evaluation_type: string
+          faculty_id: string
+          goals_next_year?: string | null
+          id?: string
+          overall_rating?: number | null
+          peer_review_score?: number | null
+          research_rating?: number | null
+          self_assessment_score?: number | null
+          semester?: number | null
+          service_rating?: number | null
+          status?: string | null
+          strengths?: string | null
+          student_feedback_score?: number | null
+          teaching_rating?: number | null
+        }
+        Update: {
+          academic_year?: string
+          areas_for_improvement?: string | null
+          created_at?: string | null
+          evaluated_by?: string | null
+          evaluation_date?: string | null
+          evaluation_type?: string
+          faculty_id?: string
+          goals_next_year?: string | null
+          id?: string
+          overall_rating?: number | null
+          peer_review_score?: number | null
+          research_rating?: number | null
+          self_assessment_score?: number | null
+          semester?: number | null
+          service_rating?: number | null
+          status?: string | null
+          strengths?: string | null
+          student_feedback_score?: number | null
+          teaching_rating?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_evaluations_evaluated_by_fkey"
+            columns: ["evaluated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_evaluations_evaluated_by_fkey"
+            columns: ["evaluated_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "faculty_evaluations_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_experience: {
+        Row: {
+          achievements: string | null
+          created_at: string | null
+          designation: string
+          experience_type: string
+          faculty_id: string
+          from_date: string
+          id: string
+          is_current: boolean | null
+          organization_name: string
+          responsibilities: string | null
+          salary: number | null
+          to_date: string | null
+        }
+        Insert: {
+          achievements?: string | null
+          created_at?: string | null
+          designation: string
+          experience_type: string
+          faculty_id: string
+          from_date: string
+          id?: string
+          is_current?: boolean | null
+          organization_name: string
+          responsibilities?: string | null
+          salary?: number | null
+          to_date?: string | null
+        }
+        Update: {
+          achievements?: string | null
+          created_at?: string | null
+          designation?: string
+          experience_type?: string
+          faculty_id?: string
+          from_date?: string
+          id?: string
+          is_current?: boolean | null
+          organization_name?: string
+          responsibilities?: string | null
+          salary?: number | null
+          to_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_experience_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_leaves: {
+        Row: {
+          applied_date: string | null
+          approval_date: string | null
+          approval_remarks: string | null
+          approved_by: string | null
+          created_at: string | null
+          documents_url: string[] | null
+          faculty_id: string
+          from_date: string
+          id: string
+          leave_type: string
+          reason: string
+          status: string | null
+          substitute_faculty_id: string | null
+          to_date: string
+          total_days: number
+        }
+        Insert: {
+          applied_date?: string | null
+          approval_date?: string | null
+          approval_remarks?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          documents_url?: string[] | null
+          faculty_id: string
+          from_date: string
+          id?: string
+          leave_type: string
+          reason: string
+          status?: string | null
+          substitute_faculty_id?: string | null
+          to_date: string
+          total_days: number
+        }
+        Update: {
+          applied_date?: string | null
+          approval_date?: string | null
+          approval_remarks?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          documents_url?: string[] | null
+          faculty_id?: string
+          from_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string
+          status?: string | null
+          substitute_faculty_id?: string | null
+          to_date?: string
+          total_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_leaves_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_leaves_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "faculty_leaves_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_leaves_substitute_faculty_id_fkey"
+            columns: ["substitute_faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_profiles: {
+        Row: {
+          aadhar_number: string | null
+          bank_account_number: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          blood_group: string | null
+          children_count: number | null
+          confirmation_date: string | null
+          created_at: string | null
+          created_by: string | null
+          current_address: string | null
+          designation: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relation: string | null
+          employee_code: string
+          id: string
+          ifsc_code: string | null
+          is_active: boolean | null
+          joining_date: string
+          marital_status: string | null
+          medical_conditions: string | null
+          pan_number: string | null
+          permanent_address: string | null
+          pf_number: string | null
+          retirement_date: string | null
+          salary_grade: string | null
+          spouse_name: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          aadhar_number?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          blood_group?: string | null
+          children_count?: number | null
+          confirmation_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_address?: string | null
+          designation: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          employee_code: string
+          id?: string
+          ifsc_code?: string | null
+          is_active?: boolean | null
+          joining_date: string
+          marital_status?: string | null
+          medical_conditions?: string | null
+          pan_number?: string | null
+          permanent_address?: string | null
+          pf_number?: string | null
+          retirement_date?: string | null
+          salary_grade?: string | null
+          spouse_name?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          aadhar_number?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          blood_group?: string | null
+          children_count?: number | null
+          confirmation_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_address?: string | null
+          designation?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          employee_code?: string
+          id?: string
+          ifsc_code?: string | null
+          is_active?: boolean | null
+          joining_date?: string
+          marital_status?: string | null
+          medical_conditions?: string | null
+          pan_number?: string | null
+          permanent_address?: string | null
+          pf_number?: string | null
+          retirement_date?: string | null
+          salary_grade?: string | null
+          spouse_name?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_profiles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_profiles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "faculty_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
+      faculty_qualifications: {
+        Row: {
+          certificate_url: string | null
+          created_at: string | null
+          degree_name: string
+          degree_type: string
+          faculty_id: string
+          grade: string | null
+          id: string
+          institution_name: string
+          is_highest: boolean | null
+          percentage: number | null
+          specialization: string | null
+          university_name: string | null
+          year_of_passing: number
+        }
+        Insert: {
+          certificate_url?: string | null
+          created_at?: string | null
+          degree_name: string
+          degree_type: string
+          faculty_id: string
+          grade?: string | null
+          id?: string
+          institution_name: string
+          is_highest?: boolean | null
+          percentage?: number | null
+          specialization?: string | null
+          university_name?: string | null
+          year_of_passing: number
+        }
+        Update: {
+          certificate_url?: string | null
+          created_at?: string | null
+          degree_name?: string
+          degree_type?: string
+          faculty_id?: string
+          grade?: string | null
+          id?: string
+          institution_name?: string
+          is_highest?: boolean | null
+          percentage?: number | null
+          specialization?: string | null
+          university_name?: string | null
+          year_of_passing?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_qualifications_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_research: {
+        Row: {
+          collaborators: string[] | null
+          completion_date: string | null
+          conference_name: string | null
+          created_at: string | null
+          description: string | null
+          doi: string | null
+          faculty_id: string
+          file_url: string | null
+          funding_agency: string | null
+          funding_amount: number | null
+          id: string
+          journal_name: string | null
+          keywords: string[] | null
+          publication_date: string | null
+          research_type: string
+          start_date: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          collaborators?: string[] | null
+          completion_date?: string | null
+          conference_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          doi?: string | null
+          faculty_id: string
+          file_url?: string | null
+          funding_agency?: string | null
+          funding_amount?: number | null
+          id?: string
+          journal_name?: string | null
+          keywords?: string[] | null
+          publication_date?: string | null
+          research_type: string
+          start_date?: string | null
+          status: string
+          title: string
+        }
+        Update: {
+          collaborators?: string[] | null
+          completion_date?: string | null
+          conference_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          doi?: string | null
+          faculty_id?: string
+          file_url?: string | null
+          funding_agency?: string | null
+          funding_amount?: number | null
+          id?: string
+          journal_name?: string | null
+          keywords?: string[] | null
+          publication_date?: string | null
+          research_type?: string
+          start_date?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_research_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_specializations: {
+        Row: {
+          certifications: string[] | null
+          created_at: string | null
+          faculty_id: string
+          id: string
+          proficiency_level: string
+          specialization_area: string
+          years_of_experience: number | null
+        }
+        Insert: {
+          certifications?: string[] | null
+          created_at?: string | null
+          faculty_id: string
+          id?: string
+          proficiency_level: string
+          specialization_area: string
+          years_of_experience?: number | null
+        }
+        Update: {
+          certifications?: string[] | null
+          created_at?: string | null
+          faculty_id?: string
+          id?: string
+          proficiency_level?: string
+          specialization_area?: string
+          years_of_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_specializations_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_configurations: {
         Row: {
           academic_year: string
@@ -1399,6 +2085,21 @@ export type Database = {
           last_updated: string
         }[]
       }
+      get_faculty_with_details: {
+        Args: { p_user_id: string }
+        Returns: {
+          faculty_id: string
+          user_id: string
+          name: string
+          email: string
+          employee_code: string
+          designation: string
+          department_name: string
+          joining_date: string
+          phone: string
+          is_active: boolean
+        }[]
+      }
       get_fee_records_with_filters: {
         Args:
           | {
@@ -1582,7 +2283,13 @@ export type Database = {
         | "UPI"
         | "Scholarship"
       payment_status: "Pending" | "Success" | "Failed" | "Cancelled"
-      user_role: "student" | "hod" | "principal" | "admin" | "chairman"
+      user_role:
+        | "student"
+        | "hod"
+        | "principal"
+        | "admin"
+        | "chairman"
+        | "faculty"
       waiver_status: "Pending" | "Approved" | "Rejected"
     }
     CompositeTypes: {
@@ -1725,7 +2432,14 @@ export const Constants = {
       installment_status: ["Pending", "Paid", "Overdue"],
       payment_method: ["Online", "Cash", "Cheque", "DD", "UPI", "Scholarship"],
       payment_status: ["Pending", "Success", "Failed", "Cancelled"],
-      user_role: ["student", "hod", "principal", "admin", "chairman"],
+      user_role: [
+        "student",
+        "hod",
+        "principal",
+        "admin",
+        "chairman",
+        "faculty",
+      ],
       waiver_status: ["Pending", "Approved", "Rejected"],
     },
   },
