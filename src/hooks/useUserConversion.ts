@@ -8,7 +8,7 @@ export const useUserConversion = () => {
       id: userProfile.id,
       name: userProfile.name,
       email: userProfile.email,
-      role: userProfile.role,
+      role: userProfile.role as 'student' | 'hod' | 'principal' | 'admin' | 'chairman' | 'faculty',
       department_id: userProfile.department_id,
       department_name: userProfile.department_name,
       avatar: userProfile.profile_photo_url || userProfile.avatar || '',

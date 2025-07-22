@@ -117,14 +117,35 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
         return;
       }
 
-      // Step 1: Create user profile - using correct field names
+      // Step 1: Create user invitation first (simulating user creation process)
+      const { data: invitationData, error: invitationError } = await supabase
+        .from('user_invitations')
+        .insert({
+          email: basicInfo.email,
+          role: 'faculty',
+          employee_id: basicInfo.employee_code,
+          invited_by: user.id,
+          is_active: true,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+        })
+        .select()
+        .single();
+
+      if (invitationError) {
+        console.error('Invitation error:', invitationError);
+        // Continue without invitation if it fails
+      }
+
+      // Step 2: Create profile directly (for existing users or immediate creation)
+      const profileId = crypto.randomUUID();
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: profileId,
           name: basicInfo.name,
           email: basicInfo.email,
           phone: basicInfo.phone,
-          role: 'faculty' as const,
+          role: 'faculty',
           department_id: basicInfo.department_id,
           employee_id: basicInfo.employee_code,
           blood_group: basicInfo.blood_group,
@@ -134,13 +155,17 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
         .select()
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        toast.error('Failed to create user profile. This email might already exist.');
+        return;
+      }
 
-      // Step 2: Create faculty profile
+      // Step 3: Create faculty profile
       const { data: facultyData, error: facultyError } = await supabase
         .from('faculty_profiles')
         .insert({
-          user_id: profileData.id,
+          user_id: profileId,
           employee_code: basicInfo.employee_code,
           designation: basicInfo.designation,
           joining_date: basicInfo.joining_date,
@@ -169,7 +194,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
 
       if (facultyError) throw facultyError;
 
-      // Step 3: Add qualification if provided
+      // Step 4: Add qualification if provided
       if (qualification.degree_name && qualification.institution_name) {
         const { error: qualError } = await supabase
           .from('faculty_qualifications')
@@ -189,7 +214,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
         if (qualError) throw qualError;
       }
 
-      // Step 4: Add specialization if provided
+      // Step 5: Add specialization if provided
       if (specialization.specialization_area) {
         const { error: specError } = await supabase
           .from('faculty_specializations')
