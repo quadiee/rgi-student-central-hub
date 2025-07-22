@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -118,14 +117,14 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
         return;
       }
 
-      // Step 1: Create user profile
+      // Step 1: Create user profile - using correct field names
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
           name: basicInfo.name,
           email: basicInfo.email,
           phone: basicInfo.phone,
-          role: 'faculty',
+          role: 'faculty' as const,
           department_id: basicInfo.department_id,
           employee_id: basicInfo.employee_code,
           blood_group: basicInfo.blood_group,

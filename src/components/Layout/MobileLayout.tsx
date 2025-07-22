@@ -10,7 +10,7 @@ interface MobileLayoutProps {
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   return (
     <div className="lg:hidden">
-      <MobileHeader />
+      <MobileHeader onMenuClick={() => {}} activeTab="dashboard" />
       <main className="pt-16 pb-20 px-4">
         {children}
       </main>

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Search, Filter, Eye, Edit, Phone, Mail, Calendar, MapPin } from 'lucide-react';
-import { useMobile } from '../../hooks/use-mobile';
+import { useIsMobile } from '../../hooks/use-mobile';
 
 interface FacultyMember {
   id: string;
@@ -28,7 +28,7 @@ interface FacultyMember {
 
 const FacultyListManagement: React.FC = () => {
   const { user } = useAuth();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [faculty, setFaculty] = useState<FacultyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +52,22 @@ const FacultyListManagement: React.FC = () => {
       });
 
       if (error) throw error;
-      setFaculty(data || []);
+      
+      // Map the returned data to match our FacultyMember interface
+      const mappedData = (data || []).map((item: any) => ({
+        id: item.faculty_id,
+        user_id: item.user_id,
+        name: item.name,
+        email: item.email,
+        employee_code: item.employee_code,
+        designation: item.designation,
+        department_name: item.department_name,
+        joining_date: item.joining_date,
+        phone: item.phone,
+        is_active: item.is_active
+      }));
+      
+      setFaculty(mappedData);
     } catch (error) {
       console.error('Error fetching faculty:', error);
     } finally {

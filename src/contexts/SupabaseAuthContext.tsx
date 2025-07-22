@@ -11,7 +11,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'hod' | 'principal' | 'admin' | 'chairman';
+  role: 'student' | 'hod' | 'principal' | 'admin' | 'chairman' | 'faculty';
   department_id: string;
   department_name?: string;
   avatar: string;

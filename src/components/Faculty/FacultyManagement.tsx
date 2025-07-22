@@ -8,11 +8,11 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp } from 'lucide-react';
-import { useMobile } from '../../hooks/use-mobile';
+import { useIsMobile } from '../../hooks/use-mobile';
 
 const FacultyManagement: React.FC = () => {
   const { user } = useAuth();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
