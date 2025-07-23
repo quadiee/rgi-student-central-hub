@@ -1,25 +1,33 @@
 
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SupabaseAuthProvider } from "./contexts/SupabaseAuthContext";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import AuthCallback from "./pages/AuthCallback";
-import ResetPassword from "./pages/ResetPassword";
-import Students from "./pages/Students";
-import UserManagement from "./pages/UserManagement";
-import Faculty from "./pages/Faculty";
-import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const queryClient = new QueryClient();
+import Index from './pages/Index';
+import Auth from './pages/Auth';
+import AuthCallback from './pages/AuthCallback';
+import ResetPassword from './pages/ResetPassword';
+import NotFound from './pages/NotFound';
+import Students from './pages/Students';
+import Faculty from './pages/Faculty';
+import UserManagement from './pages/UserManagement';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <SupabaseAuthProvider>
-      <TooltipProvider>
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SupabaseAuthProvider>
         <Toaster />
         <BrowserRouter>
           <Routes>
@@ -46,6 +54,30 @@ const App = () => (
               } 
             />
             <Route 
+              path="/students" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
+                  <Students />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/faculty" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
+                  <Faculty />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/user-management" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman']}>
+                  <UserManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/fees" 
               element={
                 <ProtectedRoute>
@@ -56,7 +88,7 @@ const App = () => (
             <Route 
               path="/admin" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <Index />
                 </ProtectedRoute>
               } 
@@ -85,38 +117,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/students" 
-              element={
-                <ProtectedRoute>
-                  <Students />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/user-management" 
-              element={
-                <ProtectedRoute>
-                  <UserManagement />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/faculty" 
-              element={
-                <ProtectedRoute>
-                  <Faculty />
-                </ProtectedRoute>
-              } 
-            />
             
             {/* Catch all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </TooltipProvider>
-    </SupabaseAuthProvider>
-  </QueryClientProvider>
-);
+      </SupabaseAuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
