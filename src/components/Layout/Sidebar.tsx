@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -62,7 +63,9 @@ const Sidebar: React.FC = () => {
   );
 
   console.log('Sidebar - Current user:', user);
+  console.log('Sidebar - User role:', user?.role);
   console.log('Sidebar - Filtered navigation:', filteredNavigation);
+  console.log('Sidebar - Navigation items:', navigationItems);
 
   return (
     <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
