@@ -62,6 +62,9 @@ const Sidebar: React.FC = () => {
     user && item.roles.includes(user.role)
   );
 
+  console.log('Sidebar - Current user:', user);
+  console.log('Sidebar - Filtered navigation:', filteredNavigation);
+
   return (
     <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
       <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
@@ -118,7 +121,7 @@ const Sidebar: React.FC = () => {
                 {user?.name || 'User'}
               </p>
               <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
-                {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} ({user?.role})
               </p>
             </div>
           </div>
