@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Crown, BarChart3, List, PieChart, RefreshCw, Sparkles, TrendingUp, Users, DollarSign, Award, Building2, GraduationCap, UserCheck } from 'lucide-react';
+import { Crown, BarChart3, List, PieChart, RefreshCw, Sparkles, TrendingUp, Users, DollarSign, Award, Building2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Button } from '../ui/button';
 import { useIsMobile } from '../../hooks/use-mobile';
@@ -12,9 +11,6 @@ import { Badge } from '../ui/badge';
 import ExecutiveStatsCard from './ExecutiveStatsCard';
 import StrategicActionCenter from './StrategicActionCenter';
 import ExecutiveAnalyticsPanel from './ExecutiveAnalyticsPanel';
-import ChairmanStudentDesktop from './Chairman/ChairmanStudentDesktop';
-import ChairmanFacultyDesktop from './Chairman/ChairmanFacultyDesktop';
-import ChairmanFeeDesktop from './Chairman/ChairmanFeeDesktop';
 import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
 import { useScholarshipStats } from '../../hooks/useScholarshipStats';
@@ -101,24 +97,6 @@ const ChairmanDashboard: React.FC = () => {
       label: isMobile ? 'Overview' : 'Executive Overview',
       icon: Crown,
       description: 'Strategic institutional insights'
-    },
-    {
-      id: 'student-management',
-      label: isMobile ? 'Students' : 'Student Management',
-      icon: GraduationCap,
-      description: 'Student affairs and analytics'
-    },
-    {
-      id: 'faculty-management',
-      label: isMobile ? 'Faculty' : 'Faculty Management',
-      icon: UserCheck,
-      description: 'Faculty oversight and development'
-    },
-    {
-      id: 'fee-management',
-      label: isMobile ? 'Fees' : 'Financial Management',
-      icon: DollarSign,
-      description: 'Financial oversight and analytics'
     },
     {
       id: 'analytics-dashboard',
@@ -214,11 +192,11 @@ const ChairmanDashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Enhanced Tabs with Responsive Layout */}
+      {/* Enhanced Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className={`
-          grid w-full bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 shadow-inner overflow-x-auto
-          ${isMobile ? 'grid-cols-2 gap-1 h-auto' : 'grid-cols-8 h-14'}
+          grid w-full bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 shadow-inner
+          ${isMobile ? 'grid-cols-2 gap-1 h-auto' : 'grid-cols-5 h-14'}
         `}>
           {tabs.map(tab => (
             <TabsTrigger 
@@ -255,18 +233,6 @@ const ChairmanDashboard: React.FC = () => {
               <StrategicActionCenter />
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="student-management" className="space-y-6 animate-fade-in">
-          <ChairmanStudentDesktop />
-        </TabsContent>
-
-        <TabsContent value="faculty-management" className="space-y-6 animate-fade-in">
-          <ChairmanFacultyDesktop />
-        </TabsContent>
-
-        <TabsContent value="fee-management" className="space-y-6 animate-fade-in">
-          <ChairmanFeeDesktop />
         </TabsContent>
 
         <TabsContent value="analytics-dashboard" className="space-y-6 animate-fade-in">
