@@ -37,9 +37,9 @@ const SmartBottomNav: React.FC<SmartBottomNavProps> = ({ currentRoute }) => {
       case 'chairman':
         return [
           ...baseItems,
+          { title: 'Students', href: '/students', icon: GraduationCap, roles: ['chairman'] },
           { title: 'Faculty', href: '/faculty', icon: Users, roles: ['chairman'] },
-          { title: 'Reports', href: '/reports', icon: BarChart3, roles: ['chairman'] },
-          { title: 'Settings', href: '/settings', icon: Settings, roles: ['chairman'] }
+          { title: 'Fees', href: '/fees', icon: CreditCard, roles: ['chairman'] }
         ];
 
       case 'admin':
@@ -86,7 +86,7 @@ const SmartBottomNav: React.FC<SmartBottomNavProps> = ({ currentRoute }) => {
 
   const navItems = getRoleNavItems().filter(item => 
     user && item.roles.includes(user.role)
-  ).slice(0, 5);
+  ).slice(0, 4); // Limit to 4 items for chairman
 
   const getRoleThemeColor = () => {
     switch (user?.role) {
@@ -109,7 +109,7 @@ const SmartBottomNav: React.FC<SmartBottomNavProps> = ({ currentRoute }) => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-border shadow-lg z-40">
-      <div className="grid grid-cols-5 h-16">
+      <div className={`grid grid-cols-${navItems.length} h-16`}>
         {navItems.map((item) => {
           const isActive = currentRoute === item.href || 
                          (item.href === '/dashboard' && currentRoute === '/');
@@ -134,7 +134,12 @@ const SmartBottomNav: React.FC<SmartBottomNavProps> = ({ currentRoute }) => {
                 "w-5 h-5 mb-1 transition-transform duration-200",
                 isActive ? "animate-bounce" : ""
               )} />
-              <span className="truncate leading-tight">{item.title}</span>
+              <span className="truncate leading-tight">
+                {item.title}
+                {user?.role === 'chairman' && item.title !== 'Dashboard' && (
+                  <span className="text-xs opacity-75 block">View</span>
+                )}
+              </span>
               
               {/* Ripple effect */}
               {isActive && (

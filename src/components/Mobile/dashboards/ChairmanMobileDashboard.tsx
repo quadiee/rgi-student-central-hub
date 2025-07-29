@@ -14,46 +14,32 @@ import {
   Building,
   Award,
   Clock,
-  AlertCircle
+  Eye
 } from 'lucide-react';
 import { useFeeTypeAnalytics } from '../../../hooks/useFeeTypeAnalytics';
+import { useInstitutionalStats } from '../../../hooks/useInstitutionalStats';
 import { formatCurrency } from '../../../utils/feeValidation';
 
 const ChairmanMobileDashboard: React.FC = () => {
   const { user } = useAuth();
   const { analytics, loading, getTotalStats } = useFeeTypeAnalytics();
-  const [realTimeStats, setRealTimeStats] = useState({
-    totalStudents: 0,
-    totalRevenue: 0,
-    academicScore: 8.7
-  });
-
+  const { stats: institutionalStats, loading: statsLoading } = useInstitutionalStats();
+  
   const totalStats = getTotalStats();
-
-  useEffect(() => {
-    // Update stats when analytics data is loaded
-    if (!loading && analytics.length > 0) {
-      setRealTimeStats(prev => ({
-        ...prev,
-        totalStudents: totalStats.totalStudents || 0,
-        totalRevenue: totalStats.totalCollected || 0
-      }));
-    }
-  }, [analytics, loading, totalStats]);
 
   const executiveStats = [
     {
       title: 'Total Students',
-      value: realTimeStats.totalStudents.toLocaleString(),
-      change: '+142 this year',
+      value: statsLoading ? '...' : institutionalStats.totalStudents.toLocaleString(),
+      change: `${institutionalStats.activeStudents} active`,
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
       title: 'Faculty Strength',
-      value: '186',
-      change: '+12 recruited',
+      value: statsLoading ? '...' : institutionalStats.totalFaculty.toLocaleString(),
+      change: `${institutionalStats.activeFaculty} active`,
       icon: Users,
       color: 'text-green-600',
       bgColor: 'bg-green-50'
@@ -67,16 +53,16 @@ const ChairmanMobileDashboard: React.FC = () => {
       bgColor: 'bg-purple-50'
     },
     {
-      title: 'Academic Score',
-      value: `${realTimeStats.academicScore}/10`,
-      change: '+0.3 this sem',
-      icon: Award,
+      title: 'Departments',
+      value: statsLoading ? '...' : institutionalStats.totalDepartments.toLocaleString(),
+      change: 'All active',
+      icon: Building,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50'
     }
   ];
 
-  if (loading) {
+  if (loading || statsLoading) {
     return (
       <div className="p-4 space-y-4">
         {[1, 2, 3, 4].map((i) => (
@@ -94,6 +80,10 @@ const ChairmanMobileDashboard: React.FC = () => {
           Chairman's Dashboard
         </h2>
         <p className="text-gray-600 mt-2">Strategic overview of institutional performance</p>
+        <div className="mt-2 inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+          <Eye className="w-4 h-4" />
+          <span>View-only access</span>
+        </div>
       </div>
 
       {/* Executive Stats */}
@@ -175,28 +165,28 @@ const ChairmanMobileDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
+      {/* Executive Actions - View Only */}
       <Card>
         <CardHeader>
-          <CardTitle>Executive Actions</CardTitle>
+          <CardTitle>Executive Overview</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-purple-50 hover:bg-purple-100 border-purple-200">
               <BarChart3 className="w-5 h-5 mb-1 text-purple-600" />
-              <span className="text-xs">Analytics</span>
+              <span className="text-xs">View Analytics</span>
             </Button>
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 border-blue-200">
               <Users className="w-5 h-5 mb-1 text-blue-600" />
-              <span className="text-xs">Faculty Review</span>
+              <span className="text-xs">View Faculty</span>
             </Button>
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 border-green-200">
               <DollarSign className="w-5 h-5 mb-1 text-green-600" />
-              <span className="text-xs">Finance</span>
+              <span className="text-xs">View Finances</span>
             </Button>
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-orange-50 hover:bg-orange-100 border-orange-200">
-              <AlertCircle className="w-5 h-5 mb-1 text-orange-600" />
-              <span className="text-xs">Issues</span>
+              <Award className="w-5 h-5 mb-1 text-orange-600" />
+              <span className="text-xs">View Students</span>
             </Button>
           </div>
         </CardContent>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -28,7 +29,8 @@ import {
   Building2,
   Shield,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Eye
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
@@ -71,13 +73,13 @@ const AppSidebar: React.FC = () => {
       title: 'Attendance',
       url: '/attendance',
       icon: Calendar,
-      roles: ['hod', 'principal', 'admin', 'chairman']
+      roles: ['hod', 'principal', 'admin']
     },
     {
       title: 'Exams',
       url: '/exams',
       icon: FileText,
-      roles: ['hod', 'principal', 'admin', 'chairman']
+      roles: ['hod', 'principal', 'admin']
     },
     {
       title: 'Fee Management',
@@ -89,20 +91,20 @@ const AppSidebar: React.FC = () => {
       title: 'Reports',
       url: '/reports',
       icon: BarChart3,
-      roles: ['hod', 'principal', 'admin', 'chairman']
+      roles: ['hod', 'principal', 'admin']
     },
     {
       title: 'Admin Panel',
       url: '/admin',
       icon: Shield,
-      roles: ['principal', 'admin', 'chairman'],
+      roles: ['principal', 'admin'],
       badge: 'Admin'
     },
     {
       title: 'User Management',
       url: '/user-management',
       icon: UserCog,
-      roles: ['principal', 'admin', 'chairman']
+      roles: ['principal', 'admin']
     }
   ];
 
@@ -136,7 +138,7 @@ const AppSidebar: React.FC = () => {
                 {INSTITUTION.shortName}
               </span>
               <span className="text-xs text-muted-foreground">
-                Student Portal
+                {user?.role === 'chairman' ? 'Executive Portal' : 'Student Portal'}
               </span>
             </div>
           )}
@@ -147,6 +149,12 @@ const AppSidebar: React.FC = () => {
         <SidebarGroup>
           <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
             Navigation
+            {user?.role === 'chairman' && !collapsed && (
+              <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Eye className="w-3 h-3" />
+                View Only
+              </span>
+            )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -170,6 +178,11 @@ const AppSidebar: React.FC = () => {
                           {item.badge && (
                             <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full">
                               {item.badge}
+                            </span>
+                          )}
+                          {user?.role === 'chairman' && ['Students', 'Faculty', 'Fee Management'].includes(item.title) && (
+                            <span className="text-xs text-muted-foreground">
+                              View
                             </span>
                           )}
                           {isActive(item.url) && (
@@ -200,6 +213,7 @@ const AppSidebar: React.FC = () => {
               </p>
               <p className="text-xs text-muted-foreground capitalize">
                 {user?.role}
+                {user?.role === 'chairman' && ' (View Only)'}
               </p>
             </div>
           )}
