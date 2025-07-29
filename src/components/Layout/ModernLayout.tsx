@@ -2,6 +2,7 @@
 import React from 'react';
 import { SidebarProvider, SidebarTrigger } from '../ui/sidebar';
 import AppSidebar from './AppSidebar';
+import EnhancedMobileLayout from '../Mobile/EnhancedMobileLayout';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
 import { Bell, Search, Menu } from 'lucide-react';
@@ -24,6 +25,11 @@ interface ModernLayoutProps {
 const ModernLayout: React.FC<ModernLayoutProps> = ({ children }) => {
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
+
+  // Use EnhancedMobileLayout for mobile devices
+  if (isMobile) {
+    return <EnhancedMobileLayout>{children}</EnhancedMobileLayout>;
+  }
 
   const handleSignOut = async () => {
     try {

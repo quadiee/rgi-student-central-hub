@@ -228,22 +228,19 @@ const MobileFeeManagementHub: React.FC = () => {
     );
   }
 
-  // Enhanced Mobile-optimized version
+  // Mobile-optimized version - removed duplicate header since EnhancedMobileLayout provides it
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Enhanced Mobile Header */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-200 px-4 py-3 shadow-sm">
+      {/* Tab Selector and Refresh Button */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-lg border-b border-gray-200 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 truncate flex items-center">
-              {currentTab?.icon && <currentTab.icon className={`w-5 h-5 mr-2 ${currentTab.color}`} />}
+            <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              {currentTab?.icon && <currentTab.icon className={`w-4 h-4 mr-2 ${currentTab.color}`} />}
               {currentTab?.label || 'Fee Management'}
-            </h1>
+            </h3>
             <p className="text-xs text-gray-500 truncate">
-              {user?.role === 'chairman' 
-                ? 'Chairman Dashboard • View Only' 
-                : currentTab?.description || 'Fee Management Hub'
-              }
+              {currentTab?.description || 'Fee Management Hub'}
             </p>
           </div>
           
@@ -258,12 +255,12 @@ const MobileFeeManagementHub: React.FC = () => {
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
             
-            {/* Enhanced Mobile Tab Selector */}
+            {/* Mobile Tab Selector */}
             <Sheet open={showTabMenu} onOpenChange={setShowTabMenu}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-2">
+                <Button variant="outline" size="sm">
                   <Menu className="w-4 h-4 mr-2" />
-                  Menu
+                  Sections
                 </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="max-h-[60vh] pb-safe">
@@ -314,14 +311,14 @@ const MobileFeeManagementHub: React.FC = () => {
         </div>
       </div>
 
-      {/* Enhanced Mobile Content */}
+      {/* Mobile Content */}
       <div className="flex-1 overflow-auto px-4 py-4">
         <div className="animate-fade-in">
           {renderTabContent()}
         </div>
       </div>
 
-      {/* Enhanced Chairman Role Indicator */}
+      {/* Chairman Role Indicator */}
       {user?.role === 'chairman' && (
         <div className="sticky bottom-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-center shadow-lg">
           <div className="flex items-center justify-center space-x-2">

@@ -4,81 +4,64 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { 
   Search, 
   Filter, 
   Users, 
+  GraduationCap,
   Award,
-  Clock,
-  BookOpen,
   Download,
   Eye,
-  GraduationCap,
-  Calendar
+  Calendar,
+  MapPin,
+  BookOpen,
+  TrendingUp,
+  Star
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
-import { useFacultyAttendance } from '../../hooks/useFacultyAttendance';
-import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
+import { useFacultyStats } from '../../hooks/useFacultyStats';
 
 interface ChairmanFacultyManagementProps {
   className?: string;
 }
 
 const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ className }) => {
+  const { stats, loading, error, fetchStats } = useFacultyStats();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  
-  const { enhancedFacultyList, loading, fetchEnhancedFacultyList } = useFacultyAttendance();
-  const { stats: institutionalStats } = useInstitutionalStats();
+  const [selectedExperience, setSelectedExperience] = useState('all');
 
-  useEffect(() => {
-    fetchEnhancedFacultyList();
-  }, []);
-
-  const filteredFaculty = enhancedFacultyList.filter(faculty => {
+  const filteredFaculty = stats.faculty.filter(faculty => {
     const matchesSearch = 
       faculty.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      faculty.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      faculty.department_name.toLowerCase().includes(searchTerm.toLowerCase());
+      faculty.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      faculty.department_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (faculty.designation && faculty.designation.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesDepartment = selectedDepartment === 'all' || 
-      faculty.department_name === selectedDepartment;
+      faculty.department_id === selectedDepartment;
+    
+    const matchesExperience = selectedExperience === 'all' || 
+      (selectedExperience === 'senior' && (faculty.experience || 0) >= 10) ||
+      (selectedExperience === 'mid' && (faculty.experience || 0) >= 5 && (faculty.experience || 0) < 10) ||
+      (selectedExperience === 'junior' && (faculty.experience || 0) < 5);
 
-    return matchesSearch && matchesDepartment;
+    return matchesSearch && matchesDepartment && matchesExperience;
   });
 
-  // Group faculty by department for statistics
-  const facultyByDepartment = enhancedFacultyList.reduce((acc, faculty) => {
-    const dept = faculty.department_name;
-    if (!acc[dept]) {
-      acc[dept] = {
-        total: 0,
-        active: 0,
-        avgExperience: 0,
-        totalExperience: 0
-      };
-    }
-    acc[dept].total += 1;
-    if (faculty.is_active) acc[dept].active += 1;
-    if (faculty.years_of_experience) {
-      acc[dept].totalExperience += faculty.years_of_experience;
-    }
-    return acc;
-  }, {} as Record<string, any>);
+  const getExperienceLabel = (experience: number) => {
+    if (experience >= 10) return 'Senior';
+    if (experience >= 5) return 'Mid-level';
+    return 'Junior';
+  };
 
-  // Calculate average experience for each department
-  Object.keys(facultyByDepartment).forEach(dept => {
-    const deptData = facultyByDepartment[dept];
-    deptData.avgExperience = deptData.total > 0 ? 
-      (deptData.totalExperience / deptData.total).toFixed(1) : 0;
-  });
-
-  const getExperienceLevel = (years: number) => {
-    if (years >= 15) return { label: 'Senior', color: 'text-purple-600 bg-purple-100' };
-    if (years >= 8) return { label: 'Experienced', color: 'text-blue-600 bg-blue-100' };
-    if (years >= 3) return { label: 'Mid-level', color: 'text-green-600 bg-green-100' };
-    return { label: 'Junior', color: 'text-orange-600 bg-orange-100' };
+  const getPerformanceColor = (rate: number) => {
+    if (rate >= 95) return 'text-green-600';
+    if (rate >= 85) return 'text-blue-600';
+    if (rate >= 75) return 'text-orange-600';
+    return 'text-red-600';
   };
 
   if (loading) {
@@ -87,6 +70,21 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={cn("p-4", className)}>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">{error}</p>
+            <Button onClick={fetchStats} className="mt-4">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -114,30 +112,30 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Faculty</p>
-                <p className="text-2xl font-bold text-blue-600">{institutionalStats.totalFaculty}</p>
-                <p className="text-xs text-gray-500">{institutionalStats.activeFaculty} active</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.totalFaculty}</p>
+                <p className="text-xs text-gray-500">{stats.activeFaculty} active</p>
               </div>
               <Users className="w-8 h-8 text-blue-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Departments</p>
-                <p className="text-2xl font-bold text-green-600">{institutionalStats.totalDepartments}</p>
-                <p className="text-xs text-gray-500">Active departments</p>
+                <p className="text-sm font-medium text-gray-600">Avg Experience</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.avgExperience.toFixed(1)}</p>
+                <p className="text-xs text-gray-500">Years</p>
               </div>
-              <Clock className="w-8 h-8 text-green-600 opacity-80" />
+              <Award className="w-8 h-8 text-purple-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Department-wise Faculty */}
-      {Object.keys(facultyByDepartment).length > 0 && (
+      {Object.keys(stats.departmentStats).length > 0 && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -147,21 +145,21 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(facultyByDepartment).map(([dept, data]: [string, any]) => (
-                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+              {Object.entries(stats.departmentStats).map(([dept, data]: [string, any]) => (
+                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">{dept.substring(0, 3)}</span>
+                    <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">{data.code}</span>
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{dept}</p>
                       <p className="text-sm text-gray-600">
-                        {data.active} active • {data.avgExperience}y avg exp
+                        {data.active} active • {data.avgExperience.toFixed(1)}y avg exp
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-blue-600">{data.total}</p>
+                    <p className="text-lg font-bold text-purple-600">{data.total}</p>
                     <p className="text-xs text-gray-500">Faculty</p>
                   </div>
                 </div>
@@ -171,7 +169,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
         </Card>
       )}
 
-      {/* Search and Filter */}
+      {/* Search and Filters */}
       <div className="space-y-3">
         <div className="flex space-x-3">
           <div className="flex-1 relative">
@@ -187,6 +185,34 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
             <Filter className="w-4 h-4" />
           </Button>
         </div>
+
+        <div className="flex space-x-2">
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {Object.entries(stats.departmentStats).map(([dept, data]: [string, any]) => (
+                <SelectItem key={dept} value={dept}>
+                  {data.code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedExperience} onValueChange={setSelectedExperience}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Experience" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="senior">Senior (10+ yrs)</SelectItem>
+              <SelectItem value="mid">Mid-level (5-9 yrs)</SelectItem>
+              <SelectItem value="junior">Junior (Less than 5 yrs)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Faculty List */}
@@ -200,85 +226,88 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
             </CardContent>
           </Card>
         ) : (
-          filteredFaculty.map((faculty) => {
-            const expLevel = getExperienceLevel(faculty.years_of_experience || 0);
-            return (
-              <MobileDataCard
-                key={faculty.faculty_id}
-                title={faculty.name}
-                subtitle={`${faculty.employee_code} • ${faculty.department_name} • ${faculty.designation}`}
-                status={{
-                  label: faculty.is_active ? 'Active' : 'Inactive',
-                  variant: faculty.is_active ? 'default' : 'secondary'
-                }}
-                data={[
-                  {
-                    label: 'Experience',
-                    value: faculty.years_of_experience ? `${faculty.years_of_experience} years` : 'Not specified',
-                    icon: Calendar,
-                    color: 'text-blue-600'
-                  },
-                  {
-                    label: 'Level',
-                    value: expLevel.label,
-                    icon: GraduationCap,
-                    color: 'text-purple-600'
-                  },
-                  {
-                    label: 'Attendance',
-                    value: `${faculty.attendance_percentage || 0}%`,
-                    icon: Clock,
-                    color: (faculty.attendance_percentage || 0) >= 90 ? 'text-green-600' : 'text-orange-600'
-                  },
-                  {
-                    label: 'Department',
-                    value: faculty.department_code || 'N/A',
-                    icon: BookOpen,
-                    color: 'text-emerald-600'
-                  }
-                ]}
-                actions={[
-                  {
-                    label: 'View Profile',
-                    icon: Eye,
-                    onClick: () => console.log('View faculty:', faculty.faculty_id)
-                  }
-                ]}
-                onClick={() => console.log('Faculty clicked:', faculty.faculty_id)}
-                className="hover:shadow-md transition-shadow"
-              />
-            );
-          })
+          filteredFaculty.map((faculty) => (
+            <MobileDataCard
+              key={faculty.id}
+              title={faculty.name}
+              subtitle={`${faculty.designation || 'Faculty'} • ${faculty.department_code} • ${getExperienceLabel(faculty.experience || 0)}`}
+              status={{
+                label: faculty.is_active ? 'Active' : 'Inactive',
+                variant: faculty.is_active ? 'default' : 'secondary'
+              }}
+              data={[
+                {
+                  label: 'Experience',
+                  value: `${faculty.experience || 0} years`,
+                  icon: Calendar,
+                  color: 'text-blue-600'
+                },
+                {
+                  label: 'Department',
+                  value: faculty.department_code,
+                  icon: MapPin,
+                  color: 'text-purple-600'
+                },
+                {
+                  label: 'Attendance',
+                  value: `${(faculty.attendance_rate || 0).toFixed(1)}%`,
+                  icon: TrendingUp,
+                  color: getPerformanceColor(faculty.attendance_rate || 0)
+                },
+                {
+                  label: 'Research',
+                  value: `${faculty.research_papers || 0} papers`,
+                  icon: BookOpen,
+                  color: 'text-green-600'
+                }
+              ]}
+              actions={[
+                {
+                  label: 'View Profile',
+                  icon: Eye,
+                  onClick: () => console.log('View faculty:', faculty.id)
+                }
+              ]}
+              onClick={() => console.log('Faculty clicked:', faculty.id)}
+              className="hover:shadow-md transition-shadow"
+            />
+          ))
         )}
       </div>
 
-      {/* Performance Insights */}
-      {enhancedFacultyList.length > 0 && (
+      {/* Faculty Insights */}
+      {stats.faculty.length > 0 && (
         <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Award className="w-5 h-5 text-emerald-600" />
+              <Star className="w-5 h-5 text-emerald-600" />
               <span>Faculty Insights</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
-                <span className="text-sm font-medium text-gray-700">Senior Faculty (15+ years)</span>
+                <span className="text-sm font-medium text-gray-700">Senior Faculty (10+ years)</span>
                 <span className="text-lg font-bold text-green-600">
-                  {enhancedFacultyList.filter(f => (f.years_of_experience || 0) >= 15).length}
+                  {stats.seniorFaculty}
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
-                <span className="text-sm font-medium text-gray-700">Experienced Faculty (8+ years)</span>
+                <span className="text-sm font-medium text-gray-700">Excellent Performers (95%+ attendance)</span>
                 <span className="text-lg font-bold text-purple-600">
-                  {enhancedFacultyList.filter(f => (f.years_of_experience || 0) >= 8).length}
+                  {stats.excellentPerformers}
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
-                <span className="text-sm font-medium text-gray-700">Active Faculty</span>
+                <span className="text-sm font-medium text-gray-700">Top Researchers (5+ papers)</span>
                 <span className="text-lg font-bold text-blue-600">
-                  {enhancedFacultyList.filter(f => f.is_active).length}
+                  {stats.topPerformers}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">Average Attendance</span>
+                <span className="text-lg font-bold text-orange-600">
+                  {stats.avgAttendance.toFixed(1)}%
                 </span>
               </div>
             </div>

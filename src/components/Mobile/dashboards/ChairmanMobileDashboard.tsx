@@ -68,7 +68,7 @@ const ChairmanMobileDashboard: React.FC = () => {
 
   if (loading || statsLoading || scholarshipLoading) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-32 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg animate-pulse" />
         ))}
@@ -77,8 +77,8 @@ const ChairmanMobileDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Welcome Section - Removed View-only access indicator */}
+    <div className="space-y-6">
+      {/* Welcome Section */}
       <div className="text-center py-6">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           Chairman's Dashboard
@@ -89,7 +89,7 @@ const ChairmanMobileDashboard: React.FC = () => {
       {/* Executive Stats */}
       <QuickStatsCards stats={executiveStats} />
 
-      {/* Fee Collection Overview - Now First */}
+      {/* Fee Collection Overview */}
       <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -177,7 +177,7 @@ const ChairmanMobileDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Scholarship Overview - Now Second */}
+      {/* Scholarship Overview */}
       <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
