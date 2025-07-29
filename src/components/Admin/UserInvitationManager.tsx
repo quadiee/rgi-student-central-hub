@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, ExternalLink, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -72,11 +73,13 @@ const UserInvitationManager: React.FC = () => {
       const { data, error } = await supabase
         .from('user_invitations')
         .select(`
-          *,
-          departments (
-            name,
-            code
-          )
+          id,
+          email,
+          role,
+          department_id,
+          invited_at,
+          email_sent,
+          email_sent_at
         `)
         .is('used_at', null)
         .eq('is_active', true)
@@ -92,18 +95,29 @@ const UserInvitationManager: React.FC = () => {
         return;
       }
 
-      const invites = (data || []).map(invite => ({
-        id: invite.id,
-        email: invite.email,
-        invited_at: invite.invited_at || new Date().toISOString(),
-        role: invite.role || "",
-        department_id: invite.department_id || "",
-        department_name: invite.departments?.name || "",
-        email_sent: invite.email_sent || false,
-        email_sent_at: invite.email_sent_at || null
-      }));
+      // Get department names for each invite
+      const invitesWithDepartments = await Promise.all(
+        (data || []).map(async (invite) => {
+          if (invite.department_id) {
+            const { data: deptData } = await supabase
+              .from('departments')
+              .select('name, code')
+              .eq('id', invite.department_id)
+              .single();
+            
+            return {
+              ...invite,
+              department_name: deptData?.name || 'Unknown Department'
+            };
+          }
+          return {
+            ...invite,
+            department_name: 'Unknown Department'
+          };
+        })
+      );
       
-      setPendingInvites(invites);
+      setPendingInvites(invitesWithDepartments);
     } catch (error) {
       console.error('Error in loadPendingInvites:', error);
       toast({ 

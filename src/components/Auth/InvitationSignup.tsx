@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -129,11 +130,16 @@ const InvitationSignup: React.FC = () => {
       const { data, error } = await supabase
         .from('user_invitations')
         .select(`
-          *,
-          departments (
-            name,
-            code
-          )
+          id,
+          email,
+          role,
+          department_id,
+          roll_number,
+          employee_id,
+          token,
+          is_active,
+          expires_at,
+          used_at
         `)
         .eq('email', email)
         .eq('is_active', true)
@@ -158,13 +164,20 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
+      // Get department details
+      const { data: deptData } = await supabase
+        .from('departments')
+        .select('name, code')
+        .eq('id', data.department_id)
+        .single();
+
       setInvitationData({
         id: data.id,
         email: data.email,
         role: data.role,
         department_id: data.department_id,
-        department_name: data.departments?.name,
-        department_code: data.departments?.code,
+        department_name: deptData?.name,
+        department_code: deptData?.code,
         roll_number: data.roll_number,
         employee_id: data.employee_id,
         is_valid: true,

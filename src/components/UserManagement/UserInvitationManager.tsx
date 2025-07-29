@@ -39,37 +39,61 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
       const { data, error } = await supabase
         .from('user_invitations')
         .select(`
-          *,
-          departments (
-            name,
-            code
-          )
+          id,
+          email,
+          role,
+          department_id,
+          roll_number,
+          employee_id,
+          is_active,
+          expires_at,
+          used_at,
+          invited_at,
+          email_sent,
+          email_sent_at,
+          token
         `)
         .order('invited_at', { ascending: false });
 
       if (error) throw error;
       
+      // Get department information for each invitation
+      const invitationsWithDepts = await Promise.all(
+        (data || []).map(async (invitation) => {
+          if (invitation.department_id) {
+            const { data: deptData } = await supabase
+              .from('departments')
+              .select('name, code')
+              .eq('id', invitation.department_id)
+              .single();
+            
+            return {
+              ...invitation,
+              department_name: deptData?.name || 'Unknown Department',
+              department_code: deptData?.code || 'UNK'
+            };
+          }
+          return {
+            ...invitation,
+            department_name: 'Unknown Department',
+            department_code: 'UNK'
+          };
+        })
+      );
+
       // Remove duplicates based on email and keep the most recent one
-      const uniqueInvitations = data?.reduce((acc: any[], current) => {
+      const uniqueInvitations = invitationsWithDepts.reduce((acc: Invitation[], current) => {
         const existingIndex = acc.findIndex(inv => inv.email === current.email);
         if (existingIndex === -1) {
-          acc.push({
-            ...current,
-            department_name: current.departments?.name,
-            department_code: current.departments?.code
-          });
+          acc.push(current);
         } else {
           // Keep the more recent invitation
           if (new Date(current.invited_at) > new Date(acc[existingIndex].invited_at)) {
-            acc[existingIndex] = {
-              ...current,
-              department_name: current.departments?.name,
-              department_code: current.departments?.code
-            };
+            acc[existingIndex] = current;
           }
         }
         return acc;
-      }, []) || [];
+      }, []);
 
       setInvitations(uniqueInvitations);
     } catch (error) {
