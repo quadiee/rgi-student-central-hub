@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Send, Copy, RefreshCw, Eye, Trash2, Mail } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -60,23 +61,30 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
       // Get department information for each invitation
       const invitationsWithDepts = await Promise.all(
         (data || []).map(async (invitation) => {
+          let departmentName = 'Unknown Department';
+          let departmentCode = 'UNK';
+          
           if (invitation.department_id) {
-            const { data: deptData } = await supabase
-              .from('departments')
-              .select('name, code')
-              .eq('id', invitation.department_id)
-              .single();
-            
-            return {
-              ...invitation,
-              department_name: deptData?.name || 'Unknown Department',
-              department_code: deptData?.code || 'UNK'
-            };
+            try {
+              const { data: deptData } = await supabase
+                .from('departments')
+                .select('name, code')
+                .eq('id', invitation.department_id)
+                .single();
+              
+              if (deptData) {
+                departmentName = deptData.name;
+                departmentCode = deptData.code;
+              }
+            } catch (error) {
+              console.error('Error fetching department:', error);
+            }
           }
+          
           return {
             ...invitation,
-            department_name: 'Unknown Department',
-            department_code: 'UNK'
+            department_name: departmentName,
+            department_code: departmentCode
           };
         })
       );

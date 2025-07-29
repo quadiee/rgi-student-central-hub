@@ -98,21 +98,27 @@ const UserInvitationManager: React.FC = () => {
       // Get department names for each invite
       const invitesWithDepartments = await Promise.all(
         (data || []).map(async (invite) => {
+          let departmentName = 'Unknown Department';
+          
           if (invite.department_id) {
-            const { data: deptData } = await supabase
-              .from('departments')
-              .select('name, code')
-              .eq('id', invite.department_id)
-              .single();
-            
-            return {
-              ...invite,
-              department_name: deptData?.name || 'Unknown Department'
-            };
+            try {
+              const { data: deptData } = await supabase
+                .from('departments')
+                .select('name, code')
+                .eq('id', invite.department_id)
+                .single();
+              
+              if (deptData) {
+                departmentName = deptData.name;
+              }
+            } catch (error) {
+              console.error('Error fetching department:', error);
+            }
           }
+          
           return {
             ...invite,
-            department_name: 'Unknown Department'
+            department_name: departmentName
           };
         })
       );

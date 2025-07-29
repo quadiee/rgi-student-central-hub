@@ -97,19 +97,33 @@ const InvitationSignup: React.FC = () => {
       }
 
       // Get department details using department_id
-      const { data: deptData } = await supabase
-        .from('departments')
-        .select('name, code')
-        .eq('id', invitation.department_id)
-        .single();
+      let departmentName = 'Unknown Department';
+      let departmentCode = 'UNK';
+      
+      if (invitation.department_id) {
+        try {
+          const { data: deptData } = await supabase
+            .from('departments')
+            .select('name, code')
+            .eq('id', invitation.department_id)
+            .single();
+
+          if (deptData) {
+            departmentName = deptData.name;
+            departmentCode = deptData.code;
+          }
+        } catch (error) {
+          console.error('Error fetching department:', error);
+        }
+      }
 
       setInvitationData({
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
         department_id: invitation.department_id,
-        department_name: deptData?.name,
-        department_code: deptData?.code,
+        department_name: departmentName,
+        department_code: departmentCode,
         roll_number: invitation.roll_number,
         employee_id: invitation.employee_id,
         is_valid: true,
@@ -165,19 +179,33 @@ const InvitationSignup: React.FC = () => {
       }
 
       // Get department details
-      const { data: deptData } = await supabase
-        .from('departments')
-        .select('name, code')
-        .eq('id', data.department_id)
-        .single();
+      let departmentName = 'Unknown Department';
+      let departmentCode = 'UNK';
+      
+      if (data.department_id) {
+        try {
+          const { data: deptData } = await supabase
+            .from('departments')
+            .select('name, code')
+            .eq('id', data.department_id)
+            .single();
+
+          if (deptData) {
+            departmentName = deptData.name;
+            departmentCode = deptData.code;
+          }
+        } catch (error) {
+          console.error('Error fetching department:', error);
+        }
+      }
 
       setInvitationData({
         id: data.id,
         email: data.email,
         role: data.role,
         department_id: data.department_id,
-        department_name: deptData?.name,
-        department_code: deptData?.code,
+        department_name: departmentName,
+        department_code: departmentCode,
         roll_number: data.roll_number,
         employee_id: data.employee_id,
         is_valid: true,
