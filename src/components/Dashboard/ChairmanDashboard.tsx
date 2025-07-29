@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, BarChart3, List, PieChart, RefreshCw, Sparkles, TrendingUp, Users, DollarSign, Award, Building2 } from 'lucide-react';
+import { Crown, BarChart3, List, PieChart, RefreshCw, Sparkles, TrendingUp, Users, DollarSign, Award, Building2, GraduationCap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Button } from '../ui/button';
 import { useIsMobile } from '../../hooks/use-mobile';
@@ -11,6 +11,9 @@ import { Badge } from '../ui/badge';
 import ExecutiveStatsCard from './ExecutiveStatsCard';
 import StrategicActionCenter from './StrategicActionCenter';
 import ExecutiveAnalyticsPanel from './ExecutiveAnalyticsPanel';
+import ChairmanStudentDesktop from './Chairman/ChairmanStudentDesktop';
+import ChairmanFacultyDesktop from './Chairman/ChairmanFacultyDesktop';
+import ChairmanFeeDesktop from './Chairman/ChairmanFeeDesktop';
 import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
 import { useScholarshipStats } from '../../hooks/useScholarshipStats';
@@ -36,7 +39,12 @@ const ChairmanDashboard: React.FC = () => {
 
   // Calculate fee collection status
   const feeCollectionRate = totalStats.totalFees > 0 ? (totalStats.totalCollected / totalStats.totalFees) : 0;
-  const feeCollectionStatus: 'excellent' | 'good' = feeCollectionRate > 0.9 ? 'excellent' : 'good';
+  let feeCollectionStatus: 'excellent' | 'good';
+  if (feeCollectionRate > 0.9) {
+    feeCollectionStatus = 'excellent';
+  } else {
+    feeCollectionStatus = 'good';
+  }
 
   // Executive Statistics
   const executiveStats = [
@@ -97,6 +105,24 @@ const ChairmanDashboard: React.FC = () => {
       label: isMobile ? 'Overview' : 'Executive Overview',
       icon: Crown,
       description: 'Strategic institutional insights'
+    },
+    {
+      id: 'students-overview',
+      label: isMobile ? 'Students' : 'Student Management',
+      icon: GraduationCap,
+      description: 'Student body analytics and management'
+    },
+    {
+      id: 'faculty-overview',
+      label: isMobile ? 'Faculty' : 'Faculty Management',
+      icon: Users,
+      description: 'Faculty oversight and development'
+    },
+    {
+      id: 'fees-overview',
+      label: isMobile ? 'Finances' : 'Financial Management',
+      icon: DollarSign,
+      description: 'Revenue and fee collection analytics'
     },
     {
       id: 'analytics-dashboard',
@@ -196,9 +222,9 @@ const ChairmanDashboard: React.FC = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className={`
           grid w-full bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 shadow-inner
-          ${isMobile ? 'grid-cols-2 gap-1 h-auto' : 'grid-cols-5 h-14'}
+          ${isMobile ? 'grid-cols-2 gap-1 h-auto' : 'grid-cols-4 h-14'}
         `}>
-          {tabs.map(tab => (
+          {tabs.slice(0, isMobile ? 4 : 8).map(tab => (
             <TabsTrigger 
               key={tab.id} 
               value={tab.id} 
@@ -233,6 +259,18 @@ const ChairmanDashboard: React.FC = () => {
               <StrategicActionCenter />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="students-overview" className="space-y-6 animate-fade-in">
+          <ChairmanStudentDesktop />
+        </TabsContent>
+
+        <TabsContent value="faculty-overview" className="space-y-6 animate-fade-in">
+          <ChairmanFacultyDesktop />
+        </TabsContent>
+
+        <TabsContent value="fees-overview" className="space-y-6 animate-fade-in">
+          <ChairmanFeeDesktop />
         </TabsContent>
 
         <TabsContent value="analytics-dashboard" className="space-y-6 animate-fade-in">
