@@ -40,21 +40,21 @@ const FacultyManagement: React.FC = () => {
       value: '45',
       change: '+3 this month',
       icon: Users,
-      color: 'text-blue-600'
+      color: 'text-primary'
     },
     {
       title: 'Active Courses',
       value: '128',
       change: '+12 this semester',
       icon: BookOpen,
-      color: 'text-green-600'
+      color: 'text-success'
     },
     {
       title: 'On Leave',
       value: '3',
       change: 'Currently',
       icon: Calendar,
-      color: 'text-yellow-600'
+      color: 'text-warning'
     },
     {
       title: 'Research Projects',
@@ -66,11 +66,11 @@ const FacultyManagement: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Faculty Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Faculty Management</h1>
           <p className="text-muted-foreground">
             Comprehensive faculty information and management system
           </p>
@@ -96,14 +96,14 @@ const FacultyManagement: React.FC = () => {
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickStats.map((stat, index) => (
-              <Card key={index}>
+              <Card key={index} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">
                         {stat.title}
                       </p>
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                       <p className="text-xs text-muted-foreground">
                         {stat.change}
                       </p>
@@ -165,7 +165,10 @@ const FacultyManagement: React.FC = () => {
         <TabsContent value="reports">
           <Card>
             <CardHeader>
-              <CardTitle>Faculty Reports</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Faculty Reports
+              </CardTitle>
               <CardDescription>
                 Generate comprehensive faculty reports
               </CardDescription>

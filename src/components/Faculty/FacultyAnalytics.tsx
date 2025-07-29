@@ -12,10 +12,8 @@ import {
   BookOpen, 
   Award, 
   TrendingUp,
-  UserCheck,
   Building,
-  Calendar,
-  FileText
+  BarChart3
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -35,61 +33,34 @@ const FacultyAnalytics: React.FC = () => {
     try {
       setLoading(true);
       
-      // Get faculty count by department
-      const { data: facultyByDept, error: facultyError } = await supabase
-        .from('faculty_profiles')
+      // Get faculty data from profiles table
+      let query = supabase
+        .from('profiles')
         .select(`
           id,
-          designation,
+          name,
+          role,
+          department_id,
           is_active,
-          profiles!user_id (
-            departments:department_id (
-              name,
-              code
-            )
+          created_at,
+          departments:department_id (
+            name,
+            code
           )
         `)
-        .eq('is_active', true);
+        .eq('role', 'faculty');
 
-      if (facultyError) throw facultyError;
+      // Add department filter if user is HOD
+      if (user.role === 'hod' && user.department_id) {
+        query = query.eq('department_id', user.department_id);
+      }
 
-      // Get qualifications data
-      const { data: qualifications, error: qualError } = await supabase
-        .from('faculty_qualifications')
-        .select(`
-          degree_type,
-          is_highest,
-          faculty_profiles!faculty_id (
-            profiles!user_id (
-              departments:department_id (
-                name
-              )
-            )
-          )
-        `);
+      const { data: facultyData, error } = await query;
 
-      if (qualError) throw qualError;
+      if (error) throw error;
 
-      // Get courses data
-      const { data: courses, error: courseError } = await supabase
-        .from('faculty_courses')
-        .select(`
-          course_type,
-          is_active,
-          faculty_profiles!faculty_id (
-            profiles!user_id (
-              departments:department_id (
-                name
-              )
-            )
-          )
-        `)
-        .eq('is_active', true);
-
-      if (courseError) throw courseError;
-
-      // Process data
-      const processedAnalytics = processAnalyticsData(facultyByDept || [], qualifications || [], courses || []);
+      // Process data for analytics
+      const processedAnalytics = processAnalyticsData(facultyData || []);
       setAnalytics(processedAnalytics);
       
     } catch (error) {
@@ -99,10 +70,10 @@ const FacultyAnalytics: React.FC = () => {
     }
   };
 
-  const processAnalyticsData = (faculty: any[], qualifications: any[], courses: any[]) => {
+  const processAnalyticsData = (faculty: any[]) => {
     // Department-wise faculty count
     const deptCounts = faculty.reduce((acc, member) => {
-      const deptName = member.profiles?.departments?.name || 'Unknown';
+      const deptName = member.departments?.name || 'Unknown';
       acc[deptName] = (acc[deptName] || 0) + 1;
       return acc;
     }, {});
@@ -112,50 +83,47 @@ const FacultyAnalytics: React.FC = () => {
       count
     }));
 
-    // Designation-wise distribution
-    const designationCounts = faculty.reduce((acc, member) => {
-      acc[member.designation] = (acc[member.designation] || 0) + 1;
+    // Active vs Inactive faculty
+    const activeCount = faculty.filter(f => f.is_active).length;
+    const inactiveCount = faculty.length - activeCount;
+
+    const statusData = [
+      { status: 'Active', count: activeCount },
+      { status: 'Inactive', count: inactiveCount }
+    ];
+
+    // Monthly joining trends (last 12 months)
+    const monthlyData = faculty.reduce((acc, member) => {
+      const date = new Date(member.created_at);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      acc[monthKey] = (acc[monthKey] || 0) + 1;
       return acc;
     }, {});
 
-    const designationData = Object.entries(designationCounts).map(([designation, count]) => ({
-      designation,
-      count
-    }));
-
-    // Qualification distribution
-    const qualificationCounts = qualifications.reduce((acc, qual) => {
-      acc[qual.degree_type] = (acc[qual.degree_type] || 0) + 1;
-      return acc;
-    }, {});
-
-    const qualificationData = Object.entries(qualificationCounts).map(([type, count]) => ({
-      type,
-      count
-    }));
-
-    // Course type distribution
-    const courseTypeCounts = courses.reduce((acc, course) => {
-      acc[course.course_type] = (acc[course.course_type] || 0) + 1;
-      return acc;
-    }, {});
+    const joiningTrends = Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, count]) => ({
+        month,
+        count
+      }));
 
     return {
       totalFaculty: faculty.length,
+      activeFaculty: activeCount,
+      inactiveFaculty: inactiveCount,
       departmentData,
-      designationData,
-      qualificationData,
-      courseTypeCounts,
+      statusData,
+      joiningTrends,
       summary: {
         totalDepartments: departmentData.length,
-        totalCourses: courses.length,
-        totalQualifications: qualifications.length,
-        activeFaculty: faculty.filter(f => f.is_active).length
+        averagePerDept: (faculty.length / departmentData.length) || 0,
+        retentionRate: (activeCount / faculty.length) * 100 || 0
       }
     };
   };
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', '#8884D8', '#82CA9D'];
 
   if (loading) {
     return (
@@ -176,7 +144,7 @@ const FacultyAnalytics: React.FC = () => {
       {/* Header with Filters */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Faculty Analytics</h2>
+          <h2 className="text-2xl font-bold text-foreground">Faculty Analytics</h2>
           <p className="text-muted-foreground">
             Comprehensive analytics and insights about faculty members
           </p>
@@ -187,11 +155,11 @@ const FacultyAnalytics: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="CSE">Computer Science</SelectItem>
-            <SelectItem value="ECE">Electronics</SelectItem>
-            <SelectItem value="MECH">Mechanical</SelectItem>
-            <SelectItem value="CIVIL">Civil</SelectItem>
-            <SelectItem value="EEE">Electrical</SelectItem>
+            <SelectItem value="Computer Science">Computer Science</SelectItem>
+            <SelectItem value="Electronics">Electronics</SelectItem>
+            <SelectItem value="Mechanical">Mechanical</SelectItem>
+            <SelectItem value="Civil">Civil</SelectItem>
+            <SelectItem value="Electrical">Electrical</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -203,12 +171,12 @@ const FacultyAnalytics: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Faculty</p>
-                <p className="text-2xl font-bold">{analytics.totalFaculty || 0}</p>
+                <p className="text-2xl font-bold text-foreground">{analytics.totalFaculty || 0}</p>
                 <p className="text-xs text-muted-foreground">
-                  Active: {analytics.summary?.activeFaculty || 0}
+                  Active: {analytics.activeFaculty || 0}
                 </p>
               </div>
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -218,12 +186,12 @@ const FacultyAnalytics: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Departments</p>
-                <p className="text-2xl font-bold">{analytics.summary?.totalDepartments || 0}</p>
+                <p className="text-2xl font-bold text-foreground">{analytics.summary?.totalDepartments || 0}</p>
                 <p className="text-xs text-muted-foreground">
                   With faculty
                 </p>
               </div>
-              <Building className="h-8 w-8 text-green-600" />
+              <Building className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -232,13 +200,13 @@ const FacultyAnalytics: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Courses</p>
-                <p className="text-2xl font-bold">{analytics.summary?.totalCourses || 0}</p>
+                <p className="text-sm font-medium text-muted-foreground">Retention Rate</p>
+                <p className="text-2xl font-bold text-foreground">{(analytics.summary?.retentionRate || 0).toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground">
-                  Currently assigned
+                  Active faculty
                 </p>
               </div>
-              <BookOpen className="h-8 w-8 text-purple-600" />
+              <TrendingUp className="h-8 w-8 text-warning" />
             </div>
           </CardContent>
         </Card>
@@ -247,13 +215,13 @@ const FacultyAnalytics: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Qualifications</p>
-                <p className="text-2xl font-bold">{analytics.summary?.totalQualifications || 0}</p>
+                <p className="text-sm font-medium text-muted-foreground">Avg per Dept</p>
+                <p className="text-2xl font-bold text-foreground">{(analytics.summary?.averagePerDept || 0).toFixed(1)}</p>
                 <p className="text-xs text-muted-foreground">
-                  Recorded
+                  Faculty members
                 </p>
               </div>
-              <GraduationCap className="h-8 w-8 text-yellow-600" />
+              <BarChart3 className="h-8 w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -276,34 +244,34 @@ const FacultyAnalytics: React.FC = () => {
                 <XAxis dataKey="department" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="count" fill="#8884d8" />
+                <Bar dataKey="count" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Designation Distribution */}
+        {/* Status Distribution */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5" />
-              Faculty by Designation
+              <Users className="h-5 w-5" />
+              Faculty Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={analytics.designationData || []}
+                  data={analytics.statusData || []}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ designation, count }) => `${designation}: ${count}`}
+                  label={({ status, count }) => `${status}: ${count}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {(analytics.designationData || []).map((entry: any, index: number) => (
+                  {(analytics.statusData || []).map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -312,61 +280,9 @@ const FacultyAnalytics: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        {/* Qualification Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" />
-              Qualification Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {(analytics.qualificationData || []).map((qual: any, index: number) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-4 h-4 rounded-full" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="font-medium">{qual.type}</span>
-                  </div>
-                  <Badge variant="outline">{qual.count}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Course Type Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Course Type Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {Object.entries(analytics.courseTypeCounts || {}).map(([type, count], index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-4 h-4 rounded-full" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="font-medium">{type}</span>
-                  </div>
-                  <Badge variant="outline">{count as number}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Performance Metrics */}
+      {/* Key Metrics */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -375,30 +291,24 @@ const FacultyAnalytics: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {((analytics.summary?.activeFaculty / analytics.totalFaculty) * 100 || 0).toFixed(1)}%
+              <div className="text-2xl font-bold text-primary">
+                {((analytics.activeFaculty / analytics.totalFaculty) * 100 || 0).toFixed(1)}%
               </div>
-              <p className="text-sm text-muted-foreground">Faculty Retention Rate</p>
+              <p className="text-sm text-muted-foreground">Active Faculty Rate</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {(analytics.summary?.totalCourses / analytics.totalFaculty || 0).toFixed(1)}
-              </div>
-              <p className="text-sm text-muted-foreground">Avg Courses per Faculty</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {(analytics.summary?.totalQualifications / analytics.totalFaculty || 0).toFixed(1)}
-              </div>
-              <p className="text-sm text-muted-foreground">Avg Qualifications per Faculty</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-2xl font-bold text-success">
                 {(analytics.totalFaculty / analytics.summary?.totalDepartments || 0).toFixed(1)}
               </div>
               <p className="text-sm text-muted-foreground">Avg Faculty per Department</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-warning">
+                {analytics.summary?.totalDepartments || 0}
+              </div>
+              <p className="text-sm text-muted-foreground">Total Departments</p>
             </div>
           </div>
         </CardContent>
