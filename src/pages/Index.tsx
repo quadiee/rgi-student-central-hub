@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/SupabaseAuthContext';
@@ -11,6 +10,7 @@ import AttendanceManagement from '../components/Attendance/AttendanceManagement'
 import ExamManagement from '../components/Exams/ExamManagement';
 import ReportGenerator from '../components/Reports/ReportGenerator';
 import StudentManagement from '../components/Students/StudentManagement';
+import FacultyManagement from '../components/Faculty/FacultyManagement';
 import ProtectedRoute from '../components/Auth/ProtectedRoute';
 import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -61,6 +61,12 @@ const Index = () => {
         return (
           <ProtectedRoute allowedRoles={['admin', 'principal']}>
             <AdminPanel />
+          </ProtectedRoute>
+        );
+      case 'faculty':
+        return (
+          <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
+            <FacultyManagement />
           </ProtectedRoute>
         );
       case 'students':
@@ -182,7 +188,8 @@ const Index = () => {
                     <span>/</span>
                     <span className="text-blue-600 font-medium capitalize">
                       {activeTab === 'fees' ? 'Fee Management' : 
-                       activeTab === 'students' ? 'Student Management' : activeTab}
+                       activeTab === 'students' ? 'Student Management' : 
+                       activeTab === 'faculty' ? 'Faculty Management' : activeTab}
                     </span>
                   </div>
                 </nav>

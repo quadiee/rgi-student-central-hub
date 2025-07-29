@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Home, CreditCard, Settings, X, LogOut, Users, UserCheck, FileText, BookOpen, Crown, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -31,6 +30,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: Home, roles: ['student', 'hod', 'principal', 'admin', 'chairman'] },
     { id: 'fees', label: 'Fee Management', icon: CreditCard, roles: ['student', 'hod', 'principal', 'admin'] },
     { id: 'students', label: 'Students', icon: Users, roles: ['hod', 'principal', 'admin'] },
+    { id: 'faculty', label: 'Faculty', icon: UserCheck, roles: ['hod', 'principal', 'admin', 'chairman'] },
     { id: 'attendance', label: 'Attendance', icon: UserCheck, roles: ['hod', 'principal', 'admin'] },
     { id: 'exams', label: 'Exams', icon: BookOpen, roles: ['hod', 'principal', 'admin'] },
     { id: 'reports', label: 'Reports', icon: FileText, roles: ['hod', 'principal', 'admin'] },
@@ -40,6 +40,13 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const visibleItems = menuItems.filter(item => 
     user && item.roles.includes(user.role)
   );
+
+  console.log('=== MOBILE SIDEBAR DEBUG ===');
+  console.log('Current user:', user);
+  console.log('User role:', user?.role);
+  console.log('All menu items:', menuItems);
+  console.log('Visible items for user:', visibleItems);
+  console.log('Faculty item should be visible:', user?.role && ['hod', 'principal', 'admin', 'chairman'].includes(user.role));
 
   const getDepartmentName = (deptCode: string) => {
     return DEPARTMENT_CODES[deptCode as keyof typeof DEPARTMENT_CODES] || deptCode;
