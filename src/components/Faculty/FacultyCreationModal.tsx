@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { DEPARTMENT_CODES } from '../../constants/institutional';
 
 interface FacultyCreationModalProps {
   isOpen: boolean;
@@ -60,6 +61,17 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     return `inv_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
   };
 
+  // Map department codes to valid enum values
+  const mapDepartmentCodeToEnum = (departmentCode: string) => {
+    const validCodes = Object.keys(DEPARTMENT_CODES);
+    if (validCodes.includes(departmentCode)) {
+      return departmentCode;
+    }
+    // Default to CSE if department code is not found
+    console.warn(`Department code ${departmentCode} not found in enum, defaulting to CSE`);
+    return 'CSE';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -72,16 +84,23 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         throw new Error('Please select a department');
       }
 
+      console.log('Selected department:', department);
+
       // Generate secure token
       const invitationToken = generateInvitationToken();
 
-      // Create user invitation
+      // Map department code to valid enum value
+      const validDepartmentCode = mapDepartmentCodeToEnum(department.code);
+
+      console.log('Using department code for invitation:', validDepartmentCode);
+
+      // Create user invitation with mapped department code
       const { data: invitationData, error: invitationError } = await supabase
         .from('user_invitations')
         .insert({
           email: formData.email,
           role: 'faculty' as const,
-          department: department.code as any,
+          department: validDepartmentCode as any,
           employee_id: formData.employee_code,
           invited_by: user.id,
           is_active: true,
@@ -91,7 +110,10 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         .select()
         .single();
 
-      if (invitationError) throw invitationError;
+      if (invitationError) {
+        console.error('Invitation creation error:', invitationError);
+        throw invitationError;
+      }
 
       console.log('Invitation created successfully:', invitationData);
 
@@ -101,10 +123,11 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         body: {
           email: formData.email,
           role: 'faculty',
-          department: department.code,
+          department: validDepartmentCode,
           invitedBy: user.id,
           invitationId: invitationData.id,
-          employeeId: formData.employee_code
+          employeeId: formData.employee_code,
+          token: invitationToken
         }
       });
 
@@ -257,7 +280,9 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
                   </SelectTrigger>
                   <SelectContent>
                     {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name} ({dept.code})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
