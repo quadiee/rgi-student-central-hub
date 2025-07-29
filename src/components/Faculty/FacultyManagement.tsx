@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import FacultyListManagement from './FacultyListManagement';
@@ -13,6 +12,7 @@ import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp } fro
 import { useIsMobile } from '../../hooks/use-mobile';
 
 interface FacultyMember {
+  id: string;
   faculty_id: string;
   user_id: string | null;
   name: string;
