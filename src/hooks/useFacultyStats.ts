@@ -66,7 +66,7 @@ export const useFacultyStats = () => {
       setLoading(true);
       setError('');
 
-      // Fetch faculty data with department information
+      // Fetch faculty data with department information and faculty profile details
       const { data: facultyData, error: facultyError } = await supabase
         .from('profiles')
         .select(`
@@ -74,15 +74,15 @@ export const useFacultyStats = () => {
           name,
           email,
           department_id,
-          designation,
-          experience,
-          qualification,
-          specialization,
           phone,
           is_active,
           departments:department_id (
             name,
             code
+          ),
+          faculty_profiles!faculty_profiles_user_id_fkey (
+            designation,
+            employee_code
           )
         `)
         .eq('role', 'faculty')
@@ -96,6 +96,7 @@ export const useFacultyStats = () => {
         const mockSubjectsTaught = Math.floor(Math.random() * 4) + 1; // 1-4 subjects
         const mockResearchPapers = Math.floor(Math.random() * 10); // 0-9 papers
         const mockYearsAtInstitution = Math.floor(Math.random() * 15) + 1; // 1-15 years
+        const mockExperience = Math.floor(Math.random() * 20) + 1; // 1-20 years
 
         return {
           id: member.id,
@@ -104,10 +105,10 @@ export const useFacultyStats = () => {
           department_id: member.department_id,
           department_name: member.departments?.name || 'Unknown',
           department_code: member.departments?.code || 'N/A',
-          designation: member.designation,
-          experience: member.experience,
-          qualification: member.qualification,
-          specialization: member.specialization,
+          designation: member.faculty_profiles?.[0]?.designation || 'Faculty',
+          experience: mockExperience,
+          qualification: 'M.Tech', // Mock data
+          specialization: 'Computer Science', // Mock data
           phone: member.phone,
           is_active: member.is_active,
           attendance_rate: mockAttendanceRate,
