@@ -1,6 +1,7 @@
-
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useIsMobile } from '../../hooks/use-mobile';
+import RoleDashboard from '../Mobile/RoleDashboard';
 import StudentDashboard from './StudentDashboard';
 import HODDashboard from './HODDashboard';
 import PrincipalDashboard from './PrincipalDashboard';
@@ -9,7 +10,14 @@ import FeeManagementHub from '../Fees/FeeManagementHub';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
+  // Use enhanced mobile dashboard for mobile devices
+  if (isMobile) {
+    return <RoleDashboard />;
+  }
+
+  // Desktop dashboard logic remains the same
   const renderDashboard = () => {
     switch (user?.role) {
       case 'student':
