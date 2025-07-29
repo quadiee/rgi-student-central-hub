@@ -2,97 +2,89 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { 
   Bell, 
-  AlertTriangle, 
-  Info, 
+  AlertCircle, 
   CheckCircle, 
+  Info, 
   X,
-  MoreHorizontal
+  CreditCard,
+  Users,
+  Calendar,
+  FileText
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface Notification {
   id: string;
-  type: 'info' | 'warning' | 'success' | 'urgent';
+  type: 'info' | 'warning' | 'success' | 'error';
   title: string;
   message: string;
   timestamp: string;
-  read: boolean;
+  isRead: boolean;
   actionable: boolean;
-  category: 'fee' | 'attendance' | 'exam' | 'general';
+  category: 'fee' | 'attendance' | 'general' | 'exam';
 }
 
 const NotificationCenter: React.FC = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (user) {
-      loadNotifications();
-    }
-  }, [user]);
-
-  const loadNotifications = async () => {
-    // Mock notifications for now - in production, fetch from database
+    // Mock notifications for demo - replace with real data fetching
     const mockNotifications: Notification[] = [
       {
         id: '1',
-        type: 'urgent',
+        type: 'warning',
         title: 'Fee Payment Due',
-        message: 'Your semester fee payment is due in 3 days. Amount: ₹45,000',
+        message: 'Your semester fee payment is due in 3 days',
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        read: false,
+        isRead: false,
         actionable: true,
         category: 'fee'
       },
       {
         id: '2',
-        type: 'warning',
-        title: 'Low Attendance Alert',
-        message: 'Your attendance in Data Structures is below 75%. Current: 72%',
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        read: false,
+        type: 'success',
+        title: 'Payment Confirmed',
+        message: 'Your fee payment of ₹15,000 has been processed successfully',
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        isRead: false,
         actionable: false,
-        category: 'attendance'
+        category: 'fee'
       },
       {
         id: '3',
         type: 'info',
-        title: 'Exam Schedule Released',
-        message: 'Mid-term examination schedule for Semester 5 has been published',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        read: true,
+        title: 'Attendance Alert',
+        message: 'Your attendance is below 75% in Mathematics',
+        timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+        isRead: true,
         actionable: true,
-        category: 'exam'
-      },
-      {
-        id: '4',
-        type: 'success',
-        title: 'Assignment Submitted',
-        message: 'Your Database Management assignment has been successfully submitted',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        read: true,
-        actionable: false,
-        category: 'general'
+        category: 'attendance'
       }
     ];
 
     setNotifications(mockNotifications);
-  };
+    setUnreadCount(mockNotifications.filter(n => !n.isRead).length);
+  }, []);
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, category: string) => {
+    if (category === 'fee') return CreditCard;
+    if (category === 'attendance') return Users;
+    if (category === 'exam') return FileText;
+    
     switch (type) {
-      case 'urgent':
-        return AlertTriangle;
-      case 'warning':
-        return AlertTriangle;
       case 'success':
         return CheckCircle;
+      case 'warning':
+        return AlertCircle;
+      case 'error':
+        return AlertCircle;
       default:
         return Info;
     }
@@ -100,57 +92,45 @@ const NotificationCenter: React.FC = () => {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'urgent':
-        return 'text-red-600 bg-red-100 border-red-200';
-      case 'warning':
-        return 'text-yellow-600 bg-yellow-100 border-yellow-200';
       case 'success':
-        return 'text-green-600 bg-green-100 border-green-200';
+        return 'text-green-600 bg-green-100';
+      case 'warning':
+        return 'text-orange-600 bg-orange-100';
+      case 'error':
+        return 'text-red-600 bg-red-100';
       default:
-        return 'text-blue-600 bg-blue-100 border-blue-200';
+        return 'text-blue-600 bg-blue-100';
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'fee':
-        return 'bg-red-100 text-red-800';
-      case 'attendance':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'exam':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const markAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    const notification = notifications.find(n => n.id === id);
+    if (notification && !notification.isRead) {
+      setUnreadCount(prev => Math.max(0, prev - 1));
     }
   };
 
   const getTimeAgo = (timestamp: string) => {
     const now = new Date();
     const time = new Date(timestamp);
-    const diffInHours = Math.floor((now.getTime() - time.getTime()) / (1000 * 60 * 60));
+    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
 
-    if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInMinutes < 1440) {
+      return `${Math.floor(diffInMinutes / 60)}h ago`;
     } else {
-      return `${Math.floor(diffInHours / 24)}d ago`;
+      return `${Math.floor(diffInMinutes / 1440)}d ago`;
     }
   };
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
-
-  const dismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const filteredNotifications = notifications.filter(n => 
-    filter === 'all' || !n.read
-  );
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <Card>
@@ -160,48 +140,47 @@ const NotificationCenter: React.FC = () => {
             <Bell className="w-5 h-5 text-blue-600" />
             <span>Notifications</span>
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="text-xs">
                 {unreadCount}
               </Badge>
             )}
           </CardTitle>
-          
-          <div className="flex space-x-2">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
+          {unreadCount > 0 && (
+            <Button 
+              variant="ghost" 
               size="sm"
-              onClick={() => setFilter('all')}
+              onClick={() => {
+                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                setUnreadCount(0);
+              }}
+              className="text-xs"
             >
-              All
+              Mark all read
             </Button>
-            <Button
-              variant={filter === 'unread' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('unread')}
-            >
-              Unread
-            </Button>
-          </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        {filteredNotifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>{filter === 'unread' ? 'No unread notifications' : 'No notifications'}</p>
+            <p>No notifications</p>
           </div>
         ) : (
           <ScrollArea className="h-80">
             <div className="space-y-3">
-              {filteredNotifications.map((notification, index) => {
-                const Icon = getNotificationIcon(notification.type);
+              {notifications.map((notification, index) => {
+                const Icon = getNotificationIcon(notification.type, notification.category);
                 
                 return (
                   <div 
                     key={notification.id}
                     className={cn(
                       "relative p-3 rounded-lg border transition-all duration-200 animate-fade-in",
-                      notification.read ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-300 shadow-sm',
+                      notification.isRead ? "bg-gray-50" : "bg-white border-l-4",
+                      notification.type === 'warning' ? "border-l-orange-500" :
+                      notification.type === 'success' ? "border-l-green-500" :
+                      notification.type === 'error' ? "border-l-red-500" : "border-l-blue-500",
                       `delay-${index * 100}`
                     )}
                     style={{
@@ -217,68 +196,59 @@ const NotificationCenter: React.FC = () => {
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h4 className={cn(
-                                "font-medium text-sm",
-                                notification.read ? 'text-gray-600' : 'text-gray-900'
-                              )}>
-                                {notification.title}
-                              </h4>
-                              {!notification.read && (
-                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                              )}
-                            </div>
-                            
-                            <p className={cn(
-                              "text-sm mb-2",
-                              notification.read ? 'text-gray-500' : 'text-gray-700'
-                            )}>
-                              {notification.message}
+                        <div className="flex items-center justify-between">
+                          <p className={cn(
+                            "font-medium text-sm truncate",
+                            notification.isRead ? "text-gray-600" : "text-gray-900"
+                          )}>
+                            {notification.title}
+                          </p>
+                          <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                            <p className="text-xs text-gray-500">
+                              {getTimeAgo(notification.timestamp)}
                             </p>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Badge 
-                                  variant="outline" 
-                                  className={cn("text-xs", getCategoryColor(notification.category))}
-                                >
-                                  {notification.category}
-                                </Badge>
-                                <span className="text-xs text-gray-500">
-                                  {getTimeAgo(notification.timestamp)}
-                                </span>
-                              </div>
-                              
-                              {notification.actionable && (
-                                <Button size="sm" variant="outline" className="text-xs">
-                                  View
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-1 ml-2">
-                            {!notification.read && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => markAsRead(notification.id)}
-                                className="p-1 h-auto text-gray-400 hover:text-gray-600"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </Button>
-                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => dismissNotification(notification.id)}
-                              className="p-1 h-auto text-gray-400 hover:text-gray-600"
+                              className="p-1 h-6 w-6"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-3 h-3" />
                             </Button>
                           </div>
+                        </div>
+                        <p className={cn(
+                          "text-sm mt-1 line-clamp-2",
+                          notification.isRead ? "text-gray-500" : "text-gray-700"
+                        )}>
+                          {notification.message}
+                        </p>
+                        
+                        <div className="flex items-center justify-between mt-2">
+                          <Badge variant="outline" className="text-xs">
+                            {notification.category}
+                          </Badge>
+                          
+                          {!notification.isRead && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markAsRead(notification.id)}
+                              className="text-xs h-6"
+                            >
+                              Mark as read
+                            </Button>
+                          )}
+                          
+                          {notification.actionable && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-6"
+                            >
+                              Take Action
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -287,15 +257,6 @@ const NotificationCenter: React.FC = () => {
               })}
             </div>
           </ScrollArea>
-        )}
-        
-        {filteredNotifications.length > 0 && (
-          <div className="mt-4 text-center">
-            <Button variant="ghost" size="sm" className="text-blue-600">
-              <MoreHorizontal className="w-4 h-4 mr-2" />
-              View All Notifications
-            </Button>
-          </div>
         )}
       </CardContent>
     </Card>

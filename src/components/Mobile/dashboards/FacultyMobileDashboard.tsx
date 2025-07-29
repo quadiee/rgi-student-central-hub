@@ -8,13 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { 
   Users, 
-  BookOpen, 
   Clock, 
+  BookOpen, 
   Calendar, 
   CheckCircle,
+  TrendingUp,
   FileText,
-  Award,
-  GraduationCap
+  QrCode
 } from 'lucide-react';
 
 const FacultyMobileDashboard: React.FC = () => {
@@ -22,24 +22,24 @@ const FacultyMobileDashboard: React.FC = () => {
 
   const facultyStats = [
     {
-      title: 'My Students',
-      value: '145',
-      change: '3 classes',
-      icon: GraduationCap,
+      title: 'My Classes',
+      value: '6',
+      change: 'Active this sem',
+      icon: BookOpen,
       color: 'text-cyan-600',
       bgColor: 'bg-cyan-50'
     },
     {
-      title: 'Classes Today',
-      value: '4',
-      change: '2 completed',
-      icon: BookOpen,
+      title: 'Students',
+      value: '234',
+      change: 'Under supervision',
+      icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
       title: 'Attendance Rate',
-      value: '89%',
+      value: '94.2%',
       change: 'This month',
       icon: Clock,
       color: 'text-green-600',
@@ -47,8 +47,8 @@ const FacultyMobileDashboard: React.FC = () => {
     },
     {
       title: 'Assignments',
-      value: '12',
-      change: '8 pending review',
+      value: '18',
+      change: 'Pending review',
       icon: FileText,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
@@ -62,35 +62,39 @@ const FacultyMobileDashboard: React.FC = () => {
         <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
           Faculty Dashboard
         </h2>
-        <p className="text-gray-600 mt-2">Teaching and student management portal</p>
+        <p className="text-gray-600 mt-2">Teaching and student management</p>
       </div>
 
       {/* Faculty Stats */}
       <QuickStatsCards stats={facultyStats} />
 
-      {/* Today's Schedule */}
+      {/* Teaching Overview */}
       <Card className="bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Calendar className="w-5 h-5 text-cyan-600" />
-            <span>Today's Schedule</span>
+            <TrendingUp className="w-5 h-5 text-cyan-600" />
+            <span>Teaching Performance</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900">Data Structures</p>
-                <p className="text-sm text-gray-600">10:00 AM - Room 301</p>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-600">Class Completion</span>
+                <span className="text-sm font-bold text-cyan-600">78%</span>
               </div>
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-cyan-500 h-2 rounded-full w-3/4 transition-all duration-500" />
+              </div>
             </div>
-            <div className="flex justify-between items-center p-3 bg-white/70 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900">Algorithms Lab</p>
-                <p className="text-sm text-gray-600">2:00 PM - Lab 2</p>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-600">Student Satisfaction</span>
+                <span className="text-sm font-bold text-blue-600">4.7/5</span>
               </div>
-              <Clock className="w-5 h-5 text-orange-500" />
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-blue-500 h-2 rounded-full w-11/12 transition-all duration-500" />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -104,20 +108,20 @@ const FacultyMobileDashboard: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-cyan-50 hover:bg-cyan-100 border-cyan-200">
-              <Clock className="w-5 h-5 mb-1 text-cyan-600" />
+              <QrCode className="w-5 h-5 mb-1 text-cyan-600" />
               <span className="text-xs">Mark Attendance</span>
             </Button>
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 border-blue-200">
-              <BookOpen className="w-5 h-5 mb-1 text-blue-600" />
-              <span className="text-xs">My Classes</span>
+              <Calendar className="w-5 h-5 mb-1 text-blue-600" />
+              <span className="text-xs">Schedule Class</span>
+            </Button>
+            <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 border-green-200">
+              <CheckCircle className="w-5 h-5 mb-1 text-green-600" />
+              <span className="text-xs">Grade Students</span>
             </Button>
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-purple-50 hover:bg-purple-100 border-purple-200">
               <FileText className="w-5 h-5 mb-1 text-purple-600" />
               <span className="text-xs">Assignments</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 border-green-200">
-              <Award className="w-5 h-5 mb-1 text-green-600" />
-              <span className="text-xs">Grades</span>
             </Button>
           </div>
         </CardContent>
