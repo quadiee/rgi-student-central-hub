@@ -1,106 +1,186 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { 
   Search, 
   Filter, 
   Users, 
-  GraduationCap, 
-  DollarSign, 
+  GraduationCap,
+  IndianRupee,
   Award,
-  ChevronRight,
   Download,
-  Eye
+  Eye,
+  Calendar,
+  MapPin
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
+
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  roll_number: string;
+  year: number;
+  semester: number;
+  department_id: string;
+  department_name: string;
+  department_code: string;
+  is_active: boolean;
+  community?: string;
+  first_generation: boolean;
+}
 
 interface ChairmanStudentManagementProps {
   className?: string;
 }
 
 const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ className }) => {
+  const { user } = useAuth();
+  const { stats: institutionalStats } = useInstitutionalStats();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [departments, setDepartments] = useState<any[]>([]);
 
-  // Mock data - replace with real data from hooks
-  const studentStats = {
-    totalStudents: 2456,
-    activeStudents: 2398,
-    byDepartment: [
-      { dept: 'CSE', count: 612, active: 608 },
-      { dept: 'ECE', count: 487, active: 485 },
-      { dept: 'EEE', count: 423, active: 420 },
-      { dept: 'MECH', count: 398, active: 396 },
-      { dept: 'CIVIL', count: 356, active: 354 },
-      { dept: 'IT', count: 180, active: 178 }
-    ],
-    feeStatus: {
-      fullyPaid: 1456,
-      partiallyPaid: 542,
-      unpaid: 458
-    },
-    scholarshipStudents: 342
-  };
+  useEffect(() => {
+    fetchStudents();
+    fetchDepartments();
+  }, [user]);
 
-  const mockStudents = [
-    {
-      id: '1',
-      name: 'Rajesh Kumar',
-      rollNumber: '20CS001',
-      department: 'CSE',
-      year: 3,
-      semester: 6,
-      feeStatus: 'Fully Paid',
-      totalFees: 85000,
-      paidAmount: 85000,
-      scholarshipAmount: 15000,
-      hasScholarship: true
-    },
-    {
-      id: '2',
-      name: 'Priya Sharma',
-      rollNumber: '20EC023',
-      department: 'ECE',
-      year: 2,
-      semester: 4,
-      feeStatus: 'Partially Paid',
-      totalFees: 82000,
-      paidAmount: 45000,
-      scholarshipAmount: 0,
-      hasScholarship: false
-    }
-  ];
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true)
+        .order('name');
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Fully Paid':
-        return 'text-green-600 bg-green-100';
-      case 'Partially Paid':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'Unpaid':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
     }
   };
+
+  const fetchStudents = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          name,
+          email,
+          roll_number,
+          year,
+          semester,
+          department_id,
+          is_active,
+          community,
+          first_generation,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
+        .eq('role', 'student')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const mappedStudents: Student[] = (data || []).map((student: any) => ({
+        id: student.id,
+        name: student.name || 'N/A',
+        email: student.email || 'N/A',
+        roll_number: student.roll_number || 'N/A',
+        year: student.year || 0,
+        semester: student.semester || 0,
+        department_id: student.department_id,
+        department_name: student.departments?.name || 'Unknown',
+        department_code: student.departments?.code || 'N/A',
+        is_active: student.is_active,
+        community: student.community,
+        first_generation: student.first_generation || false
+      }));
+
+      setStudents(mappedStudents);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = 
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.roll_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.department_name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === 'all' || 
+      student.department_id === selectedDepartment;
+    
+    const matchesYear = selectedYear === 'all' || 
+      student.year.toString() === selectedYear;
+
+    return matchesSearch && matchesDepartment && matchesYear;
+  });
+
+  // Group students by department for statistics
+  const studentsByDepartment = students.reduce((acc, student) => {
+    const dept = student.department_name;
+    if (!acc[dept]) {
+      acc[dept] = {
+        total: 0,
+        active: 0,
+        code: student.department_code
+      };
+    }
+    acc[dept].total += 1;
+    if (student.is_active) acc[dept].active += 1;
+    return acc;
+  }, {} as Record<string, any>);
+
+  const getYearLabel = (year: number) => {
+    if (year === 1) return '1st Year';
+    if (year === 2) return '2nd Year';
+    if (year === 3) return '3rd Year';
+    if (year === 4) return '4th Year';
+    return `${year}th Year`;
+  };
+
+  if (loading) {
+    return (
+      <div className={cn("p-4 space-y-6", className)}>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("p-4 space-y-6", className)}>
-      {/* Header with View-Only indicator */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             Student Overview
           </h2>
-          <div className="flex items-center space-x-2 mt-1">
-            <Eye className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-500">View-Only Access</span>
-          </div>
+          <p className="text-sm text-gray-500 mt-1">Institutional Student Management</p>
         </div>
         <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
           <Download className="w-4 h-4 mr-2" />
@@ -115,99 +195,62 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold text-blue-600">{studentStats.totalStudents}</p>
-                <p className="text-xs text-gray-500">{studentStats.activeStudents} active</p>
+                <p className="text-2xl font-bold text-blue-600">{institutionalStats.totalStudents}</p>
+                <p className="text-xs text-gray-500">{institutionalStats.activeStudents} active</p>
               </div>
               <Users className="w-8 h-8 text-blue-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Scholarship Students</p>
-                <p className="text-2xl font-bold text-emerald-600">{studentStats.scholarshipStudents}</p>
-                <p className="text-xs text-gray-500">
-                  {((studentStats.scholarshipStudents / studentStats.totalStudents) * 100).toFixed(1)}% of total
-                </p>
+                <p className="text-sm font-medium text-gray-600">Departments</p>
+                <p className="text-2xl font-bold text-purple-600">{Object.keys(studentsByDepartment).length}</p>
+                <p className="text-xs text-gray-500">With students</p>
               </div>
-              <Award className="w-8 h-8 text-emerald-600 opacity-80" />
+              <GraduationCap className="w-8 h-8 text-purple-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Department Breakdown */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <GraduationCap className="w-5 h-5 text-purple-600" />
-            <span>Department-wise Distribution</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {studentStats.byDepartment.map((dept) => (
-              <div key={dept.dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">{dept.dept}</span>
+      {/* Department-wise Students */}
+      {Object.keys(studentsByDepartment).length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              <span>Department-wise Distribution</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Object.entries(studentsByDepartment).map(([dept, data]: [string, any]) => (
+                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">{data.code}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{dept}</p>
+                      <p className="text-sm text-gray-600">{data.active} active students</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{dept.dept} Department</p>
-                    <p className="text-sm text-gray-600">{dept.active} active students</p>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-purple-600">{data.total}</p>
+                    <p className="text-xs text-gray-500">Students</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-purple-600">{dept.count}</p>
-                  <p className="text-xs text-gray-500">Total</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Fee Status Overview */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            <span>Fee Status Overview</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
-                <p className="text-lg font-bold text-green-600">{studentStats.feeStatus.fullyPaid}</p>
-                <p className="text-xs text-gray-600">Fully Paid</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200">
-                <p className="text-lg font-bold text-yellow-600">{studentStats.feeStatus.partiallyPaid}</p>
-                <p className="text-xs text-gray-600">Partial</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-gradient-to-r from-red-50 to-pink-50 border border-red-200">
-                <p className="text-lg font-bold text-red-600">{studentStats.feeStatus.unpaid}</p>
-                <p className="text-xs text-gray-600">Unpaid</p>
-              </div>
+              ))}
             </div>
-            
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Collection Rate</span>
-                <span className="text-lg font-bold text-purple-600">
-                  {((studentStats.feeStatus.fullyPaid / studentStats.totalStudents) * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Search and Filter */}
+      {/* Search and Filters */}
       <div className="space-y-3">
         <div className="flex space-x-3">
           <div className="flex-1 relative">
@@ -223,66 +266,130 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
             <Filter className="w-4 h-4" />
           </Button>
         </div>
+
+        <div className="flex space-x-2">
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              <SelectItem value="1">1st Year</SelectItem>
+              <SelectItem value="2">2nd Year</SelectItem>
+              <SelectItem value="3">3rd Year</SelectItem>
+              <SelectItem value="4">4th Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Student List */}
+      {/* Students List */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-800">Recent Students</h3>
-        {mockStudents.map((student) => (
-          <MobileDataCard
-            key={student.id}
-            title={student.name}
-            subtitle={`${student.rollNumber} • ${student.department} • Year ${student.year}`}
-            status={{
-              label: student.feeStatus,
-              variant: student.feeStatus === 'Fully Paid' ? 'default' : 
-                      student.feeStatus === 'Partially Paid' ? 'secondary' : 'destructive'
-            }}
-            data={[
-              {
-                label: 'Total Fees',
-                value: `₹${student.totalFees.toLocaleString()}`,
-                icon: DollarSign,
-                color: 'text-blue-600'
-              },
-              {
-                label: 'Paid Amount',
-                value: `₹${student.paidAmount.toLocaleString()}`,
-                icon: DollarSign,
-                color: 'text-green-600'
-              },
-              {
-                label: 'Semester',
-                value: student.semester.toString(),
-                icon: GraduationCap,
-                color: 'text-purple-600'
-              },
-              {
-                label: 'Scholarship',
-                value: student.hasScholarship ? `₹${student.scholarshipAmount.toLocaleString()}` : 'None',
-                icon: Award,
-                color: student.hasScholarship ? 'text-emerald-600' : 'text-gray-400'
-              }
-            ]}
-            actions={[
-              {
-                label: 'View Details',
-                icon: Eye,
-                onClick: () => console.log('View student:', student.id)
-              }
-            ]}
-            onClick={() => console.log('Student clicked:', student.id)}
-            className="hover:shadow-md transition-shadow"
-          />
-        ))}
+        <h3 className="font-semibold text-gray-800">Students</h3>
+        {filteredStudents.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-8">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No students found</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredStudents.map((student) => (
+            <MobileDataCard
+              key={student.id}
+              title={student.name}
+              subtitle={`${student.roll_number} • ${student.department_code} • ${getYearLabel(student.year)}`}
+              status={{
+                label: student.is_active ? 'Active' : 'Inactive',
+                variant: student.is_active ? 'default' : 'secondary'
+              }}
+              data={[
+                {
+                  label: 'Year',
+                  value: getYearLabel(student.year),
+                  icon: Calendar,
+                  color: 'text-blue-600'
+                },
+                {
+                  label: 'Department',
+                  value: student.department_code,
+                  icon: MapPin,
+                  color: 'text-purple-600'
+                },
+                {
+                  label: 'Community',
+                  value: student.community || 'General',
+                  icon: Users,
+                  color: 'text-green-600'
+                },
+                {
+                  label: 'First Gen',
+                  value: student.first_generation ? 'Yes' : 'No',
+                  icon: Award,
+                  color: student.first_generation ? 'text-emerald-600' : 'text-gray-500'
+                }
+              ]}
+              actions={[
+                {
+                  label: 'View Profile',
+                  icon: Eye,
+                  onClick: () => console.log('View student:', student.id)
+                }
+              ]}
+              onClick={() => console.log('Student clicked:', student.id)}
+              className="hover:shadow-md transition-shadow"
+            />
+          ))
+        )}
       </div>
 
-      {/* Load More */}
-      <div className="text-center">
-        <Button variant="outline" className="w-full">
-          Load More Students
-        </Button>
-      </div>
+      {/* Student Insights */}
+      {students.length > 0 && (
+        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Award className="w-5 h-5 text-emerald-600" />
+              <span>Student Insights</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">First Generation Students</span>
+                <span className="text-lg font-bold text-green-600">
+                  {students.filter(s => s.first_generation).length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">SC/ST Students</span>
+                <span className="text-lg font-bold text-purple-600">
+                  {students.filter(s => s.community && ['SC', 'ST'].includes(s.community)).length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">Final Year Students</span>
+                <span className="text-lg font-bold text-blue-600">
+                  {students.filter(s => s.year === 4).length}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
