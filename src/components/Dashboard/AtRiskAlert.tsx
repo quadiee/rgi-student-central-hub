@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Users } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
@@ -49,7 +48,7 @@ const AtRiskAlert: React.FC = () => {
         
         const { data: feeRecords, error: feeError } = await supabase
           .from('fee_records')
-          .select('student_id, amount, paid_amount, status')
+          .select('student_id, final_amount, paid_amount, status')
           .in('student_id', studentIds);
 
         if (feeError) {
@@ -60,7 +59,7 @@ const AtRiskAlert: React.FC = () => {
         // Calculate due amounts and filter at-risk students
         const studentsWithDues = profiles?.map(profile => {
           const studentFees = feeRecords?.filter(fee => fee.student_id === profile.id) || [];
-          const totalAmount = studentFees.reduce((sum, fee) => sum + fee.amount, 0);
+          const totalAmount = studentFees.reduce((sum, fee) => sum + fee.final_amount, 0);
           const paidAmount = studentFees.reduce((sum, fee) => sum + (fee.paid_amount || 0), 0);
           const dueAmount = totalAmount - paidAmount;
 

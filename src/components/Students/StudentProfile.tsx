@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, GraduationCap, Users, CreditCard, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Student } from '../../types';
-import { realStudentFeeService } from '../../services/realStudentFeeService';
+import { RealStudentFeeService } from '../../services/realStudentFeeService';
 
 export interface StudentProfileProps {
   student: Student;
@@ -14,14 +13,17 @@ export interface StudentProfileProps {
 
 interface FeeRecord {
   id: string;
-  feeType: string;
-  amount: number;
-  paidAmount: number;
-  dueAmount: number;
-  status: string;
-  dueDate: string;
-  semester?: number;
-  academicYear?: string;
+  academic_year: string;
+  semester: number;
+  original_amount: number;
+  discount_amount: number;
+  penalty_amount: number;
+  final_amount: number;
+  paid_amount: number;
+  status: 'Pending' | 'Paid' | 'Partial' | 'Overdue';
+  due_date: string;
+  last_payment_date?: string;
+  created_at: string;
 }
 
 const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
@@ -32,7 +34,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
     const loadFeeData = async () => {
       try {
         setLoading(true);
-        const fees = await realStudentFeeService.getStudentFeeRecords(student.id);
+        const fees = await RealStudentFeeService.getStudentFeeRecords(student.id);
         setFeeRecords(fees);
       } catch (error) {
         console.error('Error loading fee data:', error);
@@ -44,9 +46,9 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
     loadFeeData();
   }, [student.id]);
 
-  const totalFees = feeRecords.reduce((sum, record) => sum + record.amount, 0);
-  const totalPaid = feeRecords.reduce((sum, record) => sum + record.paidAmount, 0);
-  const totalDue = feeRecords.reduce((sum, record) => sum + record.dueAmount, 0);
+  const totalFees = feeRecords.reduce((sum, record) => sum + record.final_amount, 0);
+  const totalPaid = feeRecords.reduce((sum, record) => sum + record.paid_amount, 0);
+  const totalDue = totalFees - totalPaid;
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -198,12 +200,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                         <div key={record.id} className="p-4 border border-gray-200 rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <p className="font-medium">{record.feeType}</p>
-                              {record.academicYear && (
-                                <p className="text-sm text-gray-600">
-                                  {record.academicYear} {record.semester && `- Semester ${record.semester}`}
-                                </p>
-                              )}
+                              <p className="font-medium">{record.academic_year} - Semester {record.semester}</p>
                             </div>
                             <Badge className={getStatusColor(record.status)}>
                               {record.status}
@@ -212,19 +209,19 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                             <div>
                               <span className="text-gray-600">Amount:</span>
-                              <span className="ml-1 font-medium">₹{record.amount.toLocaleString()}</span>
+                              <span className="ml-1 font-medium">₹{record.final_amount.toLocaleString()}</span>
                             </div>
                             <div>
                               <span className="text-gray-600">Paid:</span>
-                              <span className="ml-1 font-medium text-green-600">₹{record.paidAmount.toLocaleString()}</span>
+                              <span className="ml-1 font-medium text-green-600">₹{record.paid_amount.toLocaleString()}</span>
                             </div>
                             <div>
                               <span className="text-gray-600">Due:</span>
-                              <span className="ml-1 font-medium text-red-600">₹{record.dueAmount.toLocaleString()}</span>
+                              <span className="ml-1 font-medium text-red-600">₹{(record.final_amount - record.paid_amount).toLocaleString()}</span>
                             </div>
                             <div>
                               <span className="text-gray-600">Due Date:</span>
-                              <span className="ml-1 font-medium">{new Date(record.dueDate).toLocaleDateString()}</span>
+                              <span className="ml-1 font-medium">{new Date(record.due_date).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>
