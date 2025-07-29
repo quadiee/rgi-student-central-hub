@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Student } from '../../types';
 import { RealStudentFeeService } from '../../services/realStudentFeeService';
 import { supabase } from '../../integrations/supabase/client';
+import { ScholarshipWithProfile } from '../../types/user-student-fees';
 
 export interface StudentProfileProps {
   student: Student;
@@ -28,24 +29,9 @@ interface FeeRecord {
   created_at: string;
 }
 
-interface ScholarshipRecord {
-  id: string;
-  scholarship_type: 'PMSS' | 'FG';
-  eligible_amount: number;
-  applied_status: boolean;
-  application_date?: string;
-  received_by_institution: boolean;
-  receipt_date?: string;
-  academic_year: string;
-  semester?: number;
-  remarks?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
   const [feeRecords, setFeeRecords] = useState<FeeRecord[]>([]);
-  const [scholarshipRecords, setScholarshipRecords] = useState<ScholarshipRecord[]>([]);
+  const [scholarshipRecords, setScholarshipRecords] = useState<ScholarshipWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [scholarshipLoading, setScholarshipLoading] = useState(true);
 
@@ -69,21 +55,27 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
     const loadScholarshipData = async () => {
       try {
         setScholarshipLoading(true);
+        
+        // Fetch scholarship data with profile information using the same query structure as Scholarship Management
         const { data: scholarships, error } = await supabase
           .from('scholarships')
-          .select('*')
+          .select(`
+            *,
+            profiles!scholarships_student_id_fkey (
+              name,
+              roll_number,
+              departments!profiles_department_id_fkey (
+                name,
+                code
+              )
+            )
+          `)
           .eq('student_id', student.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
         
-        // Cast scholarship_type to the expected union type
-        const typedScholarships = (scholarships || []).map(scholarship => ({
-          ...scholarship,
-          scholarship_type: scholarship.scholarship_type as 'PMSS' | 'FG'
-        }));
-        
-        setScholarshipRecords(typedScholarships);
+        setScholarshipRecords(scholarships || []);
       } catch (error) {
         console.error('Error loading scholarship data:', error);
       } finally {
@@ -335,11 +327,11 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-gray-600">Total Eligible Amount</p>
-                      <p className="text-lg font-bold text-blue-600">₹{scholarshipRecords.reduce((sum, record) => sum + record.eligible_amount, 0).toLocaleString()}</p>
+                      <p className="text-lg font-bold text-blue-600">₹{totalScholarshipAmount.toLocaleString()}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-gray-600">Amount Received</p>
-                      <p className="text-lg font-bold text-green-600">₹{scholarshipRecords.filter(record => record.received_by_institution).reduce((sum, record) => sum + record.eligible_amount, 0).toLocaleString()}</p>
+                      <p className="text-lg font-bold text-green-600">₹{receivedScholarshipAmount.toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -351,16 +343,11 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                         <div key={scholarship.id} className="p-4 border border-gray-200 rounded-lg">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-2">
-                              <Badge className={scholarship.scholarship_type === 'PMSS' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}>
+                              <Badge className={getScholarshipTypeColor(scholarship.scholarship_type)}>
                                 {scholarship.scholarship_type === 'PMSS' ? 'PM Scholarship' : 'First Generation'}
                               </Badge>
-                              <Badge className={
-                                scholarship.received_by_institution ? 'bg-green-100 text-green-800' :
-                                scholarship.applied_status ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }>
-                                {scholarship.received_by_institution ? 'Received' :
-                                 scholarship.applied_status ? 'Applied' : 'Eligible'}
+                              <Badge className={getScholarshipStatusColor(scholarship.applied_status, scholarship.received_by_institution)}>
+                                {getScholarshipStatusText(scholarship.applied_status, scholarship.received_by_institution)}
                               </Badge>
                             </div>
                             <div className="text-right">
