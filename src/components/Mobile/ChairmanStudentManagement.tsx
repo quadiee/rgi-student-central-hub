@@ -4,60 +4,167 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { 
   Search, 
   Filter, 
   Users, 
+  GraduationCap,
+  IndianRupee,
   Award,
-  Clock,
-  BookOpen,
   Download,
   Eye,
-  GraduationCap,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle
+  Calendar,
+  MapPin
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
-import { useStudentStats } from '../../hooks/useStudentStats';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
+
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  roll_number: string;
+  year: number;
+  semester: number;
+  department_id: string;
+  department_name: string;
+  department_code: string;
+  is_active: boolean;
+  community?: string;
+  first_generation: boolean;
+}
 
 interface ChairmanStudentManagementProps {
   className?: string;
 }
 
 const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ className }) => {
+  const { user } = useAuth();
+  const { stats: institutionalStats } = useInstitutionalStats();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  
-  const { stats, students, loading, refetch } = useStudentStats();
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [departments, setDepartments] = useState<any[]>([]);
 
   useEffect(() => {
-    refetch();
-  }, []);
+    fetchStudents();
+    fetchDepartments();
+  }, [user]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchStudents = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          name,
+          email,
+          roll_number,
+          year,
+          semester,
+          department_id,
+          is_active,
+          community,
+          first_generation,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
+        .eq('role', 'student')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const mappedStudents: Student[] = (data || []).map((student: any) => ({
+        id: student.id,
+        name: student.name || 'N/A',
+        email: student.email || 'N/A',
+        roll_number: student.roll_number || 'N/A',
+        year: student.year || 0,
+        semester: student.semester || 0,
+        department_id: student.department_id,
+        department_name: student.departments?.name || 'Unknown',
+        department_code: student.departments?.code || 'N/A',
+        is_active: student.is_active,
+        community: student.community,
+        first_generation: student.first_generation || false
+      }));
+
+      setStudents(mappedStudents);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.roll_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.department_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.roll_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.department_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDepartment = selectedDepartment === 'all' || 
-      student.department_name === selectedDepartment;
+      student.department_id === selectedDepartment;
+    
+    const matchesYear = selectedYear === 'all' || 
+      student.year.toString() === selectedYear;
 
-    return matchesSearch && matchesDepartment;
+    return matchesSearch && matchesDepartment && matchesYear;
   });
 
-  const getAttendanceStatus = (percentage: number) => {
-    if (percentage >= 90) return { label: 'Excellent', color: 'text-green-600 bg-green-100', icon: CheckCircle };
-    if (percentage >= 75) return { label: 'Good', color: 'text-blue-600 bg-blue-100', icon: TrendingUp };
-    if (percentage >= 60) return { label: 'Warning', color: 'text-orange-600 bg-orange-100', icon: AlertTriangle };
-    return { label: 'Critical', color: 'text-red-600 bg-red-100', icon: AlertTriangle };
+  // Group students by department for statistics
+  const studentsByDepartment = students.reduce((acc, student) => {
+    const dept = student.department_name;
+    if (!acc[dept]) {
+      acc[dept] = {
+        total: 0,
+        active: 0,
+        code: student.department_code
+      };
+    }
+    acc[dept].total += 1;
+    if (student.is_active) acc[dept].active += 1;
+    return acc;
+  }, {} as Record<string, any>);
+
+  const getYearLabel = (year: number) => {
+    if (year === 1) return '1st Year';
+    if (year === 2) return '2nd Year';
+    if (year === 3) return '3rd Year';
+    if (year === 4) return '4th Year';
+    return `${year}th Year`;
   };
 
   if (loading) {
     return (
-      <div className={cn("p-4 space-y-6 safe-area-pb", className)}>
+      <div className={cn("p-4 space-y-6", className)}>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
         </div>
@@ -66,22 +173,16 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   }
 
   return (
-    <div className={cn("p-4 space-y-6 safe-area-pb", className)}>
+    <div className={cn("p-4 space-y-6", className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             Student Overview
           </h2>
-          <div className="flex items-center space-x-2 mt-1">
-            <p className="text-sm text-gray-500">Institutional Student Management</p>
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-              <Eye className="w-3 h-3 mr-1" />
-              View Only
-            </Badge>
-          </div>
+          <p className="text-sm text-gray-500 mt-1">Institutional Student Management</p>
         </div>
-        <Button variant="outline" size="sm" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+        <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
           <Download className="w-4 h-4 mr-2" />
           Export
         </Button>
@@ -89,68 +190,67 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalStudents}</p>
-                <p className="text-xs text-gray-500">{stats.activeStudents} active</p>
+                <p className="text-2xl font-bold text-blue-600">{institutionalStats.totalStudents}</p>
+                <p className="text-xs text-gray-500">{institutionalStats.activeStudents} active</p>
               </div>
               <Users className="w-8 h-8 text-blue-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-sm">
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Departments</p>
-                <p className="text-2xl font-bold text-green-600">{stats.totalDepartments}</p>
-                <p className="text-xs text-gray-500">Active programs</p>
+                <p className="text-2xl font-bold text-purple-600">{Object.keys(studentsByDepartment).length}</p>
+                <p className="text-xs text-gray-500">With students</p>
               </div>
-              <GraduationCap className="w-8 h-8 text-green-600 opacity-80" />
+              <GraduationCap className="w-8 h-8 text-purple-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Student Insights */}
-      <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Award className="w-5 h-5 text-purple-600" />
-            <span>Student Insights</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
-              <div className="text-2xl font-bold text-green-600">{stats.excellentAttendance}</div>
-              <div className="text-sm text-gray-600 mt-1">Excellent Attendance</div>
-              <div className="text-xs text-gray-500">(≥90%)</div>
+      {/* Department-wise Students */}
+      {Object.keys(studentsByDepartment).length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              <span>Department-wise Distribution</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Object.entries(studentsByDepartment).map(([dept, data]: [string, any]) => (
+                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">{data.code}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{dept}</p>
+                      <p className="text-sm text-gray-600">{data.active} active students</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-purple-600">{data.total}</p>
+                    <p className="text-xs text-gray-500">Students</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
-              <div className="text-2xl font-bold text-red-600">{stats.criticalAttendance}</div>
-              <div className="text-sm text-gray-600 mt-1">Need Attention</div>
-              <div className="text-xs text-gray-500">(less than 75%)</div>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
-              <div className="text-2xl font-bold text-blue-600">{stats.avgAttendance}%</div>
-              <div className="text-sm text-gray-600 mt-1">Avg Attendance</div>
-              <div className="text-xs text-gray-500">Institute-wide</div>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
-              <div className="text-2xl font-bold text-purple-600">{stats.topPerformers}</div>
-              <div className="text-sm text-gray-600 mt-1">Top Performers</div>
-              <div className="text-xs text-gray-500">(greater than 95%)</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Search and Filter */}
+      {/* Search and Filters */}
       <div className="space-y-3">
         <div className="flex space-x-3">
           <div className="flex-1 relative">
@@ -159,115 +259,133 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
               placeholder="Search students..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-purple-200 focus:ring-purple-500"
+              className="pl-10"
             />
           </div>
-          <Button variant="outline" size="icon" className="border-purple-200 hover:bg-purple-50">
-            <Filter className="w-4 h-4 text-purple-600" />
+          <Button variant="outline" size="icon">
+            <Filter className="w-4 h-4" />
           </Button>
+        </div>
+
+        <div className="flex space-x-2">
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              <SelectItem value="1">1st Year</SelectItem>
+              <SelectItem value="2">2nd Year</SelectItem>
+              <SelectItem value="3">3rd Year</SelectItem>
+              <SelectItem value="4">4th Year</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Student List */}
+      {/* Students List */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800">Student Records</h3>
-          <Badge variant="secondary" className="text-xs">
-            {filteredStudents.length} students
-          </Badge>
-        </div>
-        
+        <h3 className="font-semibold text-gray-800">Students</h3>
         {filteredStudents.length === 0 ? (
-          <Card className="shadow-sm">
+          <Card>
             <CardContent className="text-center py-8">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No students found</p>
-              <p className="text-sm text-gray-400 mt-1">Try adjusting your search criteria</p>
             </CardContent>
           </Card>
         ) : (
-          filteredStudents.slice(0, 10).map((student) => {
-            const attendanceStatus = getAttendanceStatus(student.attendance_percentage || 0);
-            return (
-              <MobileDataCard
-                key={student.student_id}
-                title={student.name || 'Unknown Student'}
-                subtitle={`${student.roll_number || 'N/A'} • ${student.department_name || 'No Dept'} • ${student.current_year || 'N/A'} Year`}
-                status={{
-                  label: student.is_active ? 'Active' : 'Inactive',
-                  variant: student.is_active ? 'default' : 'secondary'
-                }}
-                data={[
-                  {
-                    label: 'Attendance',
-                    value: `${student.attendance_percentage || 0}%`,
-                    icon: Clock,
-                    color: attendanceStatus.color.includes('green') ? 'text-green-600' : 
-                           attendanceStatus.color.includes('orange') ? 'text-orange-600' : 'text-red-600'
-                  },
-                  {
-                    label: 'Department',
-                    value: student.department_code || 'N/A',
-                    icon: BookOpen,
-                    color: 'text-purple-600'
-                  },
-                  {
-                    label: 'Year',
-                    value: `Year ${student.current_year || 'N/A'}`,
-                    icon: GraduationCap,
-                    color: 'text-blue-600'
-                  },
-                  {
-                    label: 'Status',
-                    value: attendanceStatus.label,
-                    icon: attendanceStatus.icon,
-                    color: attendanceStatus.color.includes('green') ? 'text-green-600' : 
-                           attendanceStatus.color.includes('orange') ? 'text-orange-600' : 'text-red-600'
-                  }
-                ]}
-                actions={[
-                  {
-                    label: 'View Profile',
-                    icon: Eye,
-                    onClick: () => console.log('View student:', student.student_id)
-                  }
-                ]}
-                onClick={() => console.log('Student clicked:', student.student_id)}
-                className="hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-200"
-              />
-            );
-          })
+          filteredStudents.map((student) => (
+            <MobileDataCard
+              key={student.id}
+              title={student.name}
+              subtitle={`${student.roll_number} • ${student.department_code} • ${getYearLabel(student.year)}`}
+              status={{
+                label: student.is_active ? 'Active' : 'Inactive',
+                variant: student.is_active ? 'default' : 'secondary'
+              }}
+              data={[
+                {
+                  label: 'Year',
+                  value: getYearLabel(student.year),
+                  icon: Calendar,
+                  color: 'text-blue-600'
+                },
+                {
+                  label: 'Department',
+                  value: student.department_code,
+                  icon: MapPin,
+                  color: 'text-purple-600'
+                },
+                {
+                  label: 'Community',
+                  value: student.community || 'General',
+                  icon: Users,
+                  color: 'text-green-600'
+                },
+                {
+                  label: 'First Gen',
+                  value: student.first_generation ? 'Yes' : 'No',
+                  icon: Award,
+                  color: student.first_generation ? 'text-emerald-600' : 'text-gray-500'
+                }
+              ]}
+              actions={[
+                {
+                  label: 'View Profile',
+                  icon: Eye,
+                  onClick: () => console.log('View student:', student.id)
+                }
+              ]}
+              onClick={() => console.log('Student clicked:', student.id)}
+              className="hover:shadow-md transition-shadow"
+            />
+          ))
         )}
       </div>
 
-      {/* Department Summary */}
-      {stats.departmentStats && stats.departmentStats.length > 0 && (
+      {/* Student Insights */}
+      {students.length > 0 && (
         <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-              <span>Department Performance</span>
+              <Award className="w-5 h-5 text-emerald-600" />
+              <span>Student Insights</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {stats.departmentStats.map((dept) => (
-                <div key={dept.department} className="flex items-center justify-between p-3 rounded-lg bg-white/70 shadow-sm">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">{dept.department.substring(0, 3)}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{dept.department}</p>
-                      <p className="text-sm text-gray-600">{dept.avgAttendance}% avg attendance</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-emerald-600">{dept.totalStudents}</p>
-                    <p className="text-xs text-gray-500">Students</p>
-                  </div>
-                </div>
-              ))}
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">First Generation Students</span>
+                <span className="text-lg font-bold text-green-600">
+                  {students.filter(s => s.first_generation).length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">SC/ST Students</span>
+                <span className="text-lg font-bold text-purple-600">
+                  {students.filter(s => s.community && ['SC', 'ST'].includes(s.community)).length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+                <span className="text-sm font-medium text-gray-700">Final Year Students</span>
+                <span className="text-lg font-bold text-blue-600">
+                  {students.filter(s => s.year === 4).length}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
