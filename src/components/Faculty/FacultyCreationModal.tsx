@@ -57,39 +57,66 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
 
     setLoading(true);
     try {
-      // First create the profile
+      // Create user invitation instead of direct profile creation
+      const { data: invitationData, error: invitationError } = await supabase
+        .from('user_invitations')
+        .insert([{
+          email: formData.email,
+          role: 'faculty',
+          department: departments.find(d => d.id === formData.department_id)?.code || 'CSE',
+          employee_id: formData.employee_code,
+          invited_by: user.id,
+          is_active: true,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+        }])
+        .select()
+        .single();
+
+      if (invitationError) throw invitationError;
+
+      // For demo purposes, create a basic profile record
+      // In production, this would be handled by the user signup flow
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert([{
+          id: crypto.randomUUID(), // Temporary ID for demo
           name: formData.name,
           email: formData.email,
           role: 'faculty',
           department_id: formData.department_id,
           phone: formData.phone,
           employee_id: formData.employee_code,
-          is_active: true
+          is_active: false, // Will be activated when user signs up
+          profile_completed: false
         }])
         .select()
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.warn('Profile creation failed:', profileError);
+        // Continue anyway as invitation is the primary mechanism
+      }
 
-      // Then create the faculty profile
-      const { error: facultyError } = await supabase
-        .from('faculty_profiles')
-        .insert([{
-          user_id: profileData.id,
-          employee_code: formData.employee_code,
-          designation: formData.designation,
-          joining_date: new Date().toISOString().split('T')[0],
-          is_active: true
-        }]);
+      // Create faculty profile if main profile was created successfully
+      if (profileData) {
+        const { error: facultyError } = await supabase
+          .from('faculty_profiles')
+          .insert([{
+            user_id: profileData.id,
+            employee_code: formData.employee_code,
+            designation: formData.designation,
+            joining_date: new Date().toISOString().split('T')[0],
+            is_active: false // Will be activated when user signs up
+          }]);
 
-      if (facultyError) throw facultyError;
+        if (facultyError) {
+          console.warn('Faculty profile creation failed:', facultyError);
+        }
+      }
 
       toast({
         title: "Success",
-        description: "Faculty member created successfully"
+        description: "Faculty invitation sent successfully. They will receive an email to complete their profile."
       });
 
       onSuccess();
@@ -106,7 +133,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create faculty member",
+        description: error.message || "Failed to create faculty invitation",
         variant: "destructive"
       });
     } finally {
@@ -120,7 +147,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         <DialogHeader>
           <DialogTitle>Add New Faculty Member</DialogTitle>
           <DialogDescription>
-            Enter the faculty member's information below.
+            Enter the faculty member's information. They will receive an invitation email to complete their profile.
           </DialogDescription>
         </DialogHeader>
         
@@ -216,7 +243,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Faculty'}
+              {loading ? 'Creating...' : 'Send Invitation'}
             </Button>
           </div>
         </form>

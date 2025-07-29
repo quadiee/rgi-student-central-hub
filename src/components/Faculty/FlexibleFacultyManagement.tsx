@@ -68,27 +68,45 @@ const FlexibleFacultyManagement: React.FC = () => {
       ];
 
       for (const faculty of sampleFaculty) {
-        // Create profile first
-        const { data: profile, error: profileError } = await supabase
+        // Create user invitation first
+        await supabase
+          .from('user_invitations')
+          .insert([{
+            email: faculty.email,
+            role: 'faculty',
+            department: departments.find(d => d.id === faculty.department_id)?.code || 'CSE',
+            employee_id: faculty.employee_code,
+            invited_by: user.id,
+            is_active: true,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          }]);
+
+        // Create demo profile (in production, this would be done by user signup)
+        const profileId = crypto.randomUUID();
+        
+        const { error: profileError } = await supabase
           .from('profiles')
           .insert([{
+            id: profileId,
             name: faculty.name,
             email: faculty.email,
             role: 'faculty',
             department_id: faculty.department_id,
             employee_id: faculty.employee_code,
-            is_active: true
-          }])
-          .select()
-          .single();
+            is_active: true, // Set to true for demo
+            profile_completed: true
+          }]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.warn('Profile creation failed for', faculty.name, profileError);
+          continue;
+        }
 
         // Create faculty profile
         await supabase
           .from('faculty_profiles')
           .insert([{
-            user_id: profile.id,
+            user_id: profileId,
             employee_code: faculty.employee_code,
             designation: faculty.designation,
             joining_date: new Date().toISOString().split('T')[0],

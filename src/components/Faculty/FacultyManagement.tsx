@@ -258,6 +258,7 @@ const FacultyManagement: React.FC = () => {
         <FacultyCreationModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
+          onSuccess={handleFacultyUpdate}
         />
       )}
 
