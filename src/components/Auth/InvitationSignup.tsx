@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -14,7 +15,7 @@ interface InvitationData {
   email: string;
   role: string;
   department_id?: string;
-  department?: string; // Legacy field
+  department?: string; // Legacy field - current schema
   department_name?: string;
   department_code?: string;
   roll_number?: string;
@@ -96,10 +97,12 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Get department details using department_id (if available) or fallback
+      // Get department details - handle both old and new structure
       let departmentName = 'Unknown Department';
       let departmentCode = 'UNK';
+      let departmentId = invitation.department_id;
       
+      // If we have department_id, fetch department details
       if (invitation.department_id) {
         try {
           const { data: deptData } = await supabase
@@ -116,12 +119,31 @@ const InvitationSignup: React.FC = () => {
           console.error('Error fetching department:', error);
         }
       }
+      // Fallback to old department enum if no department_id
+      else if (invitation.department) {
+        try {
+          const { data: deptData } = await supabase
+            .from('departments')
+            .select('id, name, code')
+            .eq('code', invitation.department)
+            .single();
+
+          if (deptData) {
+            departmentId = deptData.id;
+            departmentName = deptData.name;
+            departmentCode = deptData.code;
+          }
+        } catch (error) {
+          console.error('Error fetching department by code:', error);
+        }
+      }
 
       setInvitationData({
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
-        department_id: invitation.department_id,
+        department_id: departmentId,
+        department: invitation.department,
         department_name: departmentName,
         department_code: departmentCode,
         roll_number: invitation.roll_number,
@@ -182,6 +204,7 @@ const InvitationSignup: React.FC = () => {
       // Get department details - handle both old and new structure
       let departmentName = 'Unknown Department';
       let departmentCode = 'UNK';
+      let departmentId = data.department_id;
       
       if (data.department_id) {
         try {
@@ -203,11 +226,12 @@ const InvitationSignup: React.FC = () => {
         try {
           const { data: deptData } = await supabase
             .from('departments')
-            .select('name, code')
+            .select('id, name, code')
             .eq('code', data.department)
             .single();
 
           if (deptData) {
+            departmentId = deptData.id;
             departmentName = deptData.name;
             departmentCode = deptData.code;
           }
@@ -220,7 +244,7 @@ const InvitationSignup: React.FC = () => {
         id: data.id,
         email: data.email,
         role: data.role,
-        department_id: data.department_id,
+        department_id: departmentId,
         department: data.department,
         department_name: departmentName,
         department_code: departmentCode,
