@@ -7,12 +7,9 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Users, BarChart3, Calendar, Plus, Search, Filter, Eye, Download, Settings } from 'lucide-react';
-import { useIsMobile } from '../../hooks/use-mobile';
+import { Users, BarChart3, Calendar, Plus, Search, Eye, Settings, Download } from 'lucide-react';
 import { useFacultyAttendance } from '../../hooks/useFacultyAttendance';
-import FacultyDetailsModal from './FacultyDetailsModal';
-import FacultyAnalyticsOverview from './FacultyAnalyticsOverview';
-import FacultyAttendanceOverview from './FacultyAttendanceOverview';
+import FacultyCreationModal from './FacultyCreationModal';
 
 interface EnhancedFacultyMember {
   faculty_id: string;
@@ -47,8 +44,7 @@ const DesktopFacultyManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedFaculty, setSelectedFaculty] = useState<EnhancedFacultyMember | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCreationModal, setShowCreationModal] = useState(false);
 
   React.useEffect(() => {
     fetchEnhancedFacultyList();
@@ -126,16 +122,10 @@ const DesktopFacultyManagement: React.FC = () => {
     }
   ];
 
-  const handleViewDetails = (faculty: EnhancedFacultyMember) => {
-    setSelectedFaculty(faculty);
-    setShowDetailsModal(true);
-  };
-
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'faculty-list', label: 'Faculty Directory', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'attendance', label: 'Attendance', icon: Calendar },
   ];
 
   return (
@@ -157,7 +147,10 @@ const DesktopFacultyManagement: React.FC = () => {
             <Settings className="h-4 w-4" />
             Settings
           </Button>
-          <Button className={`gap-2 bg-gradient-to-r ${getThemeColors()} text-white`}>
+          <Button 
+            onClick={() => setShowCreationModal(true)}
+            className={`gap-2 bg-gradient-to-r ${getThemeColors()} text-white hover:opacity-90`}
+          >
             <Plus className="h-4 w-4" />
             Add Faculty
           </Button>
@@ -165,12 +158,12 @@ const DesktopFacultyManagement: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           {tabs.map((tab) => (
             <TabsTrigger 
               key={tab.id}
               value={tab.id}
-              className={`gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:${getThemeColors()} data-[state=active]:text-white`}
+              className="gap-2"
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
@@ -204,7 +197,11 @@ const DesktopFacultyManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-20 flex-col gap-2">
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex-col gap-2"
+                  onClick={() => setShowCreationModal(true)}
+                >
                   <Plus className="h-6 w-6" />
                   Add Faculty
                 </Button>
@@ -312,11 +309,7 @@ const DesktopFacultyManagement: React.FC = () => {
                             </p>
                           </div>
                           
-                          <Button
-                            variant="outline"
-                            onClick={() => handleViewDetails(faculty)}
-                            className="gap-2"
-                          >
+                          <Button variant="outline" className="gap-2">
                             <Eye className="h-4 w-4" />
                             View Details
                           </Button>
@@ -331,22 +324,26 @@ const DesktopFacultyManagement: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <FacultyAnalyticsOverview />
-        </TabsContent>
-
-        <TabsContent value="attendance">
-          <FacultyAttendanceOverview />
+          <Card>
+            <CardHeader>
+              <CardTitle>Analytics Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Advanced analytics coming soon</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Faculty Details Modal */}
-      {showDetailsModal && selectedFaculty && (
-        <FacultyDetailsModal
-          isOpen={showDetailsModal}
-          onClose={() => setShowDetailsModal(false)}
-          faculty={selectedFaculty}
-        />
-      )}
+      {/* Creation Modal */}
+      <FacultyCreationModal
+        isOpen={showCreationModal}
+        onClose={() => setShowCreationModal(false)}
+        onSuccess={fetchEnhancedFacultyList}
+      />
     </div>
   );
 };
