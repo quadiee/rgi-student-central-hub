@@ -4,16 +4,34 @@ import { useAuth } from '../../contexts/SupabaseAuthContext';
 import FacultyListManagement from './FacultyListManagement';
 import FacultyAnalytics from './FacultyAnalytics';
 import FacultyCreationModal from './FacultyCreationModal';
+import FacultyEditModal from './FacultyEditModal';
+import FacultyDetailsModal from './FacultyDetailsModal';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp } from 'lucide-react';
 import { useIsMobile } from '../../hooks/use-mobile';
 
+interface FacultyMember {
+  faculty_id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  employee_code: string;
+  designation: string;
+  department_name: string;
+  joining_date: string;
+  phone: string | null;
+  is_active: boolean;
+}
+
 const FacultyManagement: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedFaculty, setSelectedFaculty] = useState<FacultyMember | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!user || !['admin', 'principal', 'chairman', 'hod'].includes(user.role)) {
@@ -33,6 +51,26 @@ const FacultyManagement: React.FC = () => {
       </div>
     );
   }
+
+  const handleEditFaculty = (faculty: FacultyMember) => {
+    setSelectedFaculty(faculty);
+    setShowEditModal(true);
+  };
+
+  const handleViewDetails = (faculty: FacultyMember) => {
+    setSelectedFaculty(faculty);
+    setShowDetailsModal(true);
+  };
+
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setSelectedFaculty(null);
+  };
+
+  const handleDetailsModalClose = () => {
+    setShowDetailsModal(false);
+    setSelectedFaculty(null);
+  };
 
   const quickStats = [
     {
@@ -155,7 +193,10 @@ const FacultyManagement: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="faculty">
-          <FacultyListManagement />
+          <FacultyListManagement 
+            onEditFaculty={handleEditFaculty}
+            onViewDetails={handleViewDetails}
+          />
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -191,6 +232,24 @@ const FacultyManagement: React.FC = () => {
         <FacultyCreationModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {/* Edit Faculty Modal */}
+      {showEditModal && selectedFaculty && (
+        <FacultyEditModal
+          isOpen={showEditModal}
+          onClose={handleEditModalClose}
+          faculty={selectedFaculty}
+        />
+      )}
+
+      {/* Faculty Details Modal */}
+      {showDetailsModal && selectedFaculty && (
+        <FacultyDetailsModal
+          isOpen={showDetailsModal}
+          onClose={handleDetailsModalClose}
+          faculty={selectedFaculty}
         />
       )}
     </div>
