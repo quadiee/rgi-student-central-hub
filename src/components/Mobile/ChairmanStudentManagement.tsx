@@ -19,11 +19,14 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
+import StudentProfile from '../Students/StudentProfile';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
+import { useUserConversion } from '../../hooks/useUserConversion';
+import { Student } from '../../types';
 
-interface Student {
+interface StudentData {
   id: string;
   name: string;
   email: string;
@@ -44,8 +47,11 @@ interface ChairmanStudentManagementProps {
 
 const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ className }) => {
   const { user } = useAuth();
+  const { convertUserProfileToUser } = useUserConversion();
   const { stats: institutionalStats } = useInstitutionalStats();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentData[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
@@ -90,6 +96,8 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
           is_active,
           community,
           first_generation,
+          phone,
+          address,
           departments:department_id (
             name,
             code
@@ -100,7 +108,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
       if (error) throw error;
 
-      const mappedStudents: Student[] = (data || []).map((student: any) => ({
+      const mappedStudents: StudentData[] = (data || []).map((student: any) => ({
         id: student.id,
         name: student.name || 'N/A',
         email: student.email || 'N/A',
@@ -112,7 +120,9 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
         department_code: student.departments?.code || 'N/A',
         is_active: student.is_active,
         community: student.community,
-        first_generation: student.first_generation || false
+        first_generation: student.first_generation || false,
+        phone: student.phone,
+        address: student.address
       }));
 
       setStudents(mappedStudents);
@@ -121,6 +131,41 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     } finally {
       setLoading(false);
     }
+  };
+
+  const convertToStudentType = (studentData: StudentData): Student => {
+    return {
+      id: studentData.id,
+      name: studentData.name,
+      rollNumber: studentData.roll_number,
+      roll_number: studentData.roll_number,
+      email: studentData.email,
+      phone: studentData.phone || '',
+      course: `${studentData.department_name}`,
+      year: studentData.year,
+      semester: studentData.semester,
+      department: studentData.department_name,
+      yearSection: `${studentData.year}`,
+      section: '',
+      admissionDate: '',
+      guardianName: '',
+      guardianPhone: '',
+      address: studentData.address || '',
+      emergencyContact: '',
+      community: studentData.community as 'SC' | 'ST' | 'OBC' | 'General' | 'EWS',
+      first_generation: studentData.first_generation
+    };
+  };
+
+  const handleStudentClick = (studentData: StudentData) => {
+    const student = convertToStudentType(studentData);
+    setSelectedStudent(student);
+    setShowProfile(true);
+  };
+
+  const handleBackToList = () => {
+    setShowProfile(false);
+    setSelectedStudent(null);
   };
 
   const filteredStudents = students.filter(student => {
@@ -169,6 +214,16 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
         </div>
       </div>
+    );
+  }
+
+  // Show student profile if selected
+  if (showProfile && selectedStudent) {
+    return (
+      <StudentProfile
+        student={selectedStudent}
+        onBack={handleBackToList}
+      />
     );
   }
 
@@ -347,10 +402,10 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                 {
                   label: 'View Profile',
                   icon: Eye,
-                  onClick: () => console.log('View student:', student.id)
+                  onClick: () => handleStudentClick(student)
                 }
               ]}
-              onClick={() => console.log('Student clicked:', student.id)}
+              onClick={() => handleStudentClick(student)}
               className="hover:shadow-md transition-shadow"
             />
           ))
