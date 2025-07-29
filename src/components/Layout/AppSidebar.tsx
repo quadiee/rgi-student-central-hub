@@ -1,41 +1,11 @@
-
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  useSidebar,
-} from '../ui/sidebar';
-import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  CreditCard,
-  BarChart3,
-  Settings,
-  UserCog,
-  BookOpen,
-  Calendar,
-  FileText,
-  Building2,
-  Shield,
-  LogOut,
-  ChevronRight,
-  Eye
-} from 'lucide-react';
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from '../ui/sidebar';
+import { LayoutDashboard, Users, GraduationCap, CreditCard, BarChart3, Settings, UserCog, BookOpen, Calendar, FileText, Building2, Shield, LogOut, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { INSTITUTION } from '../../constants/institutional';
-
 interface NavigationItem {
   title: string;
   url: string;
@@ -43,80 +13,67 @@ interface NavigationItem {
   roles: string[];
   badge?: string;
 }
-
 const AppSidebar: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const location = useLocation();
-  const { state } = useSidebar();
+  const {
+    state
+  } = useSidebar();
   const collapsed = state === 'collapsed';
-
-  const navigationItems: NavigationItem[] = [
-    {
-      title: 'Dashboard',
-      url: '/dashboard',
-      icon: LayoutDashboard,
-      roles: ['student', 'faculty', 'hod', 'principal', 'admin', 'chairman']
-    },
-    {
-      title: 'Students',
-      url: '/students',
-      icon: GraduationCap,
-      roles: ['hod', 'principal', 'admin', 'chairman']
-    },
-    {
-      title: 'Faculty',
-      url: '/faculty',
-      icon: Users,
-      roles: ['hod', 'principal', 'admin', 'chairman']
-    },
-    {
-      title: 'Attendance',
-      url: '/attendance',
-      icon: Calendar,
-      roles: ['hod', 'principal', 'admin']
-    },
-    {
-      title: 'Exams',
-      url: '/exams',
-      icon: FileText,
-      roles: ['hod', 'principal', 'admin']
-    },
-    {
-      title: 'Fee Management',
-      url: '/fees',
-      icon: CreditCard,
-      roles: ['student', 'hod', 'principal', 'admin', 'chairman']
-    },
-    {
-      title: 'Reports',
-      url: '/reports',
-      icon: BarChart3,
-      roles: ['hod', 'principal', 'admin']
-    },
-    {
-      title: 'Admin Panel',
-      url: '/admin',
-      icon: Shield,
-      roles: ['principal', 'admin'],
-      badge: 'Admin'
-    },
-    {
-      title: 'User Management',
-      url: '/user-management',
-      icon: UserCog,
-      roles: ['principal', 'admin']
-    }
-  ];
-
-  const filteredNavigation = navigationItems.filter(item => 
-    user && item.roles.includes(user.role)
-  );
-
+  const navigationItems: NavigationItem[] = [{
+    title: 'Dashboard',
+    url: '/dashboard',
+    icon: LayoutDashboard,
+    roles: ['student', 'faculty', 'hod', 'principal', 'admin', 'chairman']
+  }, {
+    title: 'Students',
+    url: '/students',
+    icon: GraduationCap,
+    roles: ['hod', 'principal', 'admin', 'chairman']
+  }, {
+    title: 'Faculty',
+    url: '/faculty',
+    icon: Users,
+    roles: ['hod', 'principal', 'admin', 'chairman']
+  }, {
+    title: 'Attendance',
+    url: '/attendance',
+    icon: Calendar,
+    roles: ['hod', 'principal', 'admin']
+  }, {
+    title: 'Exams',
+    url: '/exams',
+    icon: FileText,
+    roles: ['hod', 'principal', 'admin']
+  }, {
+    title: 'Fee Management',
+    url: '/fees',
+    icon: CreditCard,
+    roles: ['student', 'hod', 'principal', 'admin', 'chairman']
+  }, {
+    title: 'Reports',
+    url: '/reports',
+    icon: BarChart3,
+    roles: ['hod', 'principal', 'admin']
+  }, {
+    title: 'Admin Panel',
+    url: '/admin',
+    icon: Shield,
+    roles: ['principal', 'admin'],
+    badge: 'Admin'
+  }, {
+    title: 'User Management',
+    url: '/user-management',
+    icon: UserCog,
+    roles: ['principal', 'admin']
+  }];
+  const filteredNavigation = navigationItems.filter(item => user && item.roles.includes(user.role));
   const isActive = (path: string) => {
-    return location.pathname === path || 
-           (path === '/dashboard' && location.pathname === '/');
+    return location.pathname === path || path === '/dashboard' && location.pathname === '/';
   };
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -124,24 +81,20 @@ const AppSidebar: React.FC = () => {
       console.error('Sign out error:', error);
     }
   };
-
-  return (
-    <Sidebar className="border-r border-border bg-sidebar-background">
+  return <Sidebar className="border-r border-border bg-sidebar-background">
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
             <BookOpen className="w-4 h-4 text-white" />
           </div>
-          {!collapsed && (
-            <div className="flex flex-col">
+          {!collapsed && <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-foreground">
                 {INSTITUTION.shortName}
               </span>
               <span className="text-xs text-muted-foreground">
                 {user?.role === 'chairman' ? 'Executive Portal' : 'Student Portal'}
               </span>
-            </div>
-          )}
+            </div>}
         </div>
       </SidebarHeader>
 
@@ -149,51 +102,27 @@ const AppSidebar: React.FC = () => {
         <SidebarGroup>
           <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
             Navigation
-            {user?.role === 'chairman' && !collapsed && (
-              <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Eye className="w-3 h-3" />
-                View Only
-              </span>
-            )}
+            {user?.role === 'chairman' && !collapsed}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredNavigation.map((item) => (
-                <SidebarMenuItem key={item.url}>
+              {filteredNavigation.map(item => <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive: navIsActive }) =>
-                        `flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
-                          isActive(item.url) || navIsActive
-                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                            : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                        }`
-                      }
-                    >
+                    <NavLink to={item.url} className={({
+                  isActive: navIsActive
+                }) => `flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${isActive(item.url) || navIsActive ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'}`}>
                       <item.icon className="w-4 h-4" />
-                      {!collapsed && (
-                        <>
+                      {!collapsed && <>
                           <span className="flex-1">{item.title}</span>
-                          {item.badge && (
-                            <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full">
+                          {item.badge && <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full">
                               {item.badge}
-                            </span>
-                          )}
-                          {user?.role === 'chairman' && ['Students', 'Faculty', 'Fee Management'].includes(item.title) && (
-                            <span className="text-xs text-muted-foreground">
-                              View
-                            </span>
-                          )}
-                          {isActive(item.url) && (
-                            <ChevronRight className="w-3 h-3" />
-                          )}
-                        </>
-                      )}
+                            </span>}
+                          {user?.role === 'chairman' && ['Students', 'Faculty', 'Fee Management'].includes(item.title)}
+                          {isActive(item.url) && <ChevronRight className="w-3 h-3" />}
+                        </>}
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                </SidebarMenuItem>)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -206,8 +135,7 @@ const AppSidebar: React.FC = () => {
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
+          {!collapsed && <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
                 {user?.name || 'User'}
               </p>
@@ -215,21 +143,13 @@ const AppSidebar: React.FC = () => {
                 {user?.role}
                 {user?.role === 'chairman' && ' (View Only)'}
               </p>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className={`p-1.5 ${collapsed ? 'w-8 h-8' : ''}`}
-          >
+            </div>}
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className={`p-1.5 ${collapsed ? 'w-8 h-8' : ''}`}>
             <LogOut className="w-4 h-4" />
             {!collapsed && <span className="sr-only">Sign Out</span>}
           </Button>
         </div>
       </SidebarFooter>
-    </Sidebar>
-  );
+    </Sidebar>;
 };
-
 export default AppSidebar;
