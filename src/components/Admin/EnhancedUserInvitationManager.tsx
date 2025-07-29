@@ -8,7 +8,8 @@ import { supabase } from '../../integrations/supabase/client';
 interface BulkInvitation {
   email: string;
   role: string;
-  department: string;
+  department_id: string;
+  department_name?: string;
   name?: string;
   rollNumber?: string;
   employeeId?: string;
@@ -40,7 +41,7 @@ const EnhancedUserInvitationManager: React.FC = () => {
   }, []);
 
   const downloadTemplate = () => {
-    const csvContent = `email,role,department,name,rollNumber,employeeId
+    const csvContent = `email,role,department_code,name,rollNumber,employeeId
 student1@example.com,student,CSE,John Doe,CS001,
 hod1@example.com,hod,CSE,Jane Smith,,EMP001
 faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
@@ -61,27 +62,40 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
     try {
       const lines = csvData.trim().split('\n');
       const headers = lines[0].split(',').map(h => h.trim());
-      const requiredHeaders = ['email', 'role', 'department'];
+      const requiredHeaders = ['email', 'role', 'department_code'];
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
       if (missingHeaders.length > 0) {
         toast({ title: "Error", description: `Missing required columns: ${missingHeaders.join(', ')}`, variant: "destructive" });
         return;
       }
+      
       const parsed: BulkInvitation[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim());
-        const invitation: BulkInvitation = { email: '', role: '', department: '' };
+        const invitation: any = { email: '', role: '', department_id: '' };
+        
         headers.forEach((header, idx) => {
           const value = values[idx] || '';
           if (header === 'email') invitation.email = value;
           if (header === 'role') invitation.role = value;
-          if (header === 'department') invitation.department = value;
+          if (header === 'department_code') {
+            // Find department by code
+            const dept = departments.find(d => d.code === value);
+            if (dept) {
+              invitation.department_id = dept.id;
+              invitation.department_name = dept.name;
+            }
+          }
           if (header === 'name') invitation.name = value;
           if (header === 'rollNumber') invitation.rollNumber = value;
           if (header === 'employeeId') invitation.employeeId = value;
         });
-        if (invitation.email && invitation.role && invitation.department) parsed.push(invitation);
+        
+        if (invitation.email && invitation.role && invitation.department_id) {
+          parsed.push(invitation);
+        }
       }
+      
       setInvitations(parsed);
       toast({ title: "Success", description: `Parsed ${parsed.length} invitations from CSV` });
     } catch {
@@ -106,7 +120,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
           .insert({
             email: invitation.email,
             role: invitation.role as any,
-            department: invitation.department as any,
+            department_id: invitation.department_id,
             roll_number: invitation.rollNumber || null,
             employee_id: invitation.employeeId || null,
             is_active: true,
@@ -126,7 +140,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
           body: {
             email: invitation.email,
             role: invitation.role,
-            department: invitation.department,
+            departmentId: invitation.department_id,
             invitedBy: null,
             invitationId: data.id
           }
@@ -171,7 +185,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
             <p className="font-medium">How to send bulk invitations:</p>
             <ol className="text-sm mt-2 space-y-1 list-decimal list-inside">
               <li>Download the CSV template using the button above</li>
-              <li>Fill in the user details (email, role, department are required)</li>
+              <li>Fill in the user details (email, role, department_code are required)</li>
               <li>Copy and paste the CSV content into the text area below</li>
               <li>Click "Parse CSV" to preview the invitations</li>
               <li>Click "Send Invitations" to send all invitations</li>
@@ -221,7 +235,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
                   <tr key={idx} className="hover:bg-gray-50">
                     <td className="px-4 py-2 text-sm text-gray-900">{invitation.email}</td>
                     <td className="px-4 py-2 text-sm text-gray-900 capitalize">{invitation.role}</td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{invitation.department}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{invitation.department_name}</td>
                     <td className="px-4 py-2 text-sm text-gray-900">{invitation.name || '-'}</td>
                     <td className="px-4 py-2 text-sm text-gray-900">
                       {invitation.rollNumber || invitation.employeeId || '-'}

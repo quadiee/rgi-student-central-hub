@@ -28,7 +28,7 @@ const UserCreationModal: React.FC<UserCreationModalProps> = ({ onUserCreated }) 
   const [formData, setFormData] = useState({
     email: '',
     role: '',
-    department: '',
+    department_id: '',
     name: '',
     roll_number: '',
     employee_id: '',
@@ -68,7 +68,7 @@ const UserCreationModal: React.FC<UserCreationModalProps> = ({ onUserCreated }) 
       const invitationData = {
         email: formData.email,
         role: formData.role as any,
-        department: formData.department as any,
+        department_id: formData.department_id,
         roll_number: formData.role === 'student' ? formData.roll_number : null,
         employee_id: formData.role !== 'student' ? formData.employee_id : null,
         is_active: true,
@@ -90,7 +90,7 @@ const UserCreationModal: React.FC<UserCreationModalProps> = ({ onUserCreated }) 
       setFormData({
         email: '',
         role: '',
-        department: '',
+        department_id: '',
         name: '',
         roll_number: '',
         employee_id: '',
@@ -160,15 +160,15 @@ const UserCreationModal: React.FC<UserCreationModalProps> = ({ onUserCreated }) 
             </div>
 
             <div>
-              <Label htmlFor="department">Department *</Label>
-              <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
+              <Label htmlFor="department_id">Department *</Label>
+              <Select value={formData.department_id} onValueChange={(value) => handleInputChange('department_id', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.code}>
-                      {dept.name}
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name} ({dept.code})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -257,7 +257,7 @@ const UserCreationModal: React.FC<UserCreationModalProps> = ({ onUserCreated }) 
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formData.email || !formData.role || !formData.department}>
+            <Button type="submit" disabled={loading || !formData.email || !formData.role || !formData.department_id}>
               {loading ? 'Creating...' : 'Create User Invitation'}
             </Button>
           </div>

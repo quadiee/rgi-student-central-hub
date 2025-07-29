@@ -10,7 +10,9 @@ interface Invitation {
   id: string;
   email: string;
   role: string;
-  department: string;
+  department_id: string;
+  department_name?: string;
+  department_code?: string;
   roll_number?: string;
   employee_id?: string;
   is_active: boolean;
@@ -36,20 +38,34 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
       setLoading(true);
       const { data, error } = await supabase
         .from('user_invitations')
-        .select('*')
+        .select(`
+          *,
+          departments!user_invitations_department_id_fkey (
+            name,
+            code
+          )
+        `)
         .order('invited_at', { ascending: false });
 
       if (error) throw error;
       
       // Remove duplicates based on email and keep the most recent one
-      const uniqueInvitations = data?.reduce((acc: Invitation[], current) => {
+      const uniqueInvitations = data?.reduce((acc: any[], current) => {
         const existingIndex = acc.findIndex(inv => inv.email === current.email);
         if (existingIndex === -1) {
-          acc.push(current);
+          acc.push({
+            ...current,
+            department_name: current.departments?.name,
+            department_code: current.departments?.code
+          });
         } else {
           // Keep the more recent invitation
           if (new Date(current.invited_at) > new Date(acc[existingIndex].invited_at)) {
-            acc[existingIndex] = current;
+            acc[existingIndex] = {
+              ...current,
+              department_name: current.departments?.name,
+              department_code: current.departments?.code
+            };
           }
         }
         return acc;
@@ -91,7 +107,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         body: {
           email: invitation.email,
           role: invitation.role,
-          department: invitation.department,
+          departmentId: invitation.department_id,
           invitationId: invitation.id,
           rollNumber: invitation.roll_number,
           employeeId: invitation.employee_id
@@ -211,12 +227,12 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
                       <Badge variant="secondary" className="capitalize">
                         {getRoleDisplayName(invitation.role)}
                       </Badge>
-                      <Badge variant="outline">{invitation.department}</Badge>
+                      <Badge variant="outline">{invitation.department_name}</Badge>
                     </div>
                     <p className="text-sm text-gray-600">
                       {invitation.roll_number && `Roll: ${invitation.roll_number} • `}
                       {invitation.employee_id && `Employee ID: ${invitation.employee_id} • `}
-                      Department: {invitation.department}
+                      Department: {invitation.department_name} ({invitation.department_code})
                     </p>
                     <p className="text-xs text-gray-500">
                       Invited: {new Date(invitation.invited_at).toLocaleDateString()} • 

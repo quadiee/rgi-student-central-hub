@@ -7,17 +7,20 @@ import { Label } from '../ui/label';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import type { Database } from '../../integrations/supabase/types';
 
-type UserRole = Database['public']['Enums']['user_role'];
-type Department = Database['public']['Enums']['department'];
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+}
 
 interface PendingInvite {
   id: string;
   email: string;
   invited_at: string;
   role?: string;
-  department?: string;
+  department_id?: string;
+  department_name?: string;
   email_sent?: boolean;
   email_sent_at?: string | null;
 }
@@ -33,23 +36,49 @@ const UserInvitationManager: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState({
     email: '',
-    role: 'student' as UserRole,
-    department: 'CSE' as Department,
+    role: 'student',
+    department_id: '',
     rollNumber: '',
     employeeId: ''
   });
 
-  const roles: UserRole[] = ['student', 'hod', 'principal', 'admin'];
-  const departments: Department[] = ['CSE', 'ECE', 'MECH', 'CIVIL', 'EEE', 'IT'];
+  const roles = ['student', 'hod', 'principal', 'admin', 'faculty', 'chairman'];
+
+  useEffect(() => {
+    loadDepartments();
+    loadPendingInvites();
+  }, []);
+
+  const loadDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error loading departments:', error);
+    }
+  };
 
   // Load pending invites from user_invitations table
   const loadPendingInvites = async () => {
     try {
       const { data, error } = await supabase
         .from('user_invitations')
-        .select('*')
+        .select(`
+          *,
+          departments!user_invitations_department_id_fkey (
+            name,
+            code
+          )
+        `)
         .is('used_at', null)
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString());
@@ -69,7 +98,8 @@ const UserInvitationManager: React.FC = () => {
         email: invite.email,
         invited_at: invite.invited_at || new Date().toISOString(),
         role: invite.role || "",
-        department: invite.department || "",
+        department_id: invite.department_id || "",
+        department_name: invite.departments?.name || "",
         email_sent: invite.email_sent || false,
         email_sent_at: invite.email_sent_at || null
       }));
@@ -85,18 +115,13 @@ const UserInvitationManager: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadPendingInvites();
-    // eslint-disable-next-line
-  }, []);
-
-  const sendInvitationEmail = async (invitationId: string, email: string, role: string, department: string) => {
+  const sendInvitationEmail = async (invitationId: string, email: string, role: string, departmentId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-invitation-email', {
         body: {
           email,
           role,
-          department,
+          departmentId,
           invitedBy: user?.id,
           invitationId
         }
@@ -126,8 +151,8 @@ const UserInvitationManager: React.FC = () => {
         .from('user_invitations')
         .insert({
           email: formData.email.trim().toLowerCase(),
-          role: formData.role,
-          department: formData.department,
+          role: formData.role as any,
+          department_id: formData.department_id,
           roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
           employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
           invited_by: user.id,
@@ -159,44 +184,19 @@ const UserInvitationManager: React.FC = () => {
         inviteData.id,
         formData.email.trim().toLowerCase(),
         formData.role,
-        formData.department
+        formData.department_id
       );
 
-      // Create the user in auth.users with metadata
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email.trim().toLowerCase(),
-        password: 'TempPassword123!', // Temporary password - user will be prompted to change
-        options: {
-          data: {
-            name: formData.email.split('@')[0], // Use email prefix as initial name
-            role: formData.role,
-            department: formData.department,
-            roll_number: formData.role === 'student' ? formData.rollNumber || null : null,
-            employee_id: formData.role !== 'student' ? formData.employeeId || null : null,
-            invitation_id: inviteData.id
-          },
-          emailRedirectTo: `${window.location.origin}/auth?mode=invited`
-        }
+      toast({
+        title: "Invitation Sent Successfully",
+        description: `User invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'}`,
       });
-
-      if (signUpError) {
-        console.error('Sign up error:', signUpError);
-        toast({
-          title: "Invitation Created",
-          description: `Invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : 'User will need to register manually.'}`,
-        });
-      } else {
-        toast({
-          title: "Invitation Sent Successfully",
-          description: `User account created and invitation sent to ${formData.email}. ${emailSent ? 'Email notification sent.' : ''}`,
-        });
-      }
 
       // Reset form and reload invites
       setFormData({
         email: '',
         role: 'student',
-        department: 'CSE',
+        department_id: '',
         rollNumber: '',
         employeeId: ''
       });
@@ -220,7 +220,7 @@ const UserInvitationManager: React.FC = () => {
       invite.id,
       invite.email,
       invite.role || 'student',
-      invite.department || 'CSE'
+      invite.department_id || ''
     );
 
     if (emailSent) {
@@ -281,7 +281,7 @@ const UserInvitationManager: React.FC = () => {
                   <select
                     id="role"
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
@@ -294,16 +294,19 @@ const UserInvitationManager: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="department">Department *</Label>
+                  <Label htmlFor="department_id">Department *</Label>
                   <select
-                    id="department"
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value as Department })}
+                    id="department_id"
+                    value={formData.department_id}
+                    onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
+                    <option value="">Select Department</option>
                     {departments.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name} ({dept.code})
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -342,7 +345,7 @@ const UserInvitationManager: React.FC = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || !formData.department_id}>
                   {loading ? (
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -387,8 +390,8 @@ const UserInvitationManager: React.FC = () => {
                 pendingInvites.map(invite => (
                   <tr key={invite.id}>
                     <td className="px-6 py-4 whitespace-nowrap">{invite.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{invite.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{invite.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap capitalize">{invite.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{invite.department_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         {invite.email_sent ? (

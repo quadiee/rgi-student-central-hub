@@ -13,7 +13,9 @@ interface InvitationData {
   id: string;
   email: string;
   role: string;
-  department: string;
+  department_id: string;
+  department_name?: string;
+  department_code?: string;
   roll_number?: string;
   employee_id?: string;
   is_valid: boolean;
@@ -93,11 +95,20 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
+      // Get department details
+      const { data: deptData } = await supabase
+        .from('departments')
+        .select('name, code')
+        .eq('id', invitation.department_id)
+        .single();
+
       setInvitationData({
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
-        department: invitation.department,
+        department_id: invitation.department_id,
+        department_name: deptData?.name,
+        department_code: deptData?.code,
         roll_number: invitation.roll_number,
         employee_id: invitation.employee_id,
         is_valid: true,
@@ -115,26 +126,50 @@ const InvitationSignup: React.FC = () => {
     try {
       setValidating(true);
       
-      const { data, error } = await supabase.functions.invoke('check-user-exists', {
-        body: { email }
-      });
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select(`
+          *,
+          departments!user_invitations_department_id_fkey (
+            name,
+            code
+          )
+        `)
+        .eq('email', email)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .is('used_at', null)
+        .single();
 
       if (error || !data) {
-        setError(error?.message || 'Failed to validate invitation');
+        setError('Invalid or expired invitation');
         return;
       }
 
-      if (!data.invitationValid) {
-        setError(data.error || 'Invalid or expired invitation');
-        return;
-      }
+      // Check if user already exists
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
 
-      if (data.userExists) {
+      if (existingProfile && !profileError) {
         setError('User already exists. Please use the login page instead.');
         return;
       }
 
-      setInvitationData(data.invitationData);
+      setInvitationData({
+        id: data.id,
+        email: data.email,
+        role: data.role,
+        department_id: data.department_id,
+        department_name: data.departments?.name,
+        department_code: data.departments?.code,
+        roll_number: data.roll_number,
+        employee_id: data.employee_id,
+        is_valid: true,
+        token: data.token || ''
+      });
     } catch (error: any) {
       console.error('Error validating invitation:', error);
       setError('Failed to validate invitation');
@@ -176,7 +211,7 @@ const InvitationSignup: React.FC = () => {
           data: {
             name: formData.name,
             role: invitationData.role,
-            department: invitationData.department,
+            department_id: invitationData.department_id,
             phone: formData.phone,
             roll_number: invitationData.roll_number,
             employee_id: invitationData.employee_id,
@@ -328,7 +363,7 @@ const InvitationSignup: React.FC = () => {
           <div className="text-center text-sm text-gray-600">
             <p>You've been invited as: <strong className="capitalize">{invitationData.role}</strong></p>
             <p>Email: <strong>{invitationData.email}</strong></p>
-            <p>Department: <strong>{invitationData.department}</strong></p>
+            <p>Department: <strong>{invitationData.department_name} ({invitationData.department_code})</strong></p>
             {invitationData.employee_id && (
               <p>Employee ID: <strong>{invitationData.employee_id}</strong></p>
             )}
