@@ -12,6 +12,7 @@ import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
 import Students from './pages/Students';
 import Faculty from './pages/Faculty';
+import Attendance from './pages/Attendance';
 import UserManagement from './pages/UserManagement';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 
@@ -70,6 +71,14 @@ function App() {
               } 
             />
             <Route 
+              path="/attendance" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod', 'faculty']}>
+                  <Attendance />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/user-management" 
               element={
                 <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman']}>
@@ -89,14 +98,6 @@ function App() {
               path="/admin" 
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <Index />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/attendance" 
-              element={
-                <ProtectedRoute>
                   <Index />
                 </ProtectedRoute>
               } 

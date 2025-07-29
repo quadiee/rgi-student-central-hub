@@ -121,6 +121,251 @@ export type Database = {
           },
         ]
       }
+      faculty_attendance: {
+        Row: {
+          absent_periods: number
+          attendance_date: string
+          created_at: string | null
+          faculty_id: string
+          first_punch_time: string | null
+          id: string
+          last_punch_time: string | null
+          late_periods: number
+          leave_id: string | null
+          marked_by: string | null
+          overall_status: string | null
+          present_periods: number
+          remarks: string | null
+          total_periods: number
+          total_working_hours: unknown | null
+          updated_at: string | null
+        }
+        Insert: {
+          absent_periods?: number
+          attendance_date: string
+          created_at?: string | null
+          faculty_id: string
+          first_punch_time?: string | null
+          id?: string
+          last_punch_time?: string | null
+          late_periods?: number
+          leave_id?: string | null
+          marked_by?: string | null
+          overall_status?: string | null
+          present_periods?: number
+          remarks?: string | null
+          total_periods?: number
+          total_working_hours?: unknown | null
+          updated_at?: string | null
+        }
+        Update: {
+          absent_periods?: number
+          attendance_date?: string
+          created_at?: string | null
+          faculty_id?: string
+          first_punch_time?: string | null
+          id?: string
+          last_punch_time?: string | null
+          late_periods?: number
+          leave_id?: string | null
+          marked_by?: string | null
+          overall_status?: string | null
+          present_periods?: number
+          remarks?: string | null
+          total_periods?: number
+          total_working_hours?: unknown | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_attendance_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_attendance_leave_id_fkey"
+            columns: ["leave_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_leaves"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_attendance_corrections: {
+        Row: {
+          admin_remarks: string | null
+          approval_date: string | null
+          approved_by: string | null
+          attendance_session_id: string
+          created_at: string | null
+          id: string
+          original_status: string
+          reason: string
+          request_date: string | null
+          requested_by: string
+          requested_status: string
+          status: string | null
+          supporting_documents: string[] | null
+        }
+        Insert: {
+          admin_remarks?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          attendance_session_id: string
+          created_at?: string | null
+          id?: string
+          original_status: string
+          reason: string
+          request_date?: string | null
+          requested_by: string
+          requested_status: string
+          status?: string | null
+          supporting_documents?: string[] | null
+        }
+        Update: {
+          admin_remarks?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          attendance_session_id?: string
+          created_at?: string | null
+          id?: string
+          original_status?: string
+          reason?: string
+          request_date?: string | null
+          requested_by?: string
+          requested_status?: string
+          status?: string | null
+          supporting_documents?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_attendance_corrections_attendance_session_id_fkey"
+            columns: ["attendance_session_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_attendance_imports: {
+        Row: {
+          created_at: string | null
+          error_log: Json | null
+          failed_records: number | null
+          file_name: string
+          file_url: string | null
+          id: string
+          processed_records: number | null
+          status: string | null
+          total_records: number | null
+          upload_date: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_log?: Json | null
+          failed_records?: number | null
+          file_name: string
+          file_url?: string | null
+          id?: string
+          processed_records?: number | null
+          status?: string | null
+          total_records?: number | null
+          upload_date: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string | null
+          error_log?: Json | null
+          failed_records?: number | null
+          file_name?: string
+          file_url?: string | null
+          id?: string
+          processed_records?: number | null
+          status?: string | null
+          total_records?: number | null
+          upload_date?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      faculty_attendance_sessions: {
+        Row: {
+          actual_end_time: string | null
+          actual_start_time: string | null
+          class_section: string
+          created_at: string | null
+          faculty_id: string
+          id: string
+          marked_by: string | null
+          marking_method: string | null
+          period_number: number
+          remarks: string | null
+          scheduled_end_time: string
+          scheduled_start_time: string
+          session_date: string
+          status: string
+          subject_name: string
+          timetable_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
+          class_section: string
+          created_at?: string | null
+          faculty_id: string
+          id?: string
+          marked_by?: string | null
+          marking_method?: string | null
+          period_number: number
+          remarks?: string | null
+          scheduled_end_time: string
+          scheduled_start_time: string
+          session_date: string
+          status?: string
+          subject_name: string
+          timetable_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
+          class_section?: string
+          created_at?: string | null
+          faculty_id?: string
+          id?: string
+          marked_by?: string | null
+          marking_method?: string | null
+          period_number?: number
+          remarks?: string | null
+          scheduled_end_time?: string
+          scheduled_start_time?: string
+          session_date?: string
+          status?: string
+          subject_name?: string
+          timetable_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_attendance_sessions_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_attendance_sessions_timetable_id_fkey"
+            columns: ["timetable_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_timetable"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faculty_courses: {
         Row: {
           academic_year: string
@@ -430,6 +675,63 @@ export type Database = {
             columns: ["faculty_id"]
             isOneToOne: false
             referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_facial_recognition_logs: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          device_id: string
+          faculty_id: string
+          id: string
+          location: string | null
+          photo_url: string | null
+          processed: boolean | null
+          recognition_timestamp: string
+          recognition_type: string | null
+          session_id: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          device_id: string
+          faculty_id: string
+          id?: string
+          location?: string | null
+          photo_url?: string | null
+          processed?: boolean | null
+          recognition_timestamp: string
+          recognition_type?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          device_id?: string
+          faculty_id?: string
+          id?: string
+          location?: string | null
+          photo_url?: string | null
+          processed?: boolean | null
+          recognition_timestamp?: string
+          recognition_type?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_facial_recognition_logs_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_facial_recognition_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_attendance_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -800,6 +1102,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "faculty_specializations_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_timetable: {
+        Row: {
+          academic_year: string
+          class_section: string
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          faculty_id: string
+          id: string
+          is_active: boolean | null
+          period_number: number
+          room_number: string | null
+          semester: number
+          start_time: string
+          subject_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year?: string
+          class_section: string
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          faculty_id: string
+          id?: string
+          is_active?: boolean | null
+          period_number: number
+          room_number?: string | null
+          semester: number
+          start_time: string
+          subject_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string
+          class_section?: string
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          faculty_id?: string
+          id?: string
+          is_active?: boolean | null
+          period_number?: number
+          room_number?: string | null
+          semester?: number
+          start_time?: string
+          subject_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_timetable_faculty_id_fkey"
             columns: ["faculty_id"]
             isOneToOne: false
             referencedRelation: "faculty_profiles"
@@ -2240,6 +2601,10 @@ export type Database = {
           p_uploaded_by: string
         }
         Returns: Json
+      }
+      update_daily_faculty_attendance: {
+        Args: { p_faculty_id: string; p_date: string }
+        Returns: undefined
       }
       user_has_permission: {
         Args: {

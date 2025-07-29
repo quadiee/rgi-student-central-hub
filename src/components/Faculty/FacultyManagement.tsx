@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import FacultyListManagement from './FacultyListManagement';
@@ -5,10 +6,11 @@ import FacultyAnalytics from './FacultyAnalytics';
 import FacultyCreationModal from './FacultyCreationModal';
 import FacultyEditModal from './FacultyEditModal';
 import FacultyDetailsModal from './FacultyDetailsModal';
+import FacultyAttendanceManagement from './FacultyAttendanceManagement';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp, Clock } from 'lucide-react';
 import { useIsMobile } from '../../hooks/use-mobile';
 
 interface FacultyMember {
@@ -100,11 +102,11 @@ const FacultyManagement: React.FC = () => {
       color: 'text-warning'
     },
     {
-      title: 'Research Projects',
-      value: '27',
-      change: '+5 ongoing',
-      icon: Award,
-      color: 'text-purple-600'
+      title: 'Attendance Rate',
+      value: '94%',
+      change: '+2% this week',
+      icon: Clock,
+      color: 'text-green-600'
     }
   ];
 
@@ -115,7 +117,7 @@ const FacultyManagement: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Faculty Management</h1>
           <p className="text-muted-foreground">
-            Comprehensive faculty information and management system
+            Comprehensive faculty information and attendance management system
           </p>
         </div>
         <Button 
@@ -128,9 +130,10 @@ const FacultyManagement: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
+        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-5'}`}>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="faculty">Faculty</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
@@ -173,6 +176,10 @@ const FacultyManagement: React.FC = () => {
                   <span>Add New Faculty</span>
                 </Button>
                 <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+                  <Clock className="h-6 w-6" />
+                  <span>Mark Attendance</span>
+                </Button>
+                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
                   <BookOpen className="h-6 w-6" />
                   <span>Assign Courses</span>
                 </Button>
@@ -183,10 +190,6 @@ const FacultyManagement: React.FC = () => {
                 <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
                   <Award className="h-6 w-6" />
                   <span>Evaluations</span>
-                </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-                  <TrendingUp className="h-6 w-6" />
-                  <span>Performance</span>
                 </Button>
                 <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
                   <BarChart3 className="h-6 w-6" />
@@ -203,6 +206,10 @@ const FacultyManagement: React.FC = () => {
             onEditFaculty={handleEditFaculty}
             onViewDetails={handleViewDetails}
           />
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <FacultyAttendanceManagement />
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -238,7 +245,6 @@ const FacultyManagement: React.FC = () => {
         <FacultyCreationModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          onFacultyCreated={handleFacultyUpdate}
         />
       )}
 
