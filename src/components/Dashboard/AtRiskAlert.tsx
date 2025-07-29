@@ -1,13 +1,108 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Users } from 'lucide-react';
-import { mockStudents } from '../../data/mockData';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+
+interface Student {
+  id: string;
+  name: string;
+  rollNumber: string;
+  phone: string;
+  guardianPhone: string;
+  department: string;
+  feeStatus: string;
+  dueAmount: number;
+}
 
 const AtRiskAlert: React.FC = () => {
-  // Filter students with high due amounts (fee at risk)
-  const atRiskStudents = mockStudents.filter(student => 
-    student.dueAmount > 50000 // Students with more than 50k due
-  );
+  const { user } = useAuth();
+  const [atRiskStudents, setAtRiskStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAtRiskStudents = async () => {
+      try {
+        setLoading(true);
+        
+        // Query students with high due amounts (over 50k)
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            name,
+            roll_number,
+            phone,
+            guardian_phone,
+            departments!inner(name)
+          `)
+          .eq('role', 'student')
+          .not('name', 'is', null);
+
+        if (error) {
+          console.error('Error fetching students:', error);
+          return;
+        }
+
+        // Get fee records for these students
+        const studentIds = profiles?.map(p => p.id) || [];
+        
+        const { data: feeRecords, error: feeError } = await supabase
+          .from('fee_records')
+          .select('student_id, amount, paid_amount, status')
+          .in('student_id', studentIds);
+
+        if (feeError) {
+          console.error('Error fetching fee records:', feeError);
+          return;
+        }
+
+        // Calculate due amounts and filter at-risk students
+        const studentsWithDues = profiles?.map(profile => {
+          const studentFees = feeRecords?.filter(fee => fee.student_id === profile.id) || [];
+          const totalAmount = studentFees.reduce((sum, fee) => sum + fee.amount, 0);
+          const paidAmount = studentFees.reduce((sum, fee) => sum + (fee.paid_amount || 0), 0);
+          const dueAmount = totalAmount - paidAmount;
+
+          return {
+            id: profile.id,
+            name: profile.name || 'Unknown',
+            rollNumber: profile.roll_number || 'N/A',
+            phone: profile.phone || 'N/A',
+            guardianPhone: profile.guardian_phone || 'N/A',
+            department: profile.departments?.name || 'Unknown',
+            feeStatus: dueAmount > 0 ? 'Pending' : 'Paid',
+            dueAmount
+          };
+        }).filter(student => student.dueAmount > 50000) || [];
+
+        setAtRiskStudents(studentsWithDues);
+      } catch (error) {
+        console.error('Error in fetchAtRiskStudents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchAtRiskStudents();
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Users className="w-5 h-5 text-blue-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Fee Status</h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading student data...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (atRiskStudents.length === 0) {
     return (
