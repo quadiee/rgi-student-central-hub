@@ -1,5 +1,5 @@
 
-import { User, Student, FeeRecord } from '../types';
+import { User, FeeRecord } from '../types';
 
 export const mockUsers: User[] = [
   {
@@ -41,78 +41,6 @@ export const mockUsers: User[] = [
     department_name: 'Administration',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
     employeeId: 'ADMIN001'
-  }
-];
-
-export const mockStudents: Student[] = [
-  {
-    id: '1',
-    name: 'Arun Kumar',
-    rollNumber: 'CSE2021001',
-    roll_number: 'CSE2021001',
-    course: 'B.Tech Computer Science',
-    year: 3,
-    semester: 5,
-    email: 'arun.kumar@rgce.edu.in',
-    phone: '9876543210',
-    admissionDate: '2021-08-15',
-    guardianName: 'Rajesh Kumar',
-    guardianPhone: '9876543211',
-    address: '123 Main Street, Chennai',
-    emergencyContact: '9876543212',
-    department: 'CSE',
-    yearSection: '3rd Year A',
-    section: 'A',
-    totalFees: 120000,
-    paidAmount: 80000,
-    dueAmount: 40000,
-    feeStatus: 'Partial'
-  },
-  {
-    id: '5',
-    name: 'Priya Sharma',
-    rollNumber: 'CSE2021002',
-    roll_number: 'CSE2021002',
-    course: 'B.Tech Computer Science',
-    year: 3,
-    semester: 5,
-    email: 'priya.sharma@rgce.edu.in',
-    phone: '9876543213',
-    admissionDate: '2021-08-15',
-    guardianName: 'Mohan Sharma',
-    guardianPhone: '9876543214',
-    address: '456 Park Avenue, Chennai',
-    emergencyContact: '9876543215',
-    department: 'CSE',
-    yearSection: '3rd Year A',
-    section: 'A',
-    totalFees: 120000,
-    paidAmount: 120000,
-    dueAmount: 0,
-    feeStatus: 'Paid'
-  },
-  {
-    id: '6',
-    name: 'Ravi Patel',
-    rollNumber: 'CSE2021003',
-    roll_number: 'CSE2021003',
-    course: 'B.Tech Computer Science',
-    year: 3,
-    semester: 5,
-    email: 'ravi.patel@rgce.edu.in',
-    phone: '9876543216',
-    admissionDate: '2021-08-15',
-    guardianName: 'Suresh Patel',
-    guardianPhone: '9876543217',
-    address: '789 Garden Road, Chennai',
-    emergencyContact: '9876543218',
-    department: 'CSE',
-    yearSection: '3rd Year A',
-    section: 'A',
-    totalFees: 120000,
-    paidAmount: 0,
-    dueAmount: 120000,
-    feeStatus: 'Overdue'
   }
 ];
 

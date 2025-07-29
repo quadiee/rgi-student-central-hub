@@ -16,6 +16,8 @@ import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import InvitationSignup from "./components/Auth/InvitationSignup";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import FeeManagementHub from "./components/Fees/FeeManagementHub";
+import AdminReportGenerator from "./components/Fees/AdminReportGenerator";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Attendance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/fees"
+              element={
+                <ProtectedRoute>
+                  <FeeManagementHub />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <AdminReportGenerator />
                 </ProtectedRoute>
               }
             />

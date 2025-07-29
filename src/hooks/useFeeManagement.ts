@@ -18,8 +18,7 @@ export const useFeeManagement = () => {
     setError(null);
 
     try {
-      // Direct query to fee_records with proper joins
-      const { data, error: queryError } = await supabase
+      let query = supabase
         .from('fee_records')
         .select(`
           id,
@@ -36,7 +35,27 @@ export const useFeeManagement = () => {
             roll_number,
             departments!profiles_department_id_fkey(name)
           )
-        `)
+        `);
+
+      // Apply role-based filtering
+      if (user.role === 'student') {
+        query = query.eq('student_id', user.id);
+      } else if (user.role === 'hod' && user.department_id) {
+        // HOD can only see their department's students
+        const { data: deptStudents } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('department_id', user.department_id)
+          .eq('role', 'student');
+        
+        if (deptStudents) {
+          const studentIds = deptStudents.map(s => s.id);
+          query = query.in('student_id', studentIds);
+        }
+      }
+      // Admin, Principal, Chairman can see all records
+
+      const { data, error: queryError } = await query
         .order('created_at', { ascending: false });
 
       if (queryError) throw queryError;
@@ -76,7 +95,7 @@ export const useFeeManagement = () => {
         .from('payment_transactions')
         .insert({
           ...payment,
-          student_id: user.id,
+          student_id: payment.student_id || user.id,
           processed_by: user.id,
           status: 'Success'
         });
@@ -109,7 +128,7 @@ export const useFeeManagement = () => {
 
     setLoading(true);
     try {
-      // Simple report generation based on current fee records
+      // Generate report based on current fee records
       const report = {
         totalRecords: feeRecords.length,
         totalAmount: feeRecords.reduce((sum, record) => sum + record.final_amount, 0),
