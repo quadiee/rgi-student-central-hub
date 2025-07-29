@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, ExternalLink, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -74,7 +73,7 @@ const UserInvitationManager: React.FC = () => {
         .from('user_invitations')
         .select(`
           *,
-          departments!user_invitations_department_id_fkey (
+          departments (
             name,
             code
           )

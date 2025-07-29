@@ -95,7 +95,7 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Get department details
+      // Get department details using department_id
       const { data: deptData } = await supabase
         .from('departments')
         .select('name, code')
@@ -130,7 +130,7 @@ const InvitationSignup: React.FC = () => {
         .from('user_invitations')
         .select(`
           *,
-          departments!user_invitations_department_id_fkey (
+          departments (
             name,
             code
           )

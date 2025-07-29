@@ -40,7 +40,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         .from('user_invitations')
         .select(`
           *,
-          departments!user_invitations_department_id_fkey (
+          departments (
             name,
             code
           )
@@ -281,7 +281,6 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         </CardContent>
       </Card>
 
-      {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6 text-center">
