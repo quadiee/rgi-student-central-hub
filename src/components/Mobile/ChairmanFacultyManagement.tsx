@@ -83,7 +83,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
 
   if (loading) {
     return (
-      <div className={cn("p-4 space-y-6", className)}>
+      <div className={cn("p-4 space-y-6 pb-20", className)}>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
         </div>
@@ -92,16 +92,22 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
   }
 
   return (
-    <div className={cn("p-4 space-y-6", className)}>
+    <div className={cn("p-4 space-y-6 pb-20", className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             Faculty Overview
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Institutional Faculty Management</p>
+          <div className="flex items-center space-x-2 mt-1">
+            <p className="text-sm text-gray-500">Institutional Faculty Management</p>
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+              <Eye className="w-3 h-3 mr-1" />
+              View Only
+            </Badge>
+          </div>
         </div>
-        <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
+        <Button variant="outline" size="sm" className="text-purple-600 border-purple-200 hover:bg-purple-50">
           <Download className="w-4 h-4 mr-2" />
           Export
         </Button>
@@ -109,7 +115,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -122,7 +128,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -148,7 +154,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
           <CardContent>
             <div className="space-y-3">
               {Object.entries(facultyByDepartment).map(([dept, data]: [string, any]) => (
-                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 shadow-sm">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
                       <span className="text-white font-bold text-sm">{dept.substring(0, 3)}</span>
@@ -180,23 +186,30 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
               placeholder="Search faculty..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 border-purple-200 focus:ring-purple-500"
             />
           </div>
-          <Button variant="outline" size="icon">
-            <Filter className="w-4 h-4" />
+          <Button variant="outline" size="icon" className="border-purple-200 hover:bg-purple-50">
+            <Filter className="w-4 h-4 text-purple-600" />
           </Button>
         </div>
       </div>
 
       {/* Faculty List */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-800">Faculty Members</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-800">Faculty Members</h3>
+          <Badge variant="secondary" className="text-xs">
+            {filteredFaculty.length} faculty
+          </Badge>
+        </div>
+        
         {filteredFaculty.length === 0 ? (
-          <Card>
+          <Card className="shadow-sm">
             <CardContent className="text-center py-8">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No faculty members found</p>
+              <p className="text-sm text-gray-400 mt-1">Try adjusting your search criteria</p>
             </CardContent>
           </Card>
         ) : (
@@ -245,7 +258,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
                   }
                 ]}
                 onClick={() => console.log('Faculty clicked:', faculty.faculty_id)}
-                className="hover:shadow-md transition-shadow"
+                className="hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-200"
               />
             );
           })
@@ -263,19 +276,19 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70 shadow-sm">
                 <span className="text-sm font-medium text-gray-700">Senior Faculty (15+ years)</span>
                 <span className="text-lg font-bold text-green-600">
                   {enhancedFacultyList.filter(f => (f.years_of_experience || 0) >= 15).length}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70 shadow-sm">
                 <span className="text-sm font-medium text-gray-700">Experienced Faculty (8+ years)</span>
                 <span className="text-lg font-bold text-purple-600">
                   {enhancedFacultyList.filter(f => (f.years_of_experience || 0) >= 8).length}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/70 shadow-sm">
                 <span className="text-sm font-medium text-gray-700">Active Faculty</span>
                 <span className="text-lg font-bold text-blue-600">
                   {enhancedFacultyList.filter(f => f.is_active).length}
