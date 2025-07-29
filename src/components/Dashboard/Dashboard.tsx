@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
@@ -5,6 +6,7 @@ import RoleDashboard from '../Mobile/RoleDashboard';
 import StudentDashboard from './StudentDashboard';
 import HODDashboard from './HODDashboard';
 import PrincipalDashboard from './PrincipalDashboard';
+import ChairmanDashboard from './ChairmanDashboard';
 import RealTimeStats from './RealTimeStats';
 import FeeManagementHub from '../Fees/FeeManagementHub';
 
@@ -17,14 +19,14 @@ const Dashboard: React.FC = () => {
     return <RoleDashboard />;
   }
 
-  // Desktop dashboard logic remains the same
+  // Desktop dashboard logic with enhanced chairman view
   const renderDashboard = () => {
     switch (user?.role) {
       case 'student':
         return <StudentDashboard />;
       case 'chairman':
-        // Chairman gets the Fee Management Hub as their main dashboard
-        return <FeeManagementHub />;
+        // Chairman gets the personalized enhanced dashboard
+        return <ChairmanDashboard />;
       case 'principal':
         return <PrincipalDashboard />;
       case 'hod':
