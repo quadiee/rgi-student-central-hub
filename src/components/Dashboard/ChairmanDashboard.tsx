@@ -60,7 +60,7 @@ const ChairmanDashboard: React.FC = () => {
         direction: 'up' as const,
         period: 'vs last month'
       },
-      status: totalStats.totalFees > 0 && (totalStats.totalCollected / totalStats.totalFees) > 0.9 ? 'excellent' : 'good' as const
+      status: (totalStats.totalFees > 0 && (totalStats.totalCollected / totalStats.totalFees) > 0.9 ? 'excellent' : 'good') as const
     },
     {
       title: 'Active Faculty',
@@ -160,7 +160,7 @@ const ChairmanDashboard: React.FC = () => {
             
             <div className="flex items-center space-x-3">
               <Button 
-                variant="glass" 
+                variant="ghost" 
                 size="sm" 
                 onClick={handleRefresh} 
                 disabled={isRefreshing}
