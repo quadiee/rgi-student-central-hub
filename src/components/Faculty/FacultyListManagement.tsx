@@ -15,12 +15,16 @@ import { useIsMobile } from '../../hooks/use-mobile';
 
 interface FacultyMember {
   id: string;
+  user_id: string;
   name: string;
   email: string;
   employee_id: string;
+  employee_code: string;
   role: string;
+  designation: string;
   department_id: string;
   department_name: string;
+  joining_date: string;
   phone: string;
   is_active: boolean;
   created_at: string;
@@ -49,6 +53,7 @@ const FacultyListManagement: React.FC = () => {
       setLoading(true);
       
       // Fetch faculty from profiles table where role is 'faculty'
+      // Also fetch from faculty_profiles table for additional details
       let query = supabase
         .from('profiles')
         .select(`
@@ -73,27 +78,55 @@ const FacultyListManagement: React.FC = () => {
         query = query.eq('department_id', user.department_id);
       }
 
-      const { data, error } = await query;
+      const { data: profilesData, error: profilesError } = await query;
 
-      if (error) {
-        console.error('Error fetching faculty:', error);
-        throw error;
+      if (profilesError) {
+        console.error('Error fetching faculty profiles:', profilesError);
+        throw profilesError;
       }
 
+      // Fetch faculty_profiles for additional details
+      const { data: facultyProfilesData, error: facultyError } = await supabase
+        .from('faculty_profiles')
+        .select(`
+          user_id,
+          employee_code,
+          designation,
+          joining_date
+        `);
+
+      if (facultyError) {
+        console.error('Error fetching faculty details:', facultyError);
+        // Continue without faculty_profiles data if table doesn't exist or has issues
+      }
+
+      // Create a map of faculty profiles for quick lookup
+      const facultyProfilesMap = new Map(
+        facultyProfilesData?.map(fp => [fp.user_id, fp]) || []
+      );
+
       // Map the data to our interface
-      const mappedData: FacultyMember[] = (data || []).map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        email: item.email,
-        employee_id: item.employee_id || '',
-        role: item.role,
-        department_id: item.department_id || '',
-        department_name: item.departments?.name || 'Unknown',
-        phone: item.phone || '',
-        is_active: item.is_active,
-        created_at: item.created_at,
-        profile_photo_url: item.profile_photo_url || ''
-      }));
+      const mappedData: FacultyMember[] = (profilesData || []).map((item: any) => {
+        const facultyProfile = facultyProfilesMap.get(item.id);
+        
+        return {
+          id: item.id,
+          user_id: item.id,
+          name: item.name,
+          email: item.email,
+          employee_id: item.employee_id || '',
+          employee_code: facultyProfile?.employee_code || item.employee_id || '',
+          role: item.role,
+          designation: facultyProfile?.designation || 'Faculty',
+          department_id: item.department_id || '',
+          department_name: item.departments?.name || 'Unknown',
+          joining_date: facultyProfile?.joining_date || item.created_at?.split('T')[0] || '',
+          phone: item.phone || '',
+          is_active: item.is_active,
+          created_at: item.created_at,
+          profile_photo_url: item.profile_photo_url || ''
+        };
+      });
       
       setFaculty(mappedData);
     } catch (error) {
@@ -221,10 +254,10 @@ const FacultyListManagement: React.FC = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">
-                          Faculty • {member.department_name}
+                          {member.designation} • {member.department_name}
                         </p>
                         <p className="text-sm text-muted-foreground mb-2">
-                          ID: {member.employee_id || 'N/A'}
+                          ID: {member.employee_code || member.employee_id || 'N/A'}
                         </p>
                         
                         <div className="space-y-1">
@@ -240,7 +273,7 @@ const FacultyListManagement: React.FC = () => {
                           )}
                           <div className="flex items-center text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3 mr-1" />
-                            <span>Joined: {new Date(member.created_at).toLocaleDateString()}</span>
+                            <span>Joined: {member.joining_date ? new Date(member.joining_date).toLocaleDateString() : 'N/A'}</span>
                           </div>
                         </div>
                       </div>
