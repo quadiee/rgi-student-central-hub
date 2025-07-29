@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -82,9 +81,14 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(invitation.email);
-      if (existingUser?.user) {
+      // Check if user already exists by checking profiles table
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', invitation.email)
+        .single();
+
+      if (existingProfile && !profileError) {
         setError('User already exists. Please use the login page instead.');
         return;
       }
