@@ -73,7 +73,7 @@ export const useFacultyAttendance = () => {
           faculty_profiles!inner (
             id,
             employee_code,
-            profiles!inner (
+            profiles!faculty_profiles_user_id_fkey (
               name,
               department_id,
               departments (
@@ -100,13 +100,13 @@ export const useFacultyAttendance = () => {
         present_periods: record.present_periods,
         absent_periods: record.absent_periods,
         late_periods: record.late_periods,
-        overall_status: record.overall_status,
+        overall_status: record.overall_status as 'Present' | 'Absent' | 'Partial' | 'On Leave',
         first_punch_time: record.first_punch_time,
         last_punch_time: record.last_punch_time,
         total_working_hours: record.total_working_hours,
-        faculty_name: record.faculty_profiles.profiles.name,
-        employee_code: record.faculty_profiles.employee_code,
-        department_name: record.faculty_profiles.profiles.departments?.name || 'Unknown'
+        faculty_name: record.faculty_profiles?.profiles?.name || 'Unknown',
+        employee_code: record.faculty_profiles?.employee_code || '',
+        department_name: record.faculty_profiles?.profiles?.departments?.name || 'Unknown'
       })) || [];
 
       setAttendanceRecords(formattedRecords);
@@ -131,7 +131,7 @@ export const useFacultyAttendance = () => {
           faculty_profiles!inner (
             id,
             employee_code,
-            profiles!inner (
+            profiles!faculty_profiles_user_id_fkey (
               name
             )
           )
@@ -162,10 +162,10 @@ export const useFacultyAttendance = () => {
         scheduled_end_time: session.scheduled_end_time,
         actual_start_time: session.actual_start_time,
         actual_end_time: session.actual_end_time,
-        status: session.status,
-        marking_method: session.marking_method,
-        faculty_name: session.faculty_profiles.profiles.name,
-        employee_code: session.faculty_profiles.employee_code
+        status: session.status as 'Scheduled' | 'Present' | 'Absent' | 'Late' | 'Left Early',
+        marking_method: session.marking_method as 'Manual' | 'Facial Recognition' | 'Excel Import',
+        faculty_name: session.faculty_profiles?.profiles?.name || 'Unknown',
+        employee_code: session.faculty_profiles?.employee_code || ''
       })) || [];
 
       setAttendanceSessions(formattedSessions);
@@ -190,7 +190,7 @@ export const useFacultyAttendance = () => {
           faculty_profiles!inner (
             id,
             employee_code,
-            profiles!inner (
+            profiles!faculty_profiles_user_id_fkey (
               name
             )
           )
@@ -218,10 +218,10 @@ export const useFacultyAttendance = () => {
         confidence_score: log.confidence_score,
         photo_url: log.photo_url,
         location: log.location,
-        recognition_type: log.recognition_type,
+        recognition_type: log.recognition_type as 'Entry' | 'Exit',
         processed: log.processed,
-        faculty_name: log.faculty_profiles.profiles.name,
-        employee_code: log.faculty_profiles.employee_code
+        faculty_name: log.faculty_profiles?.profiles?.name || 'Unknown',
+        employee_code: log.faculty_profiles?.employee_code || ''
       })) || [];
 
       setFacialRecognitionLogs(formattedLogs);
