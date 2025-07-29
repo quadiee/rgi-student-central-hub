@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, GraduationCap, Users, CreditCard, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, GraduationCap, Users, CreditCard, AlertCircle, Award } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Student } from '../../types';
 import { RealStudentFeeService } from '../../services/realStudentFeeService';
+import { supabase } from '../../integrations/supabase/client';
 
 export interface StudentProfileProps {
   student: Student;
@@ -26,9 +27,26 @@ interface FeeRecord {
   created_at: string;
 }
 
+interface ScholarshipRecord {
+  id: string;
+  scholarship_type: 'PMSS' | 'FG';
+  eligible_amount: number;
+  applied_status: boolean;
+  application_date?: string;
+  received_by_institution: boolean;
+  receipt_date?: string;
+  academic_year: string;
+  semester?: number;
+  remarks?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
   const [feeRecords, setFeeRecords] = useState<FeeRecord[]>([]);
+  const [scholarshipRecords, setScholarshipRecords] = useState<ScholarshipRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scholarshipLoading, setScholarshipLoading] = useState(true);
 
   useEffect(() => {
     const loadFeeData = async () => {
@@ -46,9 +64,36 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
     loadFeeData();
   }, [student.id]);
 
+  useEffect(() => {
+    const loadScholarshipData = async () => {
+      try {
+        setScholarshipLoading(true);
+        const { data: scholarships, error } = await supabase
+          .from('scholarships')
+          .select('*')
+          .eq('student_id', student.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setScholarshipRecords(scholarships || []);
+      } catch (error) {
+        console.error('Error loading scholarship data:', error);
+      } finally {
+        setScholarshipLoading(false);
+      }
+    };
+
+    loadScholarshipData();
+  }, [student.id]);
+
   const totalFees = feeRecords.reduce((sum, record) => sum + record.final_amount, 0);
   const totalPaid = feeRecords.reduce((sum, record) => sum + record.paid_amount, 0);
   const totalDue = totalFees - totalPaid;
+
+  const totalScholarshipAmount = scholarshipRecords.reduce((sum, record) => sum + record.eligible_amount, 0);
+  const receivedScholarshipAmount = scholarshipRecords
+    .filter(record => record.received_by_institution)
+    .reduce((sum, record) => sum + record.eligible_amount, 0);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -58,6 +103,26 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
       case 'overdue': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getScholarshipTypeColor = (type: string) => {
+    switch (type) {
+      case 'PMSS': return 'bg-purple-100 text-purple-800';
+      case 'FG': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getScholarshipStatusColor = (applied: boolean, received: boolean) => {
+    if (received) return 'bg-green-100 text-green-800';
+    if (applied) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-gray-100 text-gray-800';
+  };
+
+  const getScholarshipStatusText = (applied: boolean, received: boolean) => {
+    if (received) return 'Received';
+    if (applied) return 'Applied';
+    return 'Eligible';
   };
 
   return (
@@ -231,6 +296,107 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
                     <div className="text-center py-8 text-gray-500">
                       <AlertCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p>No fee records found</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Scholarship Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                Scholarship Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {scholarshipLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading scholarship data...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Scholarship Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-purple-50 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Total Scholarships</p>
+                      <p className="text-lg font-bold text-purple-600">{scholarshipRecords.length}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Total Eligible Amount</p>
+                      <p className="text-lg font-bold text-blue-600">₹{totalScholarshipAmount.toLocaleString()}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Amount Received</p>
+                      <p className="text-lg font-bold text-green-600">₹{receivedScholarshipAmount.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Scholarship Records */}
+                  {scholarshipRecords.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold">Scholarship Records</h4>
+                      {scholarshipRecords.map((scholarship) => (
+                        <div key={scholarship.id} className="p-4 border border-gray-200 rounded-lg">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-2">
+                              <Badge className={getScholarshipTypeColor(scholarship.scholarship_type)}>
+                                {scholarship.scholarship_type === 'PMSS' ? 'PM Scholarship' : 'First Generation'}
+                              </Badge>
+                              <Badge className={getScholarshipStatusColor(scholarship.applied_status, scholarship.received_by_institution)}>
+                                {getScholarshipStatusText(scholarship.applied_status, scholarship.received_by_institution)}
+                              </Badge>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-purple-600">₹{scholarship.eligible_amount.toLocaleString()}</p>
+                              <p className="text-sm text-gray-500">{scholarship.academic_year}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            {scholarship.application_date && (
+                              <div>
+                                <span className="text-gray-600">Application Date:</span>
+                                <span className="ml-1 font-medium">{new Date(scholarship.application_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {scholarship.receipt_date && (
+                              <div>
+                                <span className="text-gray-600">Receipt Date:</span>
+                                <span className="ml-1 font-medium">{new Date(scholarship.receipt_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {scholarship.semester && (
+                              <div>
+                                <span className="text-gray-600">Semester:</span>
+                                <span className="ml-1 font-medium">{scholarship.semester}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-gray-600">Created:</span>
+                              <span className="ml-1 font-medium">{new Date(scholarship.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          {scholarship.remarks && (
+                            <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                              <span className="text-gray-600 font-medium">Remarks:</span>
+                              <p className="mt-1">{scholarship.remarks}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Award className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No scholarship records found</p>
+                      {(student.community === 'SC' || student.community === 'ST' || student.first_generation) && (
+                        <p className="text-sm mt-2">This student may be eligible for scholarships based on their profile.</p>
+                      )}
                     </div>
                   )}
                 </div>
