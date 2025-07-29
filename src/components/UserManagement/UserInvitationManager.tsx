@@ -10,8 +10,7 @@ interface Invitation {
   id: string;
   email: string;
   role: string;
-  department_id?: string;
-  department?: string; // Legacy field
+  department_id: string;
   department_name?: string;
   department_code?: string;
   roll_number?: string;
@@ -44,7 +43,6 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
           email,
           role,
           department_id,
-          department,
           roll_number,
           employee_id,
           is_active,
@@ -53,73 +51,33 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
           invited_at,
           email_sent,
           email_sent_at,
-          token
+          token,
+          departments:department_id (
+            name,
+            code
+          )
         `)
         .order('invited_at', { ascending: false });
 
       if (error) throw error;
       
-      // Handle both old and new data structures
-      const invitationsWithDepts = await Promise.all(
-        (data || []).map(async (invitation: any) => {
-          let departmentName = 'Unknown Department';
-          let departmentCode = 'UNK';
-          
-          // Check if we have department_id (new structure)
-          if (invitation.department_id) {
-            try {
-              const { data: deptData } = await supabase
-                .from('departments')
-                .select('name, code')
-                .eq('id', invitation.department_id)
-                .single();
-              
-              if (deptData) {
-                departmentName = deptData.name;
-                departmentCode = deptData.code;
-              }
-            } catch (error) {
-              console.error('Error fetching department:', error);
-            }
-          }
-          // Fallback to old department enum structure
-          else if (invitation.department) {
-            try {
-              const { data: deptData } = await supabase
-                .from('departments')
-                .select('name, code')
-                .eq('code', invitation.department)
-                .single();
-              
-              if (deptData) {
-                departmentName = deptData.name;
-                departmentCode = deptData.code;
-              }
-            } catch (error) {
-              console.error('Error fetching department by code:', error);
-            }
-          }
-          
-          return {
-            id: invitation.id,
-            email: invitation.email,
-            role: invitation.role,
-            department_id: invitation.department_id,
-            department: invitation.department,
-            roll_number: invitation.roll_number,
-            employee_id: invitation.employee_id,
-            is_active: invitation.is_active,
-            expires_at: invitation.expires_at,
-            used_at: invitation.used_at,
-            invited_at: invitation.invited_at,
-            email_sent: invitation.email_sent,
-            email_sent_at: invitation.email_sent_at,
-            token: invitation.token,
-            department_name: departmentName,
-            department_code: departmentCode
-          };
-        })
-      );
+      const invitationsWithDepts = (data || []).map((invitation: any) => ({
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        department_id: invitation.department_id,
+        roll_number: invitation.roll_number,
+        employee_id: invitation.employee_id,
+        is_active: invitation.is_active,
+        expires_at: invitation.expires_at,
+        used_at: invitation.used_at,
+        invited_at: invitation.invited_at,
+        email_sent: invitation.email_sent,
+        email_sent_at: invitation.email_sent_at,
+        token: invitation.token,
+        department_name: invitation.departments?.name || 'Unknown Department',
+        department_code: invitation.departments?.code || 'UNK'
+      }));
 
       // Remove duplicates based on email and keep the most recent one
       const uniqueInvitations = invitationsWithDepts.reduce((acc: Invitation[], current) => {
@@ -171,7 +129,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         body: {
           email: invitation.email,
           role: invitation.role,
-          departmentId: invitation.department_id || '',
+          departmentId: invitation.department_id,
           invitationId: invitation.id,
           rollNumber: invitation.roll_number,
           employeeId: invitation.employee_id

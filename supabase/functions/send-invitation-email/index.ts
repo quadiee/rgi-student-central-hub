@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -9,7 +10,7 @@ const corsHeaders = {
 interface InvitationEmailRequest {
   email: string;
   role: string;
-  department: string;
+  departmentId: string;
   invitedBy?: string;
   invitationId: string;
   rollNumber?: string;
@@ -219,13 +220,13 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { email, role, department, invitedBy, invitationId, rollNumber, employeeId }: InvitationEmailRequest = await req.json();
+    const { email, role, departmentId, invitedBy, invitationId, rollNumber, employeeId }: InvitationEmailRequest = await req.json();
 
-    if (!email || !role || !department || !invitationId) {
+    if (!email || !role || !departmentId || !invitationId) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required fields: email, role, department, and invitationId are required."
+          error: "Missing required fields: email, role, departmentId, and invitationId are required."
         }),
         {
           status: 400,
@@ -233,6 +234,29 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
+
+    // Get department name
+    const { data: deptData, error: deptError } = await supabase
+      .from('departments')
+      .select('name')
+      .eq('id', departmentId)
+      .single();
+
+    if (deptError) {
+      console.error('Error fetching department:', deptError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid department ID."
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+
+    const departmentName = deptData?.name || 'Unknown Department';
 
     // Generate secure token and update invitation
     const invitationToken = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
@@ -273,13 +297,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate personalized invitation URL with correct app URL
     const appUrl = getAppUrl(req);
-    const invitationUrl = `${appUrl}/invite/${invitationToken}?role=${role}&dept=${department}`;
+    const invitationUrl = `${appUrl}/invite/${invitationToken}?role=${role}&dept=${departmentName}`;
 
     // Generate personalized email content
     const emailHtml = generatePersonalizedEmailTemplate({
       recipientEmail: email,
       role,
-      department,
+      department: departmentName,
       inviterName,
       actionUrl: invitationUrl,
       rollNumber,

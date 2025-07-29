@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, ExternalLink, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -18,8 +19,7 @@ interface PendingInvite {
   email: string;
   invited_at: string;
   role?: string;
-  department_id?: string;
-  department?: string; // Legacy field
+  department_id: string;
   department_name?: string;
   email_sent?: boolean;
   email_sent_at?: string | null;
@@ -67,10 +67,8 @@ const UserInvitationManager: React.FC = () => {
     }
   };
 
-  // Load pending invites from user_invitations table
   const loadPendingInvites = async () => {
     try {
-      // Try to select with both old and new column structures
       const { data, error } = await supabase
         .from('user_invitations')
         .select(`
@@ -78,10 +76,13 @@ const UserInvitationManager: React.FC = () => {
           email,
           role,
           department_id,
-          department,
           invited_at,
           email_sent,
-          email_sent_at
+          email_sent_at,
+          departments:department_id (
+            name,
+            code
+          )
         `)
         .is('used_at', null)
         .eq('is_active', true)
@@ -97,57 +98,16 @@ const UserInvitationManager: React.FC = () => {
         return;
       }
 
-      // Handle both old and new data structures
-      const invitesWithDepartments = await Promise.all(
-        (data || []).map(async (invite: any) => {
-          let departmentName = 'Unknown Department';
-          
-          // Check if we have department_id (new structure)
-          if (invite.department_id) {
-            try {
-              const { data: deptData } = await supabase
-                .from('departments')
-                .select('name, code')
-                .eq('id', invite.department_id)
-                .single();
-              
-              if (deptData) {
-                departmentName = deptData.name;
-              }
-            } catch (error) {
-              console.error('Error fetching department:', error);
-            }
-          } 
-          // Fallback to old department enum structure
-          else if (invite.department) {
-            try {
-              const { data: deptData } = await supabase
-                .from('departments')
-                .select('name, code')
-                .eq('code', invite.department)
-                .single();
-              
-              if (deptData) {
-                departmentName = deptData.name;
-              }
-            } catch (error) {
-              console.error('Error fetching department by code:', error);
-            }
-          }
-          
-          return {
-            id: invite.id,
-            email: invite.email,
-            role: invite.role,
-            department_id: invite.department_id,
-            department: invite.department,
-            invited_at: invite.invited_at,
-            email_sent: invite.email_sent,
-            email_sent_at: invite.email_sent_at,
-            department_name: departmentName
-          };
-        })
-      );
+      const invitesWithDepartments = (data || []).map((invite: any) => ({
+        id: invite.id,
+        email: invite.email,
+        role: invite.role,
+        department_id: invite.department_id,
+        invited_at: invite.invited_at,
+        email_sent: invite.email_sent,
+        email_sent_at: invite.email_sent_at,
+        department_name: invite.departments?.name || 'Unknown Department'
+      }));
       
       setPendingInvites(invitesWithDepartments);
     } catch (error) {
@@ -261,12 +221,11 @@ const UserInvitationManager: React.FC = () => {
   };
 
   const handleResendEmail = async (invite: PendingInvite) => {
-    const departmentId = invite.department_id || '';
     const emailSent = await sendInvitationEmail(
       invite.id,
       invite.email,
       invite.role || 'student',
-      departmentId
+      invite.department_id
     );
 
     if (emailSent) {

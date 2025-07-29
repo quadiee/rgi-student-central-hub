@@ -136,7 +136,7 @@ faculty1@example.com,faculty,ECE,Bob Johnson,,EMP002`;
         }
 
         // Trigger email using the edge function
-        const { error: sendError } = await supabase.functions.invoke("send-invitation", {
+        const { error: sendError } = await supabase.functions.invoke("send-invitation-email", {
           body: {
             email: invitation.email,
             role: invitation.role,
