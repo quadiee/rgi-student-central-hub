@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -52,6 +53,9 @@ const MobileBottomNav: React.FC = () => {
     user && item.roles.includes(user.role)
   ).slice(0, 5); // Limit to 5 items for mobile
 
+  console.log('=== MOBILE NAV DEBUG ===');
+  console.log('Mobile filtered navigation:', filteredNavigation);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 lg:hidden">
       <div className="grid grid-cols-5 h-16">
@@ -81,3 +85,4 @@ const MobileBottomNav: React.FC = () => {
 };
 
 export default MobileBottomNav;
+

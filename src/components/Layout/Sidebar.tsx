@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -62,10 +63,12 @@ const Sidebar: React.FC = () => {
     user && item.roles.includes(user.role)
   );
 
-  console.log('Sidebar - Current user:', user);
-  console.log('Sidebar - User role:', user?.role);
-  console.log('Sidebar - Filtered navigation:', filteredNavigation);
-  console.log('Sidebar - Navigation items:', navigationItems);
+  console.log('=== SIDEBAR DEBUG INFO ===');
+  console.log('Current user:', user);
+  console.log('User role:', user?.role);
+  console.log('All navigation items:', navigationItems);
+  console.log('Filtered navigation for user role:', filteredNavigation);
+  console.log('Should show Faculty link:', user?.role && ['hod', 'principal', 'admin', 'chairman'].includes(user.role));
 
   return (
     <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
@@ -134,3 +137,4 @@ const Sidebar: React.FC = () => {
 };
 
 export default Sidebar;
+
