@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, IndianRupee, AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -8,6 +7,8 @@ import { Card, CardContent } from '../ui/card';
 import { formatCurrency } from '../../utils/feeValidation';
 import { usePaymentBreakdown } from '../../hooks/usePaymentBreakdown';
 import PaymentBreakdown from '../Fees/PaymentBreakdown';
+import DashboardFeeTypeWidget from './DashboardFeeTypeWidget';
+import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
 
 interface DashboardStats {
   totalStudents: number;
@@ -29,6 +30,8 @@ const RealTimeStats: React.FC = () => {
     hidePaymentBreakdown,
     breadcrumbItems 
   } = usePaymentBreakdown();
+  
+  const { getTotalStats } = useFeeTypeAnalytics();
 
   useEffect(() => {
     if (user) {
@@ -130,14 +133,32 @@ const RealTimeStats: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-16 bg-gray-200 rounded"></div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-16 bg-gray-200 rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-64 bg-gray-200 rounded"></div>
+              </CardContent>
+            </Card>
+          </div>
+          <div>
+            <Card className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-64 bg-gray-200 rounded"></div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -145,74 +166,94 @@ const RealTimeStats: React.FC = () => {
   if (!stats) return null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {/* Total Students */}
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.totalStudents}</p>
+    <div className="space-y-6">
+      {/* Main Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Total Students */}
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Students</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.totalStudents}</p>
+              </div>
+              <Users className="w-8 h-8 text-blue-500" />
             </div>
-            <Users className="w-8 h-8 text-blue-500" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Total Revenue - Clickable */}
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer group"
-        onClick={() => handleStatClick('revenue')}
-      >
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Total Revenue
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(stats.totalRevenue)}
-              </p>
+        {/* Total Revenue - Clickable */}
+        <Card 
+          className="hover:shadow-lg transition-shadow cursor-pointer group"
+          onClick={() => handleStatClick('revenue')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  Total Revenue
+                  <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(stats.totalRevenue)}
+                </p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-green-500" />
             </div>
-            <TrendingUp className="w-8 h-8 text-green-500" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Outstanding Amount - Clickable */}
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer group"
-        onClick={() => handleStatClick('outstanding')}
-      >
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Outstanding
-                <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-              </p>
-              <p className="text-2xl font-bold text-orange-600">
-                {formatCurrency(stats.totalOutstanding)}
-              </p>
+        {/* Outstanding Amount - Clickable */}
+        <Card 
+          className="hover:shadow-lg transition-shadow cursor-pointer group"
+          onClick={() => handleStatClick('outstanding')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  Outstanding
+                  <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                </p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatCurrency(stats.totalOutstanding)}
+                </p>
+              </div>
+              <IndianRupee className="w-8 h-8 text-orange-500" />
             </div>
-            <IndianRupee className="w-8 h-8 text-orange-500" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Overdue Students */}
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Overdue</p>
-              <p className="text-2xl font-bold text-red-600">{stats.overdueStudents}</p>
+        {/* Overdue Students */}
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Overdue</p>
+                <p className="text-2xl font-bold text-red-600">{stats.overdueStudents}</p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
-            <AlertTriangle className="w-8 h-8 text-red-500" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Fee Type Analytics Widget */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <DashboardFeeTypeWidget />
+        </div>
+        <div>
+          {/* Additional widget space for future enhancements */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center text-gray-500">
+                <p className="text-sm">Additional analytics widgets coming soon</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

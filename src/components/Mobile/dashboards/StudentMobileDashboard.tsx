@@ -28,6 +28,12 @@ interface StudentStats {
   attendancePercentage: number;
   upcomingExams: number;
   completedAssignments: number;
+  feeTypeBreakdown: Array<{
+    fee_type_name: string;
+    amount: number;
+    paid_amount: number;
+    status: string;
+  }>;
 }
 
 const StudentMobileDashboard: React.FC = () => {
@@ -39,7 +45,8 @@ const StudentMobileDashboard: React.FC = () => {
     pendingAmount: 0,
     attendancePercentage: 0,
     upcomingExams: 0,
-    completedAssignments: 0
+    completedAssignments: 0,
+    feeTypeBreakdown: []
   });
   const [loading, setLoading] = useState(true);
   const [urgentPayments, setUrgentPayments] = useState<any[]>([]);
@@ -56,16 +63,32 @@ const StudentMobileDashboard: React.FC = () => {
     try {
       setLoading(true);
 
-      // Load fee records
-      const { data: feeData } = await supabase
+      // Load fee records with fee type details
+      const { data: feeData, error: feeError } = await supabase
         .from('fee_records')
-        .select('*')
+        .select(`
+          *,
+          fee_types!fee_type_id (
+            name,
+            description
+          )
+        `)
         .eq('student_id', user.id);
+
+      if (feeError) throw feeError;
 
       if (feeData) {
         const totalFees = feeData.reduce((sum, record) => sum + Number(record.final_amount), 0);
         const paidAmount = feeData.reduce((sum, record) => sum + Number(record.paid_amount || 0), 0);
         const pendingAmount = totalFees - paidAmount;
+
+        // Create fee type breakdown
+        const feeTypeBreakdown = feeData.map(record => ({
+          fee_type_name: record.fee_types?.name || 'General Fee',
+          amount: Number(record.final_amount),
+          paid_amount: Number(record.paid_amount || 0),
+          status: record.status
+        }));
 
         // Find urgent payments (due within 7 days)
         const urgentPayments = feeData.filter(record => {
@@ -80,7 +103,8 @@ const StudentMobileDashboard: React.FC = () => {
           ...prev,
           totalFees,
           paidAmount,
-          pendingAmount
+          pendingAmount,
+          feeTypeBreakdown
         }));
 
         setUrgentPayments(urgentPayments);
@@ -164,6 +188,49 @@ const StudentMobileDashboard: React.FC = () => {
       {/* Quick Stats */}
       <QuickStatsCards stats={quickStats} />
 
+      {/* Fee Type Breakdown */}
+      {stats.feeTypeBreakdown.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <span>Fee Breakdown by Type</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats.feeTypeBreakdown.map((fee, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium text-sm">{fee.fee_type_name}</span>
+                      <Badge 
+                        variant={fee.status === 'Paid' ? 'default' : 'destructive'}
+                        className="text-xs"
+                      >
+                        {fee.status}
+                      </Badge>
+                    </div>
+                    <div className="mt-1">
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span>Paid: {formatCurrency(fee.paid_amount)}</span>
+                        <span>Total: {formatCurrency(fee.amount)}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${fee.amount > 0 ? (fee.paid_amount / fee.amount) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Urgent Payments Alert */}
       {urgentPayments.length > 0 && (
         <Card className="border-red-200 bg-red-50">
@@ -200,7 +267,7 @@ const StudentMobileDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Academic Performance */}
+      {/* Academic Progress */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
