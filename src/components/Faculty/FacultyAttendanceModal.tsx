@@ -55,24 +55,40 @@ const FacultyAttendanceModal: React.FC<FacultyAttendanceModalProps> = ({
     try {
       setLoading(true);
       
-      const { data, error } = await supabase.rpc('get_faculty_attendance_history', {
-        p_faculty_id: faculty.faculty_id,
-        p_limit: selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 120
-      });
+      // Use direct query instead of RPC since the function might not be available
+      const limit = selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 120;
+      
+      const { data, error } = await supabase
+        .from('faculty_attendance')
+        .select(`
+          attendance_date,
+          total_periods,
+          present_periods,
+          absent_periods,
+          late_periods,
+          overall_status,
+          first_punch_time,
+          last_punch_time,
+          total_working_hours,
+          remarks
+        `)
+        .eq('faculty_id', faculty.faculty_id)
+        .order('attendance_date', { ascending: false })
+        .limit(limit);
 
       if (error) throw error;
       
-      const formattedData = (data || []).map((record: any) => ({
+      const formattedData: AttendanceRecord[] = (data || []).map((record: any) => ({
         attendance_date: record.attendance_date,
-        total_periods: record.total_periods,
-        present_periods: record.present_periods,
-        absent_periods: record.absent_periods,
-        late_periods: record.late_periods,
-        overall_status: record.overall_status,
-        first_punch_time: record.first_punch_time,
-        last_punch_time: record.last_punch_time,
-        total_working_hours: record.total_working_hours,
-        remarks: record.remarks
+        total_periods: record.total_periods || 0,
+        present_periods: record.present_periods || 0,
+        absent_periods: record.absent_periods || 0,
+        late_periods: record.late_periods || 0,
+        overall_status: record.overall_status || 'Unknown',
+        first_punch_time: record.first_punch_time || '',
+        last_punch_time: record.last_punch_time || '',
+        total_working_hours: record.total_working_hours ? record.total_working_hours.toString() : '',
+        remarks: record.remarks || ''
       }));
 
       setAttendanceHistory(formattedData);
@@ -100,11 +116,15 @@ const FacultyAttendanceModal: React.FC<FacultyAttendanceModalProps> = ({
 
   const formatTime = (timeString: string) => {
     if (!timeString) return 'N/A';
-    return new Date(`1970-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+    try {
+      return new Date(`1970-01-01T${timeString}`).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return timeString || 'N/A';
+    }
   };
 
   const formatDate = (dateString: string) => {
