@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Send, Copy, RefreshCw, Eye, Trash2 } from 'lucide-react';
+import { Send, Copy, RefreshCw, Eye, Trash2, Mail } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -18,6 +17,9 @@ interface Invitation {
   expires_at: string;
   used_at?: string;
   invited_at: string;
+  email_sent: boolean;
+  email_sent_at?: string;
+  token?: string;
 }
 
 interface UserInvitationManagerProps {
@@ -38,7 +40,22 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         .order('invited_at', { ascending: false });
 
       if (error) throw error;
-      setInvitations(data || []);
+      
+      // Remove duplicates based on email and keep the most recent one
+      const uniqueInvitations = data?.reduce((acc: Invitation[], current) => {
+        const existingIndex = acc.findIndex(inv => inv.email === current.email);
+        if (existingIndex === -1) {
+          acc.push(current);
+        } else {
+          // Keep the more recent invitation
+          if (new Date(current.invited_at) > new Date(acc[existingIndex].invited_at)) {
+            acc[existingIndex] = current;
+          }
+        }
+        return acc;
+      }, []) || [];
+
+      setInvitations(uniqueInvitations);
     } catch (error) {
       console.error('Error fetching invitations:', error);
       toast({
@@ -55,13 +72,59 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
     fetchInvitations();
   }, []);
 
-  const copyInvitationLink = (email: string) => {
-    const invitationUrl = `${window.location.origin}/signup?email=${encodeURIComponent(email)}`;
+  const copyInvitationLink = (invitation: Invitation) => {
+    const baseUrl = window.location.origin;
+    const invitationUrl = invitation.token 
+      ? `${baseUrl}/invite/${invitation.token}`
+      : `${baseUrl}/signup?email=${encodeURIComponent(invitation.email)}`;
+    
     navigator.clipboard.writeText(invitationUrl);
     toast({
       title: "Success",
       description: "Invitation link copied to clipboard",
     });
+  };
+
+  const resendInvitation = async (invitation: Invitation) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invitation-email', {
+        body: {
+          email: invitation.email,
+          role: invitation.role,
+          department: invitation.department,
+          invitationId: invitation.id,
+          rollNumber: invitation.roll_number,
+          employeeId: invitation.employee_id
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Invitation email resent successfully",
+      });
+
+      // Update the invitation record to mark email as sent
+      await supabase
+        .from('user_invitations')
+        .update({ 
+          email_sent: true, 
+          email_sent_at: new Date().toISOString() 
+        })
+        .eq('id', invitation.id);
+
+      fetchInvitations();
+    } catch (error: any) {
+      console.error('Error resending invitation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend invitation",
+        variant: "destructive"
+      });
+    }
   };
 
   const deleteInvitation = async (id: string) => {
@@ -96,7 +159,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
 
   const getStatusBadge = (invitation: Invitation) => {
     if (invitation.used_at) {
-      return <Badge variant="default">Used</Badge>;
+      return <Badge variant="default" className="bg-green-600">Used</Badge>;
     }
     if (new Date(invitation.expires_at) < new Date()) {
       return <Badge variant="destructive">Expired</Badge>;
@@ -104,14 +167,29 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
     if (!invitation.is_active) {
       return <Badge variant="secondary">Inactive</Badge>;
     }
-    return <Badge variant="outline">Pending</Badge>;
+    if (!invitation.email_sent) {
+      return <Badge variant="outline" className="border-orange-500 text-orange-600">Email Pending</Badge>;
+    }
+    return <Badge variant="outline" className="border-blue-500 text-blue-600">Sent</Badge>;
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    const roleMap: { [key: string]: string } = {
+      'student': 'Student',
+      'faculty': 'Faculty',
+      'hod': 'Head of Department',
+      'principal': 'Principal',
+      'chairman': 'Chairman',
+      'admin': 'Administrator'
+    };
+    return roleMap[role] || role;
   };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>User Invitations</CardTitle>
+          <CardTitle>User Invitations ({invitations.length})</CardTitle>
           <Button onClick={fetchInvitations} variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -130,22 +208,38 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-medium">{invitation.email}</h3>
                       {getStatusBadge(invitation)}
-                      <Badge variant="secondary">{invitation.role}</Badge>
+                      <Badge variant="secondary" className="capitalize">
+                        {getRoleDisplayName(invitation.role)}
+                      </Badge>
+                      <Badge variant="outline">{invitation.department}</Badge>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {invitation.department} • {invitation.roll_number || invitation.employee_id}
+                      {invitation.roll_number && `Roll: ${invitation.roll_number} • `}
+                      {invitation.employee_id && `Employee ID: ${invitation.employee_id} • `}
+                      Department: {invitation.department}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Sent: {new Date(invitation.invited_at).toLocaleDateString()} • 
+                      Invited: {new Date(invitation.invited_at).toLocaleDateString()} • 
                       Expires: {new Date(invitation.expires_at).toLocaleDateString()}
+                      {invitation.email_sent_at && ` • Email sent: ${new Date(invitation.email_sent_at).toLocaleDateString()}`}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {!invitation.email_sent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resendInvitation(invitation)}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => copyInvitationLink(invitation.email)}
+                      onClick={() => copyInvitationLink(invitation)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
@@ -176,9 +270,9 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {invitations.filter(i => !i.used_at && new Date(i.expires_at) > new Date()).length}
+              {invitations.filter(i => !i.used_at && new Date(i.expires_at) > new Date() && i.is_active).length}
             </div>
-            <p className="text-sm text-gray-600">Pending</p>
+            <p className="text-sm text-gray-600">Active</p>
           </CardContent>
         </Card>
 
@@ -187,7 +281,16 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
             <div className="text-2xl font-bold text-green-600">
               {invitations.filter(i => i.used_at).length}
             </div>
-            <p className="text-sm text-gray-600">Used</p>
+            <p className="text-sm text-gray-600">Completed</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {invitations.filter(i => !i.email_sent).length}
+            </div>
+            <p className="text-sm text-gray-600">Email Pending</p>
           </CardContent>
         </Card>
 
@@ -197,15 +300,6 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
               {invitations.filter(i => !i.used_at && new Date(i.expires_at) < new Date()).length}
             </div>
             <p className="text-sm text-gray-600">Expired</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-2xl font-bold text-gray-600">
-              {invitations.length}
-            </div>
-            <p className="text-sm text-gray-600">Total</p>
           </CardContent>
         </Card>
       </div>

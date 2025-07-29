@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -14,15 +14,18 @@ interface InvitationData {
   id: string;
   email: string;
   role: string;
-  department_id: string;
+  department: string;
   roll_number?: string;
   employee_id?: string;
   is_valid: boolean;
+  token: string;
 }
 
 const InvitationSignup: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const { token } = useParams();
   const navigate = useNavigate();
+  
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(true);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
@@ -39,24 +42,77 @@ const InvitationSignup: React.FC = () => {
   });
 
   useEffect(() => {
+    // Get token from URL params or search params
+    const invitationToken = token || searchParams.get('token');
     const email = searchParams.get('email');
-    const token = searchParams.get('token');
 
-    if (!email) {
-      setError('Invalid invitation link - missing email parameter');
+    if (invitationToken) {
+      validateInvitationByToken(invitationToken);
+    } else if (email) {
+      // Fallback to email-based validation for backward compatibility
+      validateInvitationByEmail(email);
+    } else {
+      setError('Invalid invitation link - missing token or email parameter');
       setValidating(false);
-      return;
     }
+  }, [token, searchParams]);
 
-    validateInvitation(email, token);
-  }, [searchParams]);
+  const validateInvitationByToken = async (invitationToken: string) => {
+    try {
+      setValidating(true);
+      console.log('Validating invitation token:', invitationToken);
+      
+      const { data, error } = await supabase
+        .rpc('validate_invitation_token', { p_token: invitationToken });
 
-  const validateInvitation = async (email: string, token: string | null) => {
+      if (error) {
+        console.error('Token validation error:', error);
+        setError(error.message || 'Failed to validate invitation');
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        setError('Invalid invitation token');
+        return;
+      }
+
+      const invitation = data[0];
+      if (!invitation.is_valid) {
+        setError(invitation.error_message || 'Invalid or expired invitation');
+        return;
+      }
+
+      // Check if user already exists
+      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(invitation.email);
+      if (existingUser?.user) {
+        setError('User already exists. Please use the login page instead.');
+        return;
+      }
+
+      setInvitationData({
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        department: invitation.department,
+        roll_number: invitation.roll_number,
+        employee_id: invitation.employee_id,
+        is_valid: true,
+        token: invitationToken
+      });
+    } catch (error: any) {
+      console.error('Error validating invitation:', error);
+      setError('Failed to validate invitation');
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const validateInvitationByEmail = async (email: string) => {
     try {
       setValidating(true);
       
       const { data, error } = await supabase.functions.invoke('check-user-exists', {
-        body: { email, token }
+        body: { email }
       });
 
       if (error || !data) {
@@ -112,10 +168,11 @@ const InvitationSignup: React.FC = () => {
         email: invitationData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             name: formData.name,
             role: invitationData.role,
-            department_id: invitationData.department_id,
+            department: invitationData.department,
             phone: formData.phone,
             roll_number: invitationData.roll_number,
             employee_id: invitationData.employee_id,
@@ -174,7 +231,6 @@ const InvitationSignup: React.FC = () => {
 
           if (linkError) {
             console.error('Faculty profile linking error:', linkError);
-            // Don't fail the entire process, just log the error
             toast.error('Account created but faculty profile linking failed');
           } else if (linkResult?.success) {
             console.log('Faculty profile linked successfully');
@@ -182,14 +238,20 @@ const InvitationSignup: React.FC = () => {
           }
         } catch (linkError) {
           console.error('Faculty profile linking error:', linkError);
-          // Don't fail the entire process
           toast.error('Account created but faculty profile linking failed');
         }
       }
 
-      // Success! Redirect to login or dashboard
+      // Success! Redirect based on role
       toast.success('Account created successfully! Please check your email to verify your account.');
-      navigate('/auth?mode=login');
+      
+      // Redirect to appropriate dashboard based on role
+      const redirectPath = invitationData.role === 'student' ? '/dashboard' : 
+                          invitationData.role === 'faculty' ? '/faculty' : '/dashboard';
+      
+      setTimeout(() => {
+        navigate(redirectPath);
+      }, 2000);
 
     } catch (error: any) {
       console.error('Signup process error:', error);
@@ -262,6 +324,7 @@ const InvitationSignup: React.FC = () => {
           <div className="text-center text-sm text-gray-600">
             <p>You've been invited as: <strong className="capitalize">{invitationData.role}</strong></p>
             <p>Email: <strong>{invitationData.email}</strong></p>
+            <p>Department: <strong>{invitationData.department}</strong></p>
             {invitationData.employee_id && (
               <p>Employee ID: <strong>{invitationData.employee_id}</strong></p>
             )}
@@ -371,7 +434,10 @@ const InvitationSignup: React.FC = () => {
                   Creating Account...
                 </>
               ) : (
-                'Complete Registration'
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Complete Registration
+                </>
               )}
             </Button>
           </form>

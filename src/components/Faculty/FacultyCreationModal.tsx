@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface FacultyCreationModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [invitationSent, setInvitationSent] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -34,6 +37,8 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
   React.useEffect(() => {
     if (isOpen) {
       fetchDepartments();
+      // Reset state when modal opens
+      setInvitationSent(false);
     }
   }, [isOpen]);
 
@@ -51,76 +56,78 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     }
   };
 
+  const generateInvitationToken = () => {
+    return `inv_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     setLoading(true);
     try {
-      // Create user invitation instead of direct profile creation
+      // Get department details
+      const department = departments.find(d => d.id === formData.department_id);
+      if (!department) {
+        throw new Error('Please select a department');
+      }
+
+      // Generate secure token
+      const invitationToken = generateInvitationToken();
+
+      // Create user invitation
       const { data: invitationData, error: invitationError } = await supabase
         .from('user_invitations')
-        .insert([{
+        .insert({
           email: formData.email,
-          role: 'faculty',
-          department: departments.find(d => d.id === formData.department_id)?.code || 'CSE',
+          role: 'faculty' as const,
+          department: department.code as any,
           employee_id: formData.employee_code,
           invited_by: user.id,
           is_active: true,
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
-        }])
+          token: invitationToken,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+        })
         .select()
         .single();
 
       if (invitationError) throw invitationError;
 
-      // For demo purposes, create a basic profile record
-      // In production, this would be handled by the user signup flow
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: crypto.randomUUID(), // Temporary ID for demo
-          name: formData.name,
+      console.log('Invitation created successfully:', invitationData);
+
+      // Send invitation email
+      setEmailSending(true);
+      const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+        body: {
           email: formData.email,
           role: 'faculty',
-          department_id: formData.department_id,
-          phone: formData.phone,
-          employee_id: formData.employee_code,
-          is_active: false, // Will be activated when user signs up
-          profile_completed: false
-        }])
-        .select()
-        .single();
-
-      if (profileError) {
-        console.warn('Profile creation failed:', profileError);
-        // Continue anyway as invitation is the primary mechanism
-      }
-
-      // Create faculty profile if main profile was created successfully
-      if (profileData) {
-        const { error: facultyError } = await supabase
-          .from('faculty_profiles')
-          .insert([{
-            user_id: profileData.id,
-            employee_code: formData.employee_code,
-            designation: formData.designation,
-            joining_date: new Date().toISOString().split('T')[0],
-            is_active: false // Will be activated when user signs up
-          }]);
-
-        if (facultyError) {
-          console.warn('Faculty profile creation failed:', facultyError);
+          department: department.code,
+          invitedBy: user.id,
+          invitationId: invitationData.id,
+          employeeId: formData.employee_code
         }
-      }
-
-      toast({
-        title: "Success",
-        description: "Faculty invitation sent successfully. They will receive an email to complete their profile."
       });
 
+      if (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Don't fail the entire process, but show warning
+        toast({
+          title: "Invitation Created",
+          description: "Faculty invitation created but email could not be sent. Please contact the faculty member directly.",
+          variant: "default"
+        });
+      } else {
+        console.log('Invitation email sent successfully:', emailResult);
+        toast({
+          title: "Success",
+          description: "Faculty invitation created and email sent successfully!"
+        });
+        setInvitationSent(true);
+      }
+
       onSuccess();
-      onClose();
+      
+      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -130,7 +137,15 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         phone: '',
         gender: ''
       });
+
+      // Close modal after a brief delay to show success state
+      setTimeout(() => {
+        onClose();
+        setInvitationSent(false);
+      }, 2000);
+
     } catch (error: any) {
+      console.error('Faculty invitation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create faculty invitation",
@@ -138,115 +153,183 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
       });
     } finally {
       setLoading(false);
+      setEmailSending(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!loading && !emailSending) {
+      onClose();
+      setInvitationSent(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Faculty Member</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {invitationSent ? (
+              <>
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                Invitation Sent Successfully!
+              </>
+            ) : (
+              <>
+                <Mail className="h-5 w-5" />
+                Invite New Faculty Member
+              </>
+            )}
+          </DialogTitle>
           <DialogDescription>
-            Enter the faculty member's information. They will receive an invitation email to complete their profile.
+            {invitationSent 
+              ? "The faculty member will receive an invitation email to complete their profile."
+              : "Enter the faculty member's information. They will receive an invitation email to complete their profile."
+            }
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        {!invitationSent ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  disabled={loading || emailSending}
+                />
+              </div>
+              <div>
+                <Label htmlFor="employee_code">Employee Code *</Label>
+                <Input
+                  id="employee_code"
+                  value={formData.employee_code}
+                  onChange={(e) => setFormData({ ...formData, employee_code: e.target.value })}
+                  required
+                  disabled={loading || emailSending}
+                />
+              </div>
+            </div>
+
             <div>
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="email">Email Address *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                disabled={loading || emailSending}
               />
             </div>
-            <div>
-              <Label htmlFor="employee_code">Employee Code</Label>
-              <Input
-                id="employee_code"
-                value={formData.employee_code}
-                onChange={(e) => setFormData({ ...formData, employee_code: e.target.value })}
-                required
-              />
-            </div>
-          </div>
 
-          <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="designation">Designation *</Label>
+                <Select 
+                  value={formData.designation} 
+                  onValueChange={(value) => setFormData({ ...formData, designation: value })}
+                  disabled={loading || emailSending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select designation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Professor">Professor</SelectItem>
+                    <SelectItem value="Associate Professor">Associate Professor</SelectItem>
+                    <SelectItem value="Assistant Professor">Assistant Professor</SelectItem>
+                    <SelectItem value="Lecturer">Lecturer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="department">Department *</Label>
+                <Select 
+                  value={formData.department_id} 
+                  onValueChange={(value) => setFormData({ ...formData, department_id: value })}
+                  disabled={loading || emailSending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="designation">Designation</Label>
-              <Select value={formData.designation} onValueChange={(value) => setFormData({ ...formData, designation: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select designation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Professor">Professor</SelectItem>
-                  <SelectItem value="Associate Professor">Associate Professor</SelectItem>
-                  <SelectItem value="Assistant Professor">Assistant Professor</SelectItem>
-                  <SelectItem value="Lecturer">Lecturer</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  disabled={loading || emailSending}
+                />
+              </div>
+              <div>
+                <Label htmlFor="gender">Gender</Label>
+                <Select 
+                  value={formData.gender} 
+                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                  disabled={loading || emailSending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Select value={formData.department_id} onValueChange={(value) => setFormData({ ...formData, department_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClose}
+                disabled={loading || emailSending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading || emailSending}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Invitation...
+                  </>
+                ) : emailSending ? (
+                  <>
+                    <Mail className="mr-2 h-4 w-4 animate-pulse" />
+                    Sending Email...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Invitation
+                  </>
+                )}
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="gender">Gender</Label>
-              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </form>
+        ) : (
+          <div className="text-center py-6">
+            <CheckCircle className="mx-auto h-16 w-16 text-green-600 mb-4" />
+            <p className="text-sm text-muted-foreground">
+              Invitation email has been sent to <strong>{formData.email}</strong>
+            </p>
           </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Send Invitation'}
-            </Button>
-          </div>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );
