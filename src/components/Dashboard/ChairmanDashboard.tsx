@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Crown, BarChart3, List, PieChart, RefreshCw, Sparkles, TrendingUp, Users, DollarSign, Award, Building2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -35,6 +34,10 @@ const ChairmanDashboard: React.FC = () => {
     setIsRefreshing(false);
   };
 
+  // Calculate fee collection status
+  const feeCollectionRate = totalStats.totalFees > 0 ? (totalStats.totalCollected / totalStats.totalFees) : 0;
+  const feeCollectionStatus: 'excellent' | 'good' = feeCollectionRate > 0.9 ? 'excellent' : 'good';
+
   // Executive Statistics
   const executiveStats = [
     {
@@ -60,7 +63,7 @@ const ChairmanDashboard: React.FC = () => {
         direction: 'up' as const,
         period: 'vs last month'
       },
-      status: (totalStats.totalFees > 0 && (totalStats.totalCollected / totalStats.totalFees) > 0.9 ? 'excellent' : 'good') as const
+      status: feeCollectionStatus
     },
     {
       title: 'Active Faculty',
