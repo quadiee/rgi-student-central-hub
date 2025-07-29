@@ -1,9 +1,9 @@
 
 import React from 'react';
-import FacultyManagement from '../components/Faculty/FacultyManagement';
+import StreamlinedFacultyManagement from '../components/Faculty/StreamlinedFacultyManagement';
 
 const Faculty: React.FC = () => {
-  return <FacultyManagement />;
+  return <StreamlinedFacultyManagement />;
 };
 
 export default Faculty;

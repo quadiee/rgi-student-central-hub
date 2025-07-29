@@ -50,13 +50,87 @@ export interface FacialRecognitionLog {
   employee_code: string;
 }
 
+export interface EnhancedFacultyMember {
+  faculty_id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  employee_code: string;
+  designation: string;
+  department_name: string;
+  department_code: string;
+  joining_date: string;
+  phone: string | null;
+  gender: string | null;
+  age: number | null;
+  years_of_experience: number | null;
+  is_active: boolean;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  current_address: string | null;
+  blood_group: string | null;
+  marital_status: string | null;
+  total_attendance_days: number;
+  present_days: number;
+  absent_days: number;
+  attendance_percentage: number;
+}
+
 export const useFacultyAttendance = () => {
   const { user } = useAuth();
   const [attendanceRecords, setAttendanceRecords] = useState<FacultyAttendanceRecord[]>([]);
   const [attendanceSessions, setAttendanceSessions] = useState<FacultyAttendanceSession[]>([]);
   const [facialRecognitionLogs, setFacialRecognitionLogs] = useState<FacialRecognitionLog[]>([]);
+  const [enhancedFacultyList, setEnhancedFacultyList] = useState<EnhancedFacultyMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchEnhancedFacultyList = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase.rpc('get_faculty_with_details', {
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      const mappedData: EnhancedFacultyMember[] = (data || []).map((faculty: any) => ({
+        faculty_id: faculty.faculty_id,
+        user_id: faculty.user_id,
+        name: faculty.name || 'N/A',
+        email: faculty.email || 'N/A',
+        employee_code: faculty.employee_code || 'N/A',
+        designation: faculty.designation || 'N/A',
+        department_name: faculty.department_name || 'Unknown Department',
+        department_code: faculty.department_code || 'N/A',
+        joining_date: faculty.joining_date || '',
+        phone: faculty.phone,
+        gender: faculty.gender,
+        age: faculty.age,
+        years_of_experience: faculty.years_of_experience,
+        is_active: faculty.is_active || false,
+        emergency_contact_name: faculty.emergency_contact_name,
+        emergency_contact_phone: faculty.emergency_contact_phone,
+        current_address: faculty.current_address,
+        blood_group: faculty.blood_group,
+        marital_status: faculty.marital_status,
+        total_attendance_days: faculty.total_attendance_days || 0,
+        present_days: faculty.present_days || 0,
+        absent_days: faculty.absent_days || 0,
+        attendance_percentage: faculty.attendance_percentage || 0
+      }));
+
+      setEnhancedFacultyList(mappedData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch enhanced faculty list');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAttendanceRecords = async (date?: string, departmentId?: string) => {
     if (!user) return;
@@ -313,11 +387,13 @@ export const useFacultyAttendance = () => {
     attendanceRecords,
     attendanceSessions,
     facialRecognitionLogs,
+    enhancedFacultyList,
     loading,
     error,
     fetchAttendanceRecords,
     fetchAttendanceSessions,
     fetchFacialRecognitionLogs,
+    fetchEnhancedFacultyList,
     markAttendance,
     createAttendanceSession,
     processFacialRecognitionData
