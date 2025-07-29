@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Send, Copy, RefreshCw, Eye, Trash2, Mail } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -11,7 +10,8 @@ interface Invitation {
   id: string;
   email: string;
   role: string;
-  department_id: string;
+  department_id?: string;
+  department?: string; // Legacy field
   department_name?: string;
   department_code?: string;
   roll_number?: string;
@@ -44,6 +44,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
           email,
           role,
           department_id,
+          department,
           roll_number,
           employee_id,
           is_active,
@@ -58,12 +59,13 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
 
       if (error) throw error;
       
-      // Get department information for each invitation
+      // Handle both old and new data structures
       const invitationsWithDepts = await Promise.all(
-        (data || []).map(async (invitation) => {
+        (data || []).map(async (invitation: any) => {
           let departmentName = 'Unknown Department';
           let departmentCode = 'UNK';
           
+          // Check if we have department_id (new structure)
           if (invitation.department_id) {
             try {
               const { data: deptData } = await supabase
@@ -80,9 +82,39 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
               console.error('Error fetching department:', error);
             }
           }
+          // Fallback to old department enum structure
+          else if (invitation.department) {
+            try {
+              const { data: deptData } = await supabase
+                .from('departments')
+                .select('name, code')
+                .eq('code', invitation.department)
+                .single();
+              
+              if (deptData) {
+                departmentName = deptData.name;
+                departmentCode = deptData.code;
+              }
+            } catch (error) {
+              console.error('Error fetching department by code:', error);
+            }
+          }
           
           return {
-            ...invitation,
+            id: invitation.id,
+            email: invitation.email,
+            role: invitation.role,
+            department_id: invitation.department_id,
+            department: invitation.department,
+            roll_number: invitation.roll_number,
+            employee_id: invitation.employee_id,
+            is_active: invitation.is_active,
+            expires_at: invitation.expires_at,
+            used_at: invitation.used_at,
+            invited_at: invitation.invited_at,
+            email_sent: invitation.email_sent,
+            email_sent_at: invitation.email_sent_at,
+            token: invitation.token,
             department_name: departmentName,
             department_code: departmentCode
           };
@@ -139,7 +171,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
         body: {
           email: invitation.email,
           role: invitation.role,
-          departmentId: invitation.department_id,
+          departmentId: invitation.department_id || '',
           invitationId: invitation.id,
           rollNumber: invitation.roll_number,
           employeeId: invitation.employee_id

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -14,7 +13,8 @@ interface InvitationData {
   id: string;
   email: string;
   role: string;
-  department_id: string;
+  department_id?: string;
+  department?: string; // Legacy field
   department_name?: string;
   department_code?: string;
   roll_number?: string;
@@ -96,7 +96,7 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Get department details using department_id
+      // Get department details using department_id (if available) or fallback
       let departmentName = 'Unknown Department';
       let departmentCode = 'UNK';
       
@@ -148,6 +148,7 @@ const InvitationSignup: React.FC = () => {
           email,
           role,
           department_id,
+          department,
           roll_number,
           employee_id,
           token,
@@ -178,7 +179,7 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Get department details
+      // Get department details - handle both old and new structure
       let departmentName = 'Unknown Department';
       let departmentCode = 'UNK';
       
@@ -197,6 +198,22 @@ const InvitationSignup: React.FC = () => {
         } catch (error) {
           console.error('Error fetching department:', error);
         }
+      } else if (data.department) {
+        // Fallback for old structure
+        try {
+          const { data: deptData } = await supabase
+            .from('departments')
+            .select('name, code')
+            .eq('code', data.department)
+            .single();
+
+          if (deptData) {
+            departmentName = deptData.name;
+            departmentCode = deptData.code;
+          }
+        } catch (error) {
+          console.error('Error fetching department by code:', error);
+        }
       }
 
       setInvitationData({
@@ -204,6 +221,7 @@ const InvitationSignup: React.FC = () => {
         email: data.email,
         role: data.role,
         department_id: data.department_id,
+        department: data.department,
         department_name: departmentName,
         department_code: departmentCode,
         roll_number: data.roll_number,
