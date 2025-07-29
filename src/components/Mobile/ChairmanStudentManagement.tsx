@@ -66,7 +66,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   }
 
   return (
-    <div className={cn("p-4 space-y-6 pb-20", className)}>
+    <div className={cn("p-4 space-y-6 safe-area-pb", className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -134,7 +134,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
             <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
               <div className="text-2xl font-bold text-red-600">{stats.criticalAttendance}</div>
               <div className="text-sm text-gray-600 mt-1">Need Attention</div>
-              <div className="text-xs text-gray-500">(<75%)</div>
+              <div className="text-xs text-gray-500">(less than 75%)</div>
             </div>
             <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
               <div className="text-2xl font-bold text-blue-600">{stats.avgAttendance}%</div>
@@ -144,7 +144,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
             <div className="text-center p-4 rounded-lg bg-white/70 shadow-sm">
               <div className="text-2xl font-bold text-purple-600">{stats.topPerformers}</div>
               <div className="text-sm text-gray-600 mt-1">Top Performers</div>
-              <div className="text-xs text-gray-500">(>95%)</div>
+              <div className="text-xs text-gray-500">(greater than 95%)</div>
             </div>
           </div>
         </CardContent>
