@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Users, GraduationCap, CreditCard, Award } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -115,18 +116,41 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       if (scholarshipsError) throw scholarshipsError;
 
       // Combine students with their scholarships
-      const studentsWithScholarships = studentsData?.map(student => ({
-        ...student,
+      const studentsWithScholarships: StudentData[] = studentsData?.map(student => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        roll_number: student.roll_number,
+        year: student.year,
+        semester: student.semester,
+        department_id: student.department_id,
         department_name: student.departments?.name || 'Unknown',
         department_code: student.departments?.code || 'UNK',
+        is_active: student.is_active,
+        community: student.community,
+        first_generation: student.first_generation,
+        phone: student.phone,
+        address: student.address,
         guardianName: student.guardian_name,
         guardianPhone: student.guardian_phone,
+        course: student.course,
         yearSection: student.year_section,
+        section: student.section,
         admissionDate: student.admission_date,
         bloodGroup: student.blood_group,
         emergencyContact: student.emergency_contact,
         profileImage: student.profile_photo_url,
-        scholarships: scholarshipsData?.filter(s => s.student_id === student.id) || []
+        scholarships: scholarshipsData?.filter(s => s.student_id === student.id).map(s => ({
+          id: s.id,
+          scholarship_type: s.scholarship_type as 'PMSS' | 'FG',
+          eligible_amount: s.eligible_amount,
+          applied_status: s.applied_status,
+          application_date: s.application_date,
+          received_by_institution: s.received_by_institution,
+          receipt_date: s.receipt_date,
+          academic_year: s.academic_year,
+          remarks: s.remarks
+        })) || []
       })) || [];
 
       setStudents(studentsWithScholarships);
@@ -143,7 +167,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   };
 
   const handleStudentClick = (student: StudentData) => {
-    // Transform student data to match StudentProfile props
+    // Transform StudentData to Student type for StudentProfile
     const transformedStudent = {
       id: student.id,
       name: student.name,
@@ -172,7 +196,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       feeStatus: 'Pending'
     };
 
-    setSelectedStudent(transformedStudent);
+    setSelectedStudent(student);
     setShowProfile(true);
   };
 
@@ -200,9 +224,38 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   };
 
   if (showProfile && selectedStudent) {
+    // Transform selectedStudent to match Student interface for StudentProfile
+    const studentForProfile = {
+      id: selectedStudent.id,
+      name: selectedStudent.name,
+      email: selectedStudent.email,
+      rollNumber: selectedStudent.roll_number,
+      roll_number: selectedStudent.roll_number,
+      course: selectedStudent.course || 'Not specified',
+      year: selectedStudent.year,
+      semester: selectedStudent.semester,
+      phone: selectedStudent.phone || '',
+      profileImage: selectedStudent.profileImage,
+      admissionDate: selectedStudent.admissionDate,
+      guardianName: selectedStudent.guardianName,
+      guardianPhone: selectedStudent.guardianPhone,
+      address: selectedStudent.address,
+      bloodGroup: selectedStudent.bloodGroup,
+      emergencyContact: selectedStudent.emergencyContact,
+      department: selectedStudent.department_name,
+      yearSection: selectedStudent.yearSection,
+      section: selectedStudent.section,
+      community: selectedStudent.community as 'SC' | 'ST' | 'OBC' | 'General' | 'EWS' | undefined,
+      first_generation: selectedStudent.first_generation,
+      totalFees: 0,
+      paidAmount: 0,
+      dueAmount: 0,
+      feeStatus: 'Pending'
+    };
+
     return (
       <StudentProfile
-        student={selectedStudent}
+        student={studentForProfile}
         onBack={handleBackToList}
       />
     );
