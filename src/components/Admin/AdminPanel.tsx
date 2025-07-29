@@ -7,11 +7,10 @@ import EnhancedUserManagement from './EnhancedUserManagement';
 import UnifiedUserInvitationManager from './UnifiedUserInvitationManager';
 import DepartmentManagement from './DepartmentManagement';
 
-// Recognize admin/principal as admins
+// Enhanced admin check to include all administrative roles
 function isAdmin(user: any) {
   if (!user) return false;
-  // Always let any user with role "admin" in
-  return user.role?.toLowerCase() === 'admin';
+  return ['admin', 'principal', 'chairman'].includes(user.role?.toLowerCase());
 }
 
 const AdminPanel: React.FC = () => {
@@ -21,9 +20,11 @@ const AdminPanel: React.FC = () => {
   // Show loading state while authentication or profile is loading
   if (loading || profileLoading) {
     return (
-      <div className="text-center py-8">
-        <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-pulse" />
-        <p className="text-gray-500">Loading admin panel...</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading admin panel...</p>
+        </div>
       </div>
     );
   }
@@ -31,22 +32,15 @@ const AdminPanel: React.FC = () => {
   // Check if user has admin privileges
   if (!user || !isAdmin(user)) {
     return (
-      <div className="text-center py-8">
-        <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">Access denied. Administrator privileges required.</p>
-        <p className="text-sm text-gray-400 mt-2">
-          Current role: {user?.role || 'Not authenticated'}
-        </p>
-        <p className="text-xs text-gray-400 mt-1">
-          User: {user?.email || 'Not logged in'}
-        </p>
-        <div className="mt-4">
-          <button 
-            onClick={() => window.location.reload()} 
-            className="text-blue-500 hover:text-blue-700 underline"
-          >
-            Refresh Page
-          </button>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
+          <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-2">Administrator privileges required.</p>
+          <div className="text-sm text-gray-500 space-y-1">
+            <p>Current role: <span className="font-mono">{user?.role || 'Not authenticated'}</span></p>
+            <p>User: <span className="font-mono">{user?.email || 'Not logged in'}</span></p>
+          </div>
         </div>
       </div>
     );
@@ -70,17 +64,17 @@ const AdminPanel: React.FC = () => {
         return <DepartmentManagement />;
       case 'enhanced-users':
         return (
-          <div>
+          <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-semibold mb-4 flex items-center">
               <Settings className="w-5 h-5 mr-2" />
               Enhanced Users
             </h3>
-            <p className="text-gray-500">Enhanced users panel placeholder.</p>
+            <p className="text-muted-foreground">Enhanced users panel placeholder.</p>
           </div>
         );
       case 'invite-users':
         return (
-          <div>
+          <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-semibold mb-4 flex items-center">
               <MailPlus className="w-5 h-5 mr-2" />
               User Invitations
@@ -96,36 +90,45 @@ const AdminPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
-        <div className="flex items-center space-x-2 text-sm text-blue-600">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Admin Panel</h1>
+          <p className="text-muted-foreground mt-1">
+            Comprehensive administrative control center
+          </p>
+        </div>
+        <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
           <Shield className="w-4 h-4" />
-          <span>Administrator Access ({user.role})</span>
+          <span className="text-sm font-medium">{user.role} Access</span>
         </div>
       </div>
 
       {/* Section Tabs */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex space-x-1 mb-6 overflow-x-auto">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            return (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                  activeSection === section.id
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{section.label}</span>
-              </button>
-            );
-          })}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="border-b border-gray-200">
+          <div className="flex overflow-x-auto">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
+                    activeSection === section.id
+                      ? 'border-blue-500 text-blue-600 bg-blue-50'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{section.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {renderContent()}
+        <div className="p-6">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
