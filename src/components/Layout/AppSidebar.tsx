@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
@@ -46,7 +45,8 @@ interface NavigationItem {
 const AppSidebar: React.FC = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
 
   const navigationItems: NavigationItem[] = [
     {
