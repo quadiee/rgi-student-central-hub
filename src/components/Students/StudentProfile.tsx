@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, GraduationCap, Users, CreditCard, AlertCircle, Award } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -75,7 +74,13 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ student, onBack }) => {
 
         if (error) throw error;
         
-        setScholarshipRecords(scholarships || []);
+        // Type assertion to ensure scholarship_type is properly typed
+        const typedScholarships = (scholarships || []).map(scholarship => ({
+          ...scholarship,
+          scholarship_type: scholarship.scholarship_type as 'PMSS' | 'FG'
+        })) as ScholarshipWithProfile[];
+        
+        setScholarshipRecords(typedScholarships);
       } catch (error) {
         console.error('Error loading scholarship data:', error);
       } finally {
