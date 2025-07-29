@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../contexts/SupabaseAuthContext';
@@ -103,7 +102,7 @@ export const useFacultyAttendance = () => {
         overall_status: record.overall_status as 'Present' | 'Absent' | 'Partial' | 'On Leave',
         first_punch_time: record.first_punch_time,
         last_punch_time: record.last_punch_time,
-        total_working_hours: record.total_working_hours,
+        total_working_hours: record.total_working_hours ? String(record.total_working_hours) : undefined,
         faculty_name: record.faculty_profiles?.profiles?.name || 'Unknown',
         employee_code: record.faculty_profiles?.employee_code || '',
         department_name: record.faculty_profiles?.profiles?.departments?.name || 'Unknown'
