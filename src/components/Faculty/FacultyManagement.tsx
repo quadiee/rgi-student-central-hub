@@ -33,6 +33,7 @@ const FacultyManagement: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState<FacultyMember | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (!user || !['admin', 'principal', 'chairman', 'hod'].includes(user.role)) {
     return (
@@ -70,6 +71,10 @@ const FacultyManagement: React.FC = () => {
   const handleDetailsModalClose = () => {
     setShowDetailsModal(false);
     setSelectedFaculty(null);
+  };
+
+  const handleFacultyUpdate = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const quickStats = [
@@ -194,6 +199,7 @@ const FacultyManagement: React.FC = () => {
 
         <TabsContent value="faculty">
           <FacultyListManagement 
+            key={refreshTrigger}
             onEditFaculty={handleEditFaculty}
             onViewDetails={handleViewDetails}
           />
@@ -232,6 +238,7 @@ const FacultyManagement: React.FC = () => {
         <FacultyCreationModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
+          onFacultyCreated={handleFacultyUpdate}
         />
       )}
 
@@ -241,6 +248,7 @@ const FacultyManagement: React.FC = () => {
           isOpen={showEditModal}
           onClose={handleEditModalClose}
           faculty={selectedFaculty}
+          onUpdate={handleFacultyUpdate}
         />
       )}
 
