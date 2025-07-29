@@ -39,6 +39,8 @@ interface StudentData {
   is_active: boolean;
   community?: string;
   first_generation: boolean;
+  phone?: string;
+  address?: string;
 }
 
 interface ChairmanStudentManagementProps {
