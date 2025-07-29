@@ -31,18 +31,13 @@ const ChairmanMobileDashboard: React.FC = () => {
   const totalStats = getTotalStats();
 
   useEffect(() => {
-    // Load additional real-time stats
-    const loadStats = async () => {
-      // This would typically fetch from your existing dashboard stats function
+    // Update stats when analytics data is loaded
+    if (!loading && analytics.length > 0) {
       setRealTimeStats(prev => ({
         ...prev,
-        totalStudents: totalStats.totalStudents || 2847,
-        totalRevenue: totalStats.totalCollected || 42000000
+        totalStudents: totalStats.totalStudents || 0,
+        totalRevenue: totalStats.totalCollected || 0
       }));
-    };
-
-    if (!loading && analytics.length > 0) {
-      loadStats();
     }
   }, [analytics, loading, totalStats]);
 
@@ -65,8 +60,8 @@ const ChairmanMobileDashboard: React.FC = () => {
     },
     {
       title: 'Fee Collection',
-      value: formatCurrency(totalStats.totalCollected),
-      change: `${((totalStats.totalCollected / totalStats.totalFees) * 100).toFixed(1)}% collected`,
+      value: formatCurrency(totalStats.totalCollected || 0),
+      change: `${totalStats.totalFees > 0 ? ((totalStats.totalCollected / totalStats.totalFees) * 100).toFixed(1) : 0}% collected`,
       icon: DollarSign,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
@@ -104,7 +99,7 @@ const ChairmanMobileDashboard: React.FC = () => {
       {/* Executive Stats */}
       <QuickStatsCards stats={executiveStats} />
 
-      {/* Fee Type Performance Overview */}
+      {/* Fee Collection Overview */}
       <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -116,14 +111,33 @@ const ChairmanMobileDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-white/50 rounded-lg">
-                <BarChart3 className="w-8 h-8 mx-auto text-purple-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Fee Types</p>
-                <p className="text-xl font-bold text-purple-600">{analytics.length}</p>
+                <DollarSign className="w-8 h-8 mx-auto text-green-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Total Collected</p>
+                <p className="text-lg font-bold text-green-600">
+                  {formatCurrency(totalStats.totalCollected || 0)}
+                </p>
               </div>
               <div className="text-center p-4 bg-white/50 rounded-lg">
+                <BarChart3 className="w-8 h-8 mx-auto text-orange-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Total Pending</p>
+                <p className="text-lg font-bold text-orange-600">
+                  {formatCurrency(totalStats.totalPending || 0)}
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-white/50 rounded-lg">
                 <Building className="w-8 h-8 mx-auto text-blue-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Total Fees</p>
+                <p className="text-lg font-bold text-blue-600">
+                  {formatCurrency(totalStats.totalFees || 0)}
+                </p>
+              </div>
+              <div className="text-center p-4 bg-white/50 rounded-lg">
+                <TrendingUp className="w-8 h-8 mx-auto text-purple-600 mb-2" />
                 <p className="text-sm font-medium text-gray-600">Collection Rate</p>
-                <p className="text-xl font-bold text-blue-600">
+                <p className="text-lg font-bold text-purple-600">
                   {totalStats.totalFees > 0 ? 
                     `${((totalStats.totalCollected / totalStats.totalFees) * 100).toFixed(1)}%` : 
                     '0%'
@@ -143,9 +157,14 @@ const ChairmanMobileDashboard: React.FC = () => {
                     .map((feeType, index) => (
                       <div key={feeType.fee_type_id} className="flex justify-between items-center text-xs">
                         <span className="font-medium">{feeType.fee_type_name}</span>
-                        <span className="text-green-600 font-semibold">
-                          {feeType.collection_percentage.toFixed(1)}%
-                        </span>
+                        <div className="text-right">
+                          <span className="text-green-600 font-semibold block">
+                            {feeType.collection_percentage.toFixed(1)}%
+                          </span>
+                          <span className="text-gray-500">
+                            {formatCurrency(feeType.total_collected)}
+                          </span>
+                        </div>
                       </div>
                     ))
                   }
