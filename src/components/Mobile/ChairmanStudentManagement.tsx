@@ -15,13 +15,15 @@ import {
   Download,
   Eye,
   Calendar,
-  MapPin
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
+import { useStudentStats } from '../../hooks/useStudentStats';
 
 interface Student {
   id: string;
@@ -45,6 +47,7 @@ interface ChairmanStudentManagementProps {
 const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ className }) => {
   const { user } = useAuth();
   const { stats: institutionalStats } = useInstitutionalStats();
+  const { stats: studentStats, loading: statsLoading, refetch: refetchStats } = useStudentStats();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +126,10 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     }
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([fetchStudents(), refetchStats()]);
+  };
+
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,21 +146,6 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     return matchesSearch && matchesDepartment && matchesYear;
   });
 
-  // Group students by department for statistics
-  const studentsByDepartment = students.reduce((acc, student) => {
-    const dept = student.department_name;
-    if (!acc[dept]) {
-      acc[dept] = {
-        total: 0,
-        active: 0,
-        code: student.department_code
-      };
-    }
-    acc[dept].total += 1;
-    if (student.is_active) acc[dept].active += 1;
-    return acc;
-  }, {} as Record<string, any>);
-
   const getYearLabel = (year: number) => {
     if (year === 1) return '1st Year';
     if (year === 2) return '2nd Year';
@@ -162,7 +154,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     return `${year}th Year`;
   };
 
-  if (loading) {
+  if (loading && statsLoading) {
     return (
       <div className={cn("p-4 space-y-6", className)}>
         <div className="flex items-center justify-center py-8">
@@ -182,10 +174,21 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
           </h2>
           <p className="text-sm text-gray-500 mt-1">Institutional Student Management</p>
         </div>
-        <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
-          <Download className="w-4 h-4 mr-2" />
-          Export
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="text-purple-600 border-purple-200"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -195,8 +198,8 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold text-blue-600">{institutionalStats.totalStudents}</p>
-                <p className="text-xs text-gray-500">{institutionalStats.activeStudents} active</p>
+                <p className="text-2xl font-bold text-blue-600">{studentStats.totalStudents}</p>
+                <p className="text-xs text-gray-500">{studentStats.activeStudents} active</p>
               </div>
               <Users className="w-8 h-8 text-blue-600 opacity-80" />
             </div>
@@ -208,7 +211,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Departments</p>
-                <p className="text-2xl font-bold text-purple-600">{Object.keys(studentsByDepartment).length}</p>
+                <p className="text-2xl font-bold text-purple-600">{Object.keys(studentStats.departmentWiseCount).length}</p>
                 <p className="text-xs text-gray-500">With students</p>
               </div>
               <GraduationCap className="w-8 h-8 text-purple-600 opacity-80" />
@@ -218,7 +221,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       </div>
 
       {/* Department-wise Students */}
-      {Object.keys(studentsByDepartment).length > 0 && (
+      {Object.keys(studentStats.departmentWiseCount).length > 0 && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -228,23 +231,26 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(studentsByDepartment).map(([dept, data]: [string, any]) => (
-                <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">{data.code}</span>
+              {Object.entries(studentStats.departmentWiseCount).map(([dept, count]) => {
+                const deptCode = departments.find(d => d.name === dept)?.code || dept.substring(0, 3).toUpperCase();
+                return (
+                  <div key={dept} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">{deptCode}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{dept}</p>
+                        <p className="text-sm text-gray-600">{count} students</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{dept}</p>
-                      <p className="text-sm text-gray-600">{data.active} active students</p>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-purple-600">{count}</p>
+                      <p className="text-xs text-gray-500">Students</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-purple-600">{data.total}</p>
-                    <p className="text-xs text-gray-500">Students</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -357,8 +363,8 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
         )}
       </div>
 
-      {/* Student Insights */}
-      {students.length > 0 && (
+      {/* Student Insights - Real Data */}
+      {studentStats.totalStudents > 0 && (
         <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -371,19 +377,19 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
               <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
                 <span className="text-sm font-medium text-gray-700">First Generation Students</span>
                 <span className="text-lg font-bold text-green-600">
-                  {students.filter(s => s.first_generation).length}
+                  {studentStats.firstGenerationStudents}
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
                 <span className="text-sm font-medium text-gray-700">SC/ST Students</span>
                 <span className="text-lg font-bold text-purple-600">
-                  {students.filter(s => s.community && ['SC', 'ST'].includes(s.community)).length}
+                  {studentStats.scStStudents}
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-white/70">
                 <span className="text-sm font-medium text-gray-700">Final Year Students</span>
                 <span className="text-lg font-bold text-blue-600">
-                  {students.filter(s => s.year === 4).length}
+                  {studentStats.finalYearStudents}
                 </span>
               </div>
             </div>
