@@ -117,12 +117,13 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
         return;
       }
 
-      // Step 1: Create user invitation first (simulating user creation process)
+      // Step 1: Create user invitation using the existing flow
       const { data: invitationData, error: invitationError } = await supabase
         .from('user_invitations')
         .insert({
           email: basicInfo.email,
           role: 'faculty',
+          department: departments.find(d => d.id === basicInfo.department_id)?.code || 'UNKNOWN',
           employee_id: basicInfo.employee_code,
           invited_by: user.id,
           is_active: true,
@@ -133,39 +134,15 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
 
       if (invitationError) {
         console.error('Invitation error:', invitationError);
-        // Continue without invitation if it fails
-      }
-
-      // Step 2: Create profile directly (for existing users or immediate creation)
-      const profileId = crypto.randomUUID();
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: profileId,
-          name: basicInfo.name,
-          email: basicInfo.email,
-          phone: basicInfo.phone,
-          role: 'faculty',
-          department_id: basicInfo.department_id,
-          employee_id: basicInfo.employee_code,
-          blood_group: basicInfo.blood_group,
-          address: basicInfo.current_address,
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        toast.error('Failed to create user profile. This email might already exist.');
+        toast.error('Failed to create invitation. This email might already be invited.');
         return;
       }
 
-      // Step 3: Create faculty profile
+      // Step 2: Create faculty profile record with detailed information
       const { data: facultyData, error: facultyError } = await supabase
         .from('faculty_profiles')
         .insert({
-          user_id: profileId,
+          user_id: null, // Will be linked when user accepts invitation
           employee_code: basicInfo.employee_code,
           designation: basicInfo.designation,
           joining_date: basicInfo.joining_date,
@@ -187,14 +164,24 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
           children_count: professionalInfo.children_count,
           medical_conditions: professionalInfo.medical_conditions,
           blood_group: basicInfo.blood_group,
-          created_by: user.id
+          created_by: user.id,
+          is_active: false // Will be activated when user accepts invitation
         })
         .select()
         .single();
 
-      if (facultyError) throw facultyError;
+      if (facultyError) {
+        console.error('Faculty profile error:', facultyError);
+        // If faculty profile creation fails, clean up the invitation
+        await supabase
+          .from('user_invitations')
+          .delete()
+          .eq('id', invitationData.id);
+        toast.error('Failed to create faculty profile');
+        return;
+      }
 
-      // Step 4: Add qualification if provided
+      // Step 3: Add qualification if provided
       if (qualification.degree_name && qualification.institution_name) {
         const { error: qualError } = await supabase
           .from('faculty_qualifications')
@@ -211,10 +198,13 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
             is_highest: qualification.is_highest
           });
 
-        if (qualError) throw qualError;
+        if (qualError) {
+          console.error('Qualification error:', qualError);
+          // Continue without failing the entire process
+        }
       }
 
-      // Step 5: Add specialization if provided
+      // Step 4: Add specialization if provided
       if (specialization.specialization_area) {
         const { error: specError } = await supabase
           .from('faculty_specializations')
@@ -227,14 +217,88 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
               specialization.certifications.split(',').map(c => c.trim()) : []
           });
 
-        if (specError) throw specError;
+        if (specError) {
+          console.error('Specialization error:', specError);
+          // Continue without failing the entire process
+        }
       }
 
-      toast.success('Faculty member created successfully!');
+      // Step 5: Send invitation email
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            email: basicInfo.email,
+            role: 'faculty',
+            department: departments.find(d => d.id === basicInfo.department_id)?.name || 'Unknown',
+            invitedBy: user.id,
+            invitationId: invitationData.id,
+            employeeId: basicInfo.employee_code
+          }
+        });
+
+        if (emailError) {
+          console.error('Email error:', emailError);
+          toast.error('Faculty created but invitation email failed to send');
+        } else {
+          toast.success('Faculty invitation created and email sent successfully!');
+        }
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        toast.success('Faculty invitation created successfully! (Email notification may have failed)');
+      }
+
+      // Reset form and close modal
+      setBasicInfo({
+        name: '',
+        email: '',
+        phone: '',
+        employee_code: '',
+        designation: '',
+        department_id: '',
+        joining_date: '',
+        blood_group: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        current_address: '',
+        permanent_address: ''
+      });
+      setProfessionalInfo({
+        salary_grade: '',
+        pf_number: '',
+        aadhar_number: '',
+        pan_number: '',
+        bank_account_number: '',
+        bank_name: '',
+        bank_branch: '',
+        ifsc_code: '',
+        confirmation_date: '',
+        marital_status: '',
+        spouse_name: '',
+        children_count: 0,
+        medical_conditions: ''
+      });
+      setQualification({
+        degree_type: '',
+        degree_name: '',
+        specialization: '',
+        institution_name: '',
+        university_name: '',
+        year_of_passing: new Date().getFullYear(),
+        percentage: 0,
+        grade: '',
+        is_highest: true
+      });
+      setSpecialization({
+        specialization_area: '',
+        proficiency_level: '',
+        years_of_experience: 0,
+        certifications: ''
+      });
+      setActiveTab('basic');
       onClose();
     } catch (error: any) {
       console.error('Error creating faculty:', error);
-      toast.error(error.message || 'Failed to create faculty member');
+      toast.error(error.message || 'Failed to create faculty invitation');
     } finally {
       setLoading(false);
     }
@@ -244,7 +308,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Faculty Member</DialogTitle>
+          <DialogTitle>Invite New Faculty Member</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -751,7 +815,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
             ) : (
               <Button onClick={handleCreateFaculty} disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Faculty
+                Send Faculty Invitation
               </Button>
             )}
           </div>
