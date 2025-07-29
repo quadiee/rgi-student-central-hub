@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -100,27 +99,10 @@ const InvitationSignup: React.FC = () => {
       // Get department details - handle both old and new structure
       let departmentName = 'Unknown Department';
       let departmentCode = 'UNK';
-      let departmentId = invitation.department_id;
+      let departmentId = null;
       
-      // If we have department_id, fetch department details
-      if (invitation.department_id) {
-        try {
-          const { data: deptData } = await supabase
-            .from('departments')
-            .select('name, code')
-            .eq('id', invitation.department_id)
-            .single();
-
-          if (deptData) {
-            departmentName = deptData.name;
-            departmentCode = deptData.code;
-          }
-        } catch (error) {
-          console.error('Error fetching department:', error);
-        }
-      }
-      // Fallback to old department enum if no department_id
-      else if (invitation.department) {
+      // For now, we only have the department enum from the RPC response
+      if (invitation.department) {
         try {
           const { data: deptData } = await supabase
             .from('departments')
@@ -169,7 +151,6 @@ const InvitationSignup: React.FC = () => {
           id,
           email,
           role,
-          department_id,
           department,
           roll_number,
           employee_id,
@@ -201,28 +182,12 @@ const InvitationSignup: React.FC = () => {
         return;
       }
 
-      // Get department details - handle both old and new structure
+      // Get department details using the department enum
       let departmentName = 'Unknown Department';
       let departmentCode = 'UNK';
-      let departmentId = data.department_id;
+      let departmentId = null;
       
-      if (data.department_id) {
-        try {
-          const { data: deptData } = await supabase
-            .from('departments')
-            .select('name, code')
-            .eq('id', data.department_id)
-            .single();
-
-          if (deptData) {
-            departmentName = deptData.name;
-            departmentCode = deptData.code;
-          }
-        } catch (error) {
-          console.error('Error fetching department:', error);
-        }
-      } else if (data.department) {
-        // Fallback for old structure
+      if (data.department) {
         try {
           const { data: deptData } = await supabase
             .from('departments')
