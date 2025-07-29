@@ -68,25 +68,31 @@ const FlexibleFacultyManagement: React.FC = () => {
       ];
 
       for (const faculty of sampleFaculty) {
-        // Create user invitation first
+        // Get department code for the invitation
+        const department = departments.find(d => d.id === faculty.department_id);
+        const departmentCode = department?.code || 'CSE';
+
+        // Create user invitation first with proper typing
+        const invitationData = {
+          email: faculty.email,
+          role: 'faculty' as const,
+          department: departmentCode as any, // Type cast to match enum
+          employee_id: faculty.employee_code,
+          invited_by: user.id,
+          is_active: true,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        };
+
         await supabase
           .from('user_invitations')
-          .insert([{
-            email: faculty.email,
-            role: 'faculty',
-            department: departments.find(d => d.id === faculty.department_id)?.code || 'CSE',
-            employee_id: faculty.employee_code,
-            invited_by: user.id,
-            is_active: true,
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          }]);
+          .insert(invitationData);
 
         // Create demo profile (in production, this would be done by user signup)
         const profileId = crypto.randomUUID();
         
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([{
+          .insert({
             id: profileId,
             name: faculty.name,
             email: faculty.email,
@@ -95,7 +101,7 @@ const FlexibleFacultyManagement: React.FC = () => {
             employee_id: faculty.employee_code,
             is_active: true, // Set to true for demo
             profile_completed: true
-          }]);
+          });
 
         if (profileError) {
           console.warn('Profile creation failed for', faculty.name, profileError);
@@ -105,13 +111,13 @@ const FlexibleFacultyManagement: React.FC = () => {
         // Create faculty profile
         await supabase
           .from('faculty_profiles')
-          .insert([{
+          .insert({
             user_id: profileId,
             employee_code: faculty.employee_code,
             designation: faculty.designation,
             joining_date: new Date().toISOString().split('T')[0],
             is_active: true
-          }]);
+          });
       }
 
       toast({
