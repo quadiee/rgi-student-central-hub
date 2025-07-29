@@ -86,8 +86,13 @@ const EnhancedFacultyList: React.FC<EnhancedFacultyListProps> = ({
     setFilteredFaculty(filtered);
   }, [enhancedFacultyList, searchTerm, departmentFilter, genderFilter, statusFilter]);
 
-  const getUniqueValues = (key: keyof EnhancedFacultyMember) => {
-    return Array.from(new Set(enhancedFacultyList.map(faculty => faculty[key]).filter(Boolean)));
+  const getUniqueValues = (key: keyof EnhancedFacultyMember): string[] => {
+    return Array.from(new Set(
+      enhancedFacultyList
+        .map(faculty => faculty[key])
+        .filter(value => value != null && value !== '')
+        .map(value => String(value))
+    ));
   };
 
   const getAttendanceColor = (percentage: number) => {
@@ -126,7 +131,7 @@ const EnhancedFacultyList: React.FC<EnhancedFacultyListProps> = ({
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
               {getUniqueValues('department_name').map(dept => (
-                <SelectItem key={dept} value={dept as string}>{dept}</SelectItem>
+                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
               ))}
             </SelectContent>
           </Select>

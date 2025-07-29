@@ -22,9 +22,22 @@ interface FacultyMember {
   employee_code: string;
   designation: string;
   department_name: string;
+  department_code: string;
   joining_date: string;
   phone: string | null;
+  gender: string | null;
+  age: number | null;
+  years_of_experience: number | null;
   is_active: boolean;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  current_address: string | null;
+  blood_group: string | null;
+  marital_status: string | null;
+  total_attendance_days: number;
+  present_days: number;
+  absent_days: number;
+  attendance_percentage: number;
 }
 
 const FacultyManagement: React.FC = () => {
