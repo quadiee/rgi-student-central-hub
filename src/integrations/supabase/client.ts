@@ -23,6 +23,9 @@ export const getSupabaseClient = () => {
         headers: {
           'x-client-info': 'supabase-js-web/2.50.0'
         }
+      },
+      db: {
+        schema: 'public'
       }
     });
   }
@@ -31,3 +34,13 @@ export const getSupabaseClient = () => {
 
 // Export the singleton instance
 export const supabase = getSupabaseClient();
+
+// Force schema refresh
+export const refreshSchema = async () => {
+  if (supabaseInstance) {
+    // Create a new instance to force schema refresh
+    supabaseInstance = null;
+    return getSupabaseClient();
+  }
+  return supabaseInstance;
+};
