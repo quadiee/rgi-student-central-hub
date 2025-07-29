@@ -14,16 +14,20 @@ import {
   Building,
   Award,
   Clock,
-  Eye
+  Eye,
+  GraduationCap,
+  Star
 } from 'lucide-react';
 import { useFeeTypeAnalytics } from '../../../hooks/useFeeTypeAnalytics';
 import { useInstitutionalStats } from '../../../hooks/useInstitutionalStats';
+import { useScholarshipStats } from '../../../hooks/useScholarshipStats';
 import { formatCurrency } from '../../../utils/feeValidation';
 
 const ChairmanMobileDashboard: React.FC = () => {
   const { user } = useAuth();
   const { analytics, loading, getTotalStats } = useFeeTypeAnalytics();
   const { stats: institutionalStats, loading: statsLoading } = useInstitutionalStats();
+  const { stats: scholarshipStats, loading: scholarshipLoading } = useScholarshipStats();
   
   const totalStats = getTotalStats();
 
@@ -62,7 +66,7 @@ const ChairmanMobileDashboard: React.FC = () => {
     }
   ];
 
-  if (loading || statsLoading) {
+  if (loading || statsLoading || scholarshipLoading) {
     return (
       <div className="p-4 space-y-4">
         {[1, 2, 3, 4].map((i) => (
@@ -88,6 +92,76 @@ const ChairmanMobileDashboard: React.FC = () => {
 
       {/* Executive Stats */}
       <QuickStatsCards stats={executiveStats} />
+
+      {/* Scholarship Overview */}
+      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Award className="w-5 h-5 text-emerald-600" />
+            <span>Scholarship Overview</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-white/50 rounded-lg">
+                <GraduationCap className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Scholarship Students</p>
+                <p className="text-lg font-bold text-emerald-600">
+                  {scholarshipStats.scholarshipStudents}
+                </p>
+              </div>
+              <div className="text-center p-4 bg-white/50 rounded-lg">
+                <Award className="w-8 h-8 mx-auto text-blue-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Total Scholarships</p>
+                <p className="text-lg font-bold text-blue-600">
+                  {scholarshipStats.totalScholarships}
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-white/50 rounded-lg">
+                <DollarSign className="w-8 h-8 mx-auto text-green-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Eligible Amount</p>
+                <p className="text-lg font-bold text-green-600">
+                  {formatCurrency(scholarshipStats.totalEligibleAmount)}
+                </p>
+              </div>
+              <div className="text-center p-4 bg-white/50 rounded-lg">
+                <Star className="w-8 h-8 mx-auto text-purple-600 mb-2" />
+                <p className="text-sm font-medium text-gray-600">Received Amount</p>
+                <p className="text-lg font-bold text-purple-600">
+                  {formatCurrency(scholarshipStats.totalReceivedAmount)}
+                </p>
+              </div>
+            </div>
+
+            {/* Scholarship Breakdown */}
+            <div className="bg-white/70 rounded-lg p-3">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Scholarship Types</h4>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">PMSS (SC/ST)</span>
+                  <span className="text-blue-600 font-semibold">{scholarshipStats.pmssScholarships}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">First Generation</span>
+                  <span className="text-green-600 font-semibold">{scholarshipStats.fgScholarships}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Applied</span>
+                  <span className="text-purple-600 font-semibold">{scholarshipStats.appliedScholarships}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Received</span>
+                  <span className="text-emerald-600 font-semibold">{scholarshipStats.receivedScholarships}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Fee Collection Overview */}
       <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
