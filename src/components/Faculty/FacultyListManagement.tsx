@@ -2,334 +2,300 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import FacultyDetailsModal from './FacultyDetailsModal';
-import FacultyEditModal from './FacultyEditModal';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Badge } from '../../components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
-import { Search, Filter, Eye, Edit, Phone, Mail, Calendar, MapPin, Users } from 'lucide-react';
-import { useIsMobile } from '../../hooks/use-mobile';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Search, Filter, Users, Mail, Phone, Calendar, Building } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FacultyMember {
-  id: string;
-  user_id: string;
+  faculty_id: string;
+  user_id: string | null;
   name: string;
   email: string;
-  employee_id: string;
   employee_code: string;
-  role: string;
   designation: string;
-  department_id: string;
   department_name: string;
   joining_date: string;
-  phone: string;
+  phone: string | null;
   is_active: boolean;
-  created_at: string;
-  profile_photo_url: string;
 }
 
-const FacultyListManagement: React.FC = () => {
+interface FacultyListManagementProps {
+  onEditFaculty: (faculty: FacultyMember) => void;
+  onViewDetails: (faculty: FacultyMember) => void;
+}
+
+const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
+  onEditFaculty,
+  onViewDetails
+}) => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
-  const [faculty, setFaculty] = useState<FacultyMember[]>([]);
+  const [facultyList, setFacultyList] = useState<FacultyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [selectedFaculty, setSelectedFaculty] = useState<FacultyMember | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [departments, setDepartments] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchFaculty();
-  }, [user]);
+    fetchFacultyMembers();
+    fetchDepartments();
+  }, []);
 
-  const fetchFaculty = async () => {
-    if (!user) return;
-    
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchFacultyMembers = async () => {
     try {
       setLoading(true);
       
-      // Fetch faculty from profiles table where role is 'faculty'
-      // Also fetch from faculty_profiles table for additional details
-      let query = supabase
-        .from('profiles')
-        .select(`
-          id,
-          name,
-          email,
-          employee_id,
-          role,
-          department_id,
-          phone,
-          is_active,
-          created_at,
-          profile_photo_url,
-          departments:department_id (
-            name
-          )
-        `)
-        .eq('role', 'faculty');
+      // Use the database function to get faculty with details
+      const { data, error } = await supabase.rpc('get_faculty_with_details', {
+        p_user_id: user?.id
+      });
 
-      // Add department filter if user is HOD
-      if (user.role === 'hod' && user.department_id) {
-        query = query.eq('department_id', user.department_id);
+      if (error) {
+        console.error('Error fetching faculty:', error);
+        toast.error('Failed to fetch faculty members');
+        return;
       }
-
-      const { data: profilesData, error: profilesError } = await query;
-
-      if (profilesError) {
-        console.error('Error fetching faculty profiles:', profilesError);
-        throw profilesError;
-      }
-
-      // Fetch faculty_profiles for additional details
-      const { data: facultyProfilesData, error: facultyError } = await supabase
-        .from('faculty_profiles')
-        .select(`
-          user_id,
-          employee_code,
-          designation,
-          joining_date
-        `);
-
-      if (facultyError) {
-        console.error('Error fetching faculty details:', facultyError);
-        // Continue without faculty_profiles data if table doesn't exist or has issues
-      }
-
-      // Create a map of faculty profiles for quick lookup
-      const facultyProfilesMap = new Map(
-        facultyProfilesData?.map(fp => [fp.user_id, fp]) || []
-      );
 
       // Map the data to our interface
-      const mappedData: FacultyMember[] = (profilesData || []).map((item: any) => {
-        const facultyProfile = facultyProfilesMap.get(item.id);
-        
-        return {
-          id: item.id,
-          user_id: item.id,
-          name: item.name,
-          email: item.email,
-          employee_id: item.employee_id || '',
-          employee_code: facultyProfile?.employee_code || item.employee_id || '',
-          role: item.role,
-          designation: facultyProfile?.designation || 'Faculty',
-          department_id: item.department_id || '',
-          department_name: item.departments?.name || 'Unknown',
-          joining_date: facultyProfile?.joining_date || item.created_at?.split('T')[0] || '',
-          phone: item.phone || '',
-          is_active: item.is_active,
-          created_at: item.created_at,
-          profile_photo_url: item.profile_photo_url || ''
-        };
-      });
-      
-      setFaculty(mappedData);
+      const mappedData: FacultyMember[] = (data || []).map((faculty: any) => ({
+        faculty_id: faculty.faculty_id,
+        user_id: faculty.user_id,
+        name: faculty.name || 'N/A',
+        email: faculty.email || 'N/A',
+        employee_code: faculty.employee_code || 'N/A',
+        designation: faculty.designation || 'N/A',
+        department_name: faculty.department_name || 'Unknown Department',
+        joining_date: faculty.joining_date || '',
+        phone: faculty.phone,
+        is_active: faculty.is_active || false
+      }));
+
+      setFacultyList(mappedData);
     } catch (error) {
-      console.error('Error fetching faculty:', error);
+      console.error('Error fetching faculty members:', error);
+      toast.error('Failed to fetch faculty members');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredFaculty = faculty.filter(member => {
+  const filteredFaculty = facultyList.filter(faculty => {
     const matchesSearch = 
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.employee_id.toLowerCase().includes(searchTerm.toLowerCase());
+      faculty.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      faculty.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      faculty.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      faculty.department_name.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDepartment = departmentFilter === 'all' || member.department_name === departmentFilter;
+    const matchesDepartment = departmentFilter === 'all' || 
+      faculty.department_name === departments.find(d => d.id === departmentFilter)?.name;
     
-    return matchesSearch && matchesDepartment;
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && faculty.is_active) ||
+      (statusFilter === 'inactive' && !faculty.is_active);
+
+    return matchesSearch && matchesDepartment && matchesStatus;
   });
 
-  const handleViewDetails = (facultyMember: FacultyMember) => {
-    setSelectedFaculty(facultyMember);
-    setShowDetailsModal(true);
-  };
-
-  const handleEditFaculty = (facultyMember: FacultyMember) => {
-    setSelectedFaculty(facultyMember);
-    setShowEditModal(true);
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="rounded-full bg-muted h-12 w-12" />
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-muted rounded w-1/4" />
-                  <div className="h-3 bg-muted rounded w-1/3" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
+      {/* Search and Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filters & Search
+            Search & Filters
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search faculty..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by name, email, employee code, or department..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="Computer Science">Computer Science</SelectItem>
-                <SelectItem value="Electronics">Electronics</SelectItem>
-                <SelectItem value="Mechanical">Mechanical</SelectItem>
-                <SelectItem value="Civil">Civil</SelectItem>
-                <SelectItem value="Electrical">Electrical</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            <div className="flex gap-2">
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Faculty List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Faculty Members ({filteredFaculty.length})
-          </h3>
-        </div>
-
+      <div className="grid gap-4">
         {filteredFaculty.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No faculty members found.</p>
+            <CardContent className="flex flex-col items-center justify-center p-8">
+              <Users className="h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-gray-500 text-center">
+                {searchTerm || departmentFilter !== 'all' || statusFilter !== 'all'
+                  ? 'No faculty members found matching your criteria'
+                  : 'No faculty members found'}
+              </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {filteredFaculty.map((member) => (
-              <Card key={member.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4 flex-1">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={member.profile_photo_url} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-base truncate text-foreground">
-                            {member.name}
-                          </h4>
-                          <Badge variant={member.is_active ? "default" : "secondary"}>
-                            {member.is_active ? "Active" : "Inactive"}
-                          </Badge>
+          filteredFaculty.map((faculty) => (
+            <Card key={faculty.faculty_id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Users className="h-6 w-6 text-blue-600" />
                         </div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          {member.designation} • {member.department_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          ID: {member.employee_code || member.employee_id || 'N/A'}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg text-gray-900 truncate">
+                            {faculty.name}
+                          </h3>
+                          <Badge variant={faculty.is_active ? 'default' : 'secondary'}>
+                            {faculty.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {!faculty.user_id && (
+                            <Badge variant="outline">Pending Activation</Badge>
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 mb-2">
+                          {faculty.designation}
                         </p>
                         
-                        <div className="space-y-1">
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3 mr-1" />
-                            <span className="truncate">{member.email}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{faculty.email}</span>
                           </div>
-                          {member.phone && (
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3 mr-1" />
-                              <span>{member.phone}</span>
+                          
+                          {faculty.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 flex-shrink-0" />
+                              <span>{faculty.phone}</span>
                             </div>
                           )}
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            <span>Joined: {member.joining_date ? new Date(member.joining_date).toLocaleDateString() : 'N/A'}</span>
+                          
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{faculty.department_name}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 flex-shrink-0" />
+                            <span>Joined: {formatDate(faculty.joining_date)}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">ID:</span>
+                            <span>{faculty.employee_code}</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col gap-2 ml-4">
+                  </div>
+                  
+                  <div className="flex-shrink-0">
+                    <div className="flex gap-2">
                       <Button
-                        size="sm"
                         variant="outline"
-                        onClick={() => handleViewDetails(member)}
-                        className="w-full sm:w-auto"
+                        size="sm"
+                        onClick={() => onViewDetails(faculty)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                        View Details
                       </Button>
                       <Button
-                        size="sm"
                         variant="outline"
-                        onClick={() => handleEditFaculty(member)}
-                        className="w-full sm:w-auto"
+                        size="sm"
+                        onClick={() => onEditFaculty(faculty)}
                       >
-                        <Edit className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
 
-      {/* Modals */}
-      {selectedFaculty && showDetailsModal && (
-        <FacultyDetailsModal
-          faculty={selectedFaculty}
-          isOpen={showDetailsModal}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedFaculty(null);
-          }}
-        />
-      )}
-
-      {selectedFaculty && showEditModal && (
-        <FacultyEditModal
-          faculty={selectedFaculty}
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedFaculty(null);
-          }}
-          onUpdate={fetchFaculty}
-        />
-      )}
+      {/* Summary */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              Showing {filteredFaculty.length} of {facultyList.length} faculty members
+            </span>
+            <span>
+              Active: {facultyList.filter(f => f.is_active).length} | 
+              Inactive: {facultyList.filter(f => !f.is_active).length}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

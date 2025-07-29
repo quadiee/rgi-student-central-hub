@@ -117,13 +117,13 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
         return;
       }
 
-      // Step 1: Create user invitation using the existing flow
+      // Step 1: Create user invitation using the new department_id field
       const { data: invitationData, error: invitationError } = await supabase
         .from('user_invitations')
         .insert({
           email: basicInfo.email,
           role: 'faculty',
-          department: departments.find(d => d.id === basicInfo.department_id)?.code || 'UNKNOWN',
+          department_id: basicInfo.department_id,
           employee_id: basicInfo.employee_code,
           invited_by: user.id,
           is_active: true,
@@ -225,11 +225,12 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({
 
       // Step 5: Send invitation email
       try {
+        const selectedDepartment = departments.find(d => d.id === basicInfo.department_id);
         const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
           body: {
             email: basicInfo.email,
             role: 'faculty',
-            department: departments.find(d => d.id === basicInfo.department_id)?.name || 'Unknown',
+            department: selectedDepartment?.name || 'Unknown',
             invitedBy: user.id,
             invitationId: invitationData.id,
             employeeId: basicInfo.employee_code
