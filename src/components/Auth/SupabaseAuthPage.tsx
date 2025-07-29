@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuickAuth } from '../../hooks/useQuickAuth';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -10,12 +11,15 @@ import { useToast } from '../ui/use-toast';
 import SecureAdminButton from './SecureAdminButton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ProfileLoadingSkeleton, ProgressiveLoader } from './LoadingStates';
+
 const SupabaseAuthPage = () => {
+  const navigate = useNavigate();
   const {
     isAuthenticated,
     loading: quickAuthLoading
   } = useQuickAuth();
   const {
+    user,
     profileLoading,
     signIn
   } = useAuth();
@@ -26,11 +30,21 @@ const SupabaseAuthPage = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
+
   console.log('Auth page state:', {
     isAuthenticated,
     quickAuthLoading,
-    profileLoading
+    profileLoading,
+    user: !!user
   });
+
+  // Redirect authenticated users with complete profiles
+  useEffect(() => {
+    if (isAuthenticated && user && !profileLoading) {
+      console.log('Redirecting authenticated user to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, profileLoading, navigate]);
 
   // Show progressive loading for authenticated users while profile loads
   if (isAuthenticated && profileLoading) {
@@ -65,10 +79,12 @@ const SupabaseAuthPage = () => {
         </div>
       </div>;
   }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     console.log('Attempting login with:', loginEmail);
+    
     try {
       if (!loginEmail.endsWith('@rgce.edu.in')) {
         toast({
@@ -79,8 +95,10 @@ const SupabaseAuthPage = () => {
         setLoginLoading(false);
         return;
       }
+      
       const result = await signIn(loginEmail, loginPassword);
       console.log('Login result:', result);
+      
       if (result.error) {
         console.error('Login error:', result.error);
         toast({
@@ -89,12 +107,12 @@ const SupabaseAuthPage = () => {
           variant: "destructive"
         });
       } else {
-        console.log('Login successful');
+        console.log('Login successful, will redirect when profile loads');
         toast({
           title: "Login Successful",
           description: "Welcome to RGCE Portal!"
         });
-        // The auth context will handle the redirect
+        // Don't navigate here - let the useEffect handle it after profile loads
       }
     } catch (err: any) {
       console.error('Login exception:', err);
@@ -107,6 +125,7 @@ const SupabaseAuthPage = () => {
       setLoginLoading(false);
     }
   };
+
   return <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         {/* Header */}
@@ -183,4 +202,5 @@ const SupabaseAuthPage = () => {
       </div>
     </ErrorBoundary>;
 };
+
 export default SupabaseAuthPage;
