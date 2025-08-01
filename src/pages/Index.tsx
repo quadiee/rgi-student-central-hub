@@ -1,43 +1,60 @@
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
-import { GraduationCap } from 'lucide-react';
-import { INSTITUTION } from '../constants/institutional';
-import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
+import { useIsMobile } from '../hooks/use-mobile';
+import Dashboard from '../components/Dashboard/Dashboard';
+import EnhancedMobileLayout from '../components/Mobile/EnhancedMobileLayout';
+import ModernLayout from '../components/Layout/ModernLayout';
 
-const Index = () => {
+const Index: React.FC = () => {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, loading, navigate]);
+  // EXTREME DEBUGGING FOR INDEX PAGE
+  console.log('%c=== INDEX PAGE DEBUG ===', 'background: orange; color: white; font-size: 18px; padding: 10px;');
+  console.log('Index - User:', user);
+  console.log('Index - Loading:', loading);
+  console.log('Index - IsMobile:', isMobile);
+  console.log('Index - User Role:', user?.role);
+  console.log('Index - Window location:', window.location.href);
+  console.log('Index - Timestamp:', new Date().toISOString());
 
-  // Show loading only during initial auth check
   if (loading) {
+    console.log('%c INDEX LOADING STATE', 'background: blue; color: white; font-size: 16px;');
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">{INSTITUTION.name}</h3>
-          <p className="text-gray-600">Loading Student Portal...</p>
-          <p className="text-sm text-gray-500 mt-2">{INSTITUTION.tagline}</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Show auth page if no user
   if (!user) {
-    return <SupabaseAuthPage />;
+    console.log('%c INDEX NO USER - REDIRECTING', 'background: red; color: white; font-size: 16px;');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg">Please log in to continue</p>
+        </div>
+      </div>
+    );
   }
 
-  return null; // User will be redirected to dashboard
+  // FORCE MOBILE LAYOUT FOR CHAIRMAN ON MOBILE
+  if (isMobile) {
+    console.log('%c INDEX - RENDERING MOBILE LAYOUT', 'background: purple; color: white; font-size: 16px;');
+    return <EnhancedMobileLayout />;
+  }
+
+  // DESKTOP LAYOUT
+  console.log('%c INDEX - RENDERING DESKTOP LAYOUT', 'background: green; color: white; font-size: 16px;');
+  return (
+    <ModernLayout>
+      <Dashboard />
+    </ModernLayout>
+  );
 };
 
 export default Index;

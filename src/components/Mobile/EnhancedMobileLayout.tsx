@@ -17,9 +17,13 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // EXTREME DEBUGGING FOR MOBILE LAYOUT
+  console.log('%c=== ENHANCED MOBILE LAYOUT DEBUG ===', 'background: magenta; color: white; font-size: 18px; padding: 10px;');
   console.log('EnhancedMobileLayout - User:', user);
+  console.log('EnhancedMobileLayout - User Role:', user?.role);
   console.log('EnhancedMobileLayout - Location:', location.pathname);
   console.log('EnhancedMobileLayout - Children provided:', !!children);
+  console.log('EnhancedMobileLayout - Timestamp:', new Date().toISOString());
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,11 +53,12 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
     }
   };
 
-  // For Chairman role, only show default header for specific routes
+  // For Chairman role, don't show default header on dashboard
   const shouldShowDefaultHeader = user?.role !== 'chairman' || 
-    (user?.role === 'chairman' && (location.pathname === '/dashboard' || location.pathname === '/'));
+    (user?.role === 'chairman' && !['/dashboard', '/'].includes(location.pathname));
 
   console.log('EnhancedMobileLayout - Should show header:', shouldShowDefaultHeader);
+  console.log('EnhancedMobileLayout - About to render main content');
 
   return (
     <div className={cn(
@@ -72,8 +77,9 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
         shouldShowDefaultHeader ? "pt-16 pb-20" : "pb-20"
       )}>
         <div className="animate-fade-in">
-          {/* Use children if provided, otherwise use RoleDashboard */}
-          {children || <RoleDashboard />}
+          {/* FORCE RENDER ROLEDASHBOARD FOR DEBUGGING */}
+          {console.log('%c RENDERING ROLE DASHBOARD NOW!', 'background: cyan; color: black; font-size: 16px;')}
+          <RoleDashboard />
         </div>
       </main>
 
