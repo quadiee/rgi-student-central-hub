@@ -1,300 +1,218 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../../contexts/SupabaseAuthContext';
-import QuickStatsCards from '../QuickStatsCards';
-import RecentActivityFeed from '../RecentActivityFeed';
-import NotificationCenter from '../NotificationCenter';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
 import { 
   Users, 
-  TrendingUp, 
-  DollarSign, 
-  BarChart3, 
+  GraduationCap, 
+  CreditCard, 
+  BarChart3,
+  TrendingUp,
   Building,
-  Award,
-  Clock,
-  Eye,
-  GraduationCap,
-  Star
+  BookOpen,
+  AlertCircle
 } from 'lucide-react';
-import { useFeeTypeAnalytics } from '../../../hooks/useFeeTypeAnalytics';
-import { useInstitutionalStats } from '../../../hooks/useInstitutionalStats';
-import { useScholarshipStats } from '../../../hooks/useScholarshipStats';
-import { formatCurrency } from '../../../utils/feeValidation';
+import { Card, CardContent } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const ChairmanMobileDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { analytics, loading, getTotalStats } = useFeeTypeAnalytics();
-  const { stats: institutionalStats, loading: statsLoading } = useInstitutionalStats();
-  const { stats: scholarshipStats, loading: scholarshipLoading } = useScholarshipStats();
-  
-  const totalStats = getTotalStats();
+  const navigate = useNavigate();
 
-  const executiveStats = [
+  const stats = [
     {
       title: 'Total Students',
-      value: statsLoading ? '...' : institutionalStats.totalStudents.toLocaleString(),
-      change: `${institutionalStats.activeStudents} active`,
-      icon: Users,
+      value: '2,847',
+      change: '+12% from last month',
+      icon: GraduationCap,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      bgColor: 'bg-blue-100',
     },
     {
-      title: 'Faculty Strength',
-      value: statsLoading ? '...' : institutionalStats.totalFaculty.toLocaleString(),
-      change: `${institutionalStats.activeFaculty} active`,
+      title: 'Faculty Members',
+      value: '156',
+      change: '+3 new this month',
       icon: Users,
       color: 'text-green-600',
-      bgColor: 'bg-green-50'
+      bgColor: 'bg-green-100',
     },
     {
       title: 'Fee Collection',
-      value: formatCurrency(totalStats.totalCollected || 0),
-      change: `${totalStats.totalFees > 0 ? ((totalStats.totalCollected / totalStats.totalFees) * 100).toFixed(1) : 0}% collected`,
-      icon: DollarSign,
+      value: '₹1.2Cr',
+      change: '85% collected',
+      icon: CreditCard,
       color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
+      bgColor: 'bg-purple-100',
     },
     {
       title: 'Departments',
-      value: statsLoading ? '...' : institutionalStats.totalDepartments.toLocaleString(),
+      value: '8',
       change: 'All active',
       icon: Building,
       color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      bgColor: 'bg-orange-100',
     }
   ];
 
-  if (loading || statsLoading || scholarshipLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-32 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
-  }
+  const quickActions = [
+    {
+      title: 'Student Management',
+      description: 'View all students across departments',
+      icon: GraduationCap,
+      route: '/students',
+      color: 'bg-blue-50 hover:bg-blue-100 border-blue-200'
+    },
+    {
+      title: 'Faculty Overview',
+      description: 'Manage faculty across all departments',
+      icon: Users,
+      route: '/faculty',
+      color: 'bg-green-50 hover:bg-green-100 border-green-200'
+    },
+    {
+      title: 'Fee Management',
+      description: 'Monitor fee collection and payments',
+      icon: CreditCard,
+      route: '/fees',
+      color: 'bg-purple-50 hover:bg-purple-100 border-purple-200'
+    },
+    {
+      title: 'Reports & Analytics',
+      description: 'View institutional reports',
+      icon: BarChart3,
+      route: '/reports',
+      color: 'bg-orange-50 hover:bg-orange-100 border-orange-200'
+    }
+  ];
+
+  const recentActivity = [
+    {
+      action: 'New faculty member added',
+      department: 'Computer Science',
+      time: '2 hours ago',
+      icon: Users
+    },
+    {
+      action: 'Fee payment received',
+      department: 'Electronics & Communication',
+      time: '4 hours ago',
+      icon: CreditCard
+    },
+    {
+      action: 'Student enrollment completed',
+      department: 'Mechanical Engineering',
+      time: '1 day ago',
+      icon: GraduationCap
+    }
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="text-center py-6">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          Chairman's Dashboard
-        </h2>
-        <p className="text-gray-600 mt-2">Strategic overview of institutional performance</p>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-lg border-b border-purple-200 p-4 sticky top-0 z-10">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Chairman Dashboard</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Welcome back, {user?.name}
+          </p>
+        </div>
       </div>
 
-      {/* Executive Stats */}
-      <QuickStatsCards stats={executiveStats} />
-
-      {/* Fee Collection Overview */}
-      <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5 text-purple-600" />
-            <span>Fee Collection Overview</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-purple-100 hover:shadow-md transition-all">
-                <DollarSign className="w-8 h-8 mx-auto text-green-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Total Collected</p>
-                <p className="text-lg font-bold text-green-600">
-                  {formatCurrency(totalStats.totalCollected || 0)}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-purple-100 hover:shadow-md transition-all">
-                <BarChart3 className="w-8 h-8 mx-auto text-orange-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Total Pending</p>
-                <p className="text-lg font-bold text-orange-600">
-                  {formatCurrency(totalStats.totalPending || 0)}
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-purple-100 hover:shadow-md transition-all">
-                <Building className="w-8 h-8 mx-auto text-blue-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Total Fees</p>
-                <p className="text-lg font-bold text-blue-600">
-                  {formatCurrency(totalStats.totalFees || 0)}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-purple-100 hover:shadow-md transition-all">
-                <TrendingUp className="w-8 h-8 mx-auto text-purple-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Collection Rate</p>
-                <p className="text-lg font-bold text-purple-600">
-                  {totalStats.totalFees > 0 ? 
-                    `${((totalStats.totalCollected / totalStats.totalFees) * 100).toFixed(1)}%` : 
-                    '0%'
-                  }
-                </p>
-              </div>
-            </div>
-            
-            {/* Top Performing Fee Types */}
-            {analytics.length > 0 && (
-              <div className="bg-white/90 rounded-lg p-4 border border-purple-100">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                  <Award className="w-4 h-4 mr-2 text-purple-600" />
-                  Top Performing Fee Types
-                </h4>
-                <div className="space-y-2">
-                  {analytics
-                    .sort((a, b) => b.collection_percentage - a.collection_percentage)
-                    .slice(0, 3)
-                    .map((feeType, index) => (
-                      <div key={feeType.fee_type_id} className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                            index === 0 ? 'bg-yellow-500 text-white' : 
-                            index === 1 ? 'bg-gray-400 text-white' : 
-                            'bg-orange-500 text-white'
-                          }`}>
-                            {index + 1}
-                          </div>
-                          <span className="font-medium text-sm">{feeType.fee_type_name}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-green-600 font-semibold block text-sm">
-                            {feeType.collection_percentage.toFixed(1)}%
-                          </span>
-                          <span className="text-gray-500 text-xs">
-                            {formatCurrency(feeType.total_collected)}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-            )}
+      <div className="p-4 space-y-6">
+        {/* Institution Stats */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Institution Overview</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {stats.map((stat, index) => (
+              <Card key={index} className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-600 truncate">{stat.title}</p>
+                      <p className="text-lg font-bold text-gray-900">{stat.value}</p>
+                      <p className="text-xs text-gray-500 truncate">{stat.change}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Scholarship Overview */}
-      <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Award className="w-5 h-5 text-emerald-600" />
-            <span>Scholarship Overview</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-emerald-100 hover:shadow-md transition-all">
-                <GraduationCap className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Scholarship Students</p>
-                <p className="text-lg font-bold text-emerald-600">
-                  {scholarshipStats.scholarshipStudents}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-emerald-100 hover:shadow-md transition-all">
-                <Award className="w-8 h-8 mx-auto text-blue-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Total Scholarships</p>
-                <p className="text-lg font-bold text-blue-600">
-                  {scholarshipStats.totalScholarships}
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-emerald-100 hover:shadow-md transition-all">
-                <DollarSign className="w-8 h-8 mx-auto text-green-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Eligible Amount</p>
-                <p className="text-lg font-bold text-green-600">
-                  {formatCurrency(scholarshipStats.totalEligibleAmount)}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-white/70 rounded-lg border border-emerald-100 hover:shadow-md transition-all">
-                <Star className="w-8 h-8 mx-auto text-purple-600 mb-2" />
-                <p className="text-sm font-medium text-gray-600">Received Amount</p>
-                <p className="text-lg font-bold text-purple-600">
-                  {formatCurrency(scholarshipStats.totalReceivedAmount)}
-                </p>
-              </div>
-            </div>
-
-            {/* Enhanced Scholarship Breakdown */}
-            <div className="bg-white/90 rounded-lg p-4 border border-emerald-100">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2 text-emerald-600" />
-                Scholarship Distribution
-              </h4>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50">
-                  <span className="font-medium">PMSS (SC/ST)</span>
-                  <span className="text-blue-600 font-bold text-sm">{scholarshipStats.pmssScholarships}</span>
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="space-y-3">
+            {quickActions.map((action, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                className={`w-full p-4 h-auto justify-start ${action.color}`}
+                onClick={() => navigate(action.route)}
+              >
+                <div className="flex items-center space-x-4 w-full">
+                  <action.icon className="h-6 w-6 text-gray-700" />
+                  <div className="text-left flex-1">
+                    <div className="font-medium text-gray-900">{action.title}</div>
+                    <div className="text-sm text-gray-600">{action.description}</div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50">
-                  <span className="font-medium">First Generation</span>
-                  <span className="text-green-600 font-bold text-sm">{scholarshipStats.fgScholarships}</span>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50">
-                  <span className="font-medium">Applied</span>
-                  <span className="text-purple-600 font-bold text-sm">{scholarshipStats.appliedScholarships}</span>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50">
-                  <span className="font-medium">Received</span>
-                  <span className="text-emerald-600 font-bold text-sm">{scholarshipStats.receivedScholarships}</span>
-                </div>
-              </div>
-              
-              {/* Scholarship Success Rate */}
-              <div className="mt-3 p-3 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Success Rate</span>
-                  <span className="text-lg font-bold text-emerald-600">
-                    {scholarshipStats.appliedScholarships > 0 ? 
-                      `${((scholarshipStats.receivedScholarships / scholarshipStats.appliedScholarships) * 100).toFixed(1)}%` : 
-                      '0%'
-                    }
-                  </span>
-                </div>
-              </div>
-            </div>
+              </Button>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Executive Actions */}
-      <Card className="shadow-lg border border-purple-100">
-        <CardHeader>
-          <CardTitle className="text-purple-700">Strategic Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-purple-50 hover:bg-purple-100 border-purple-200 hover:shadow-md transition-all">
-              <BarChart3 className="w-5 h-5 mb-1 text-purple-600" />
-              <span className="text-xs font-medium">Analytics</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 border-blue-200 hover:shadow-md transition-all">
-              <Users className="w-5 h-5 mb-1 text-blue-600" />
-              <span className="text-xs font-medium">Faculty</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 border-green-200 hover:shadow-md transition-all">
-              <DollarSign className="w-5 h-5 mb-1 text-green-600" />
-              <span className="text-xs font-medium">Finances</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center bg-orange-50 hover:bg-orange-100 border-orange-200 hover:shadow-md transition-all">
-              <GraduationCap className="w-5 h-5 mb-1 text-orange-600" />
-              <span className="text-xs font-medium">Students</span>
-            </Button>
+        {/* Recent Activity */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+          <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-gray-100">
+                      <activity.icon className="h-4 w-4 text-gray-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                      <p className="text-xs text-gray-600">{activity.department} • {activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* System Status */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">System Status</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <p className="text-sm font-medium text-gray-900">All Systems</p>
+                <p className="text-xs text-green-600">Operational</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
+              <CardContent className="p-4 text-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-900">Academic Year</p>
+                <p className="text-xs text-blue-600">2024-25</p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Activity */}
-      <RecentActivityFeed limit={3} />
-
-      {/* Notifications */}
-      <NotificationCenter />
+        </div>
+      </div>
     </div>
   );
 };

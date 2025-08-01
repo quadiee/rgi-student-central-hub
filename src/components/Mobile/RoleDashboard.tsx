@@ -29,6 +29,10 @@ const RoleDashboard: React.FC = () => {
         return <ChairmanFacultyManagement />;
       case '/fees':
         return <MobileFeeManagementHub />;
+      case '/dashboard':
+      case '/':
+        // Use the main dashboard for chairman on dashboard route
+        return <ChairmanMobileDashboard />;
       default:
         return <ChairmanMobileDashboard />;
     }
