@@ -17,6 +17,10 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
+  console.log('EnhancedMobileLayout - User:', user);
+  console.log('EnhancedMobileLayout - Location:', location.pathname);
+  console.log('EnhancedMobileLayout - Children provided:', !!children);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -45,8 +49,11 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
     }
   };
 
-  // For Chairman role, don't render the default header as the organized components have their own
-  const shouldShowDefaultHeader = user?.role !== 'chairman' || location.pathname === '/dashboard';
+  // For Chairman role, only show default header for specific routes
+  const shouldShowDefaultHeader = user?.role !== 'chairman' || 
+    (user?.role === 'chairman' && (location.pathname === '/dashboard' || location.pathname === '/'));
+
+  console.log('EnhancedMobileLayout - Should show header:', shouldShowDefaultHeader);
 
   return (
     <div className={cn(
@@ -61,12 +68,12 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
       )}
       
       <main className={cn(
-        "relative",
+        "relative min-h-screen",
         shouldShowDefaultHeader ? "pt-16 pb-20" : "pb-20"
       )}>
         <div className="animate-fade-in">
-          {/* Use RoleDashboard for organized routing or children if provided */}
-          {children ? children : <RoleDashboard />}
+          {/* Use children if provided, otherwise use RoleDashboard */}
+          {children || <RoleDashboard />}
         </div>
       </main>
 

@@ -15,6 +15,9 @@ const Dashboard: React.FC = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
+  console.log('Dashboard - User:', user);
+  console.log('Dashboard - IsMobile:', isMobile);
+
   useEffect(() => {
     // Redirect faculty users to their dedicated dashboard
     if (user?.role === 'faculty') {
@@ -25,11 +28,14 @@ const Dashboard: React.FC = () => {
 
   // Use enhanced mobile dashboard for mobile devices
   if (isMobile) {
+    console.log('Dashboard - Rendering mobile RoleDashboard');
     return <RoleDashboard />;
   }
 
   // Desktop dashboard logic - no wrapper needed as ModernLayout handles it
   const renderDashboard = () => {
+    console.log('Dashboard - Rendering desktop dashboard for role:', user?.role);
+    
     switch (user?.role) {
       case 'student':
         return <StudentDashboard />;
