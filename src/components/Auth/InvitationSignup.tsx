@@ -7,7 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader2, CheckCircle, AlertCircle, Mail, User, Phone, MapPin } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 const InvitationSignup = () => {
@@ -153,7 +153,8 @@ const InvitationSignup = () => {
               email: user.email,
               employeeId: invitationData.employee_id,
               name: profileForm.name,
-              designation: 'Faculty' // Default designation, can be updated later
+              designation: 'Faculty', // Default designation, can be updated later
+              departmentId: invitationData.department_id
             }
           }
         );
@@ -237,6 +238,7 @@ const InvitationSignup = () => {
           {invitationData && (
             <div className="text-center text-sm text-gray-600">
               <p>Invited as: <span className="font-semibold capitalize">{invitationData.role}</span></p>
+              <p>Department: <span className="font-semibold">{invitationData.department_name}</span></p>
               {invitationData.employee_id && (
                 <p>Employee ID: <span className="font-semibold">{invitationData.employee_id}</span></p>
               )}

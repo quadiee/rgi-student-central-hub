@@ -113,7 +113,7 @@ const UserInvitationManager: React.FC<UserInvitationManagerProps> = ({ onDataCha
   const copyInvitationLink = (invitation: Invitation) => {
     const baseUrl = window.location.origin;
     const invitationUrl = invitation.token 
-      ? `${baseUrl}/invite/${invitation.token}`
+      ? `${baseUrl}/invitation-signup?token=${invitation.token}`
       : `${baseUrl}/signup?email=${encodeURIComponent(invitation.email)}`;
     
     navigator.clipboard.writeText(invitationUrl);
