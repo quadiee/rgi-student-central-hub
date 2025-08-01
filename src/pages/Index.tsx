@@ -1,43 +1,45 @@
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
-import { GraduationCap } from 'lucide-react';
-import { INSTITUTION } from '../constants/institutional';
-import SupabaseAuthPage from '../components/Auth/SupabaseAuthPage';
+import { useIsMobile } from '../hooks/use-mobile';
+import EnhancedMobileLayout from '../components/Mobile/EnhancedMobileLayout';
+import Dashboard from '../components/Dashboard/Dashboard';
 
-const Index = () => {
+const Index: React.FC = () => {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, loading, navigate]);
+  console.log('🏠 Index.tsx - Rendering with:', {
+    user: user ? { id: user.id, role: user.role, name: user.name } : null,
+    loading,
+    isMobile,
+    currentPath: window.location.pathname
+  });
 
-  // Show loading only during initial auth check
   if (loading) {
+    console.log('🏠 Index.tsx - Still loading, showing loading state');
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">{INSTITUTION.name}</h3>
-          <p className="text-gray-600">Loading Student Portal...</p>
-          <p className="text-sm text-gray-500 mt-2">{INSTITUTION.tagline}</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2">Authenticating...</span>
       </div>
     );
   }
 
-  // Show auth page if no user
   if (!user) {
-    return <SupabaseAuthPage />;
+    console.log('🏠 Index.tsx - No user found, should redirect to auth');
+    return null;
   }
 
-  return null; // User will be redirected to dashboard
+  console.log('🏠 Index.tsx - About to render layout:', { isMobile, userRole: user.role });
+
+  if (isMobile) {
+    console.log('🏠 Index.tsx - Rendering EnhancedMobileLayout for mobile');
+    return <EnhancedMobileLayout />;
+  }
+
+  console.log('🏠 Index.tsx - Rendering Desktop Dashboard');
+  return <Dashboard />;
 };
 
 export default Index;

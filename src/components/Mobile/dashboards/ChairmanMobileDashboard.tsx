@@ -24,10 +24,20 @@ import { useScholarshipStats } from '../../../hooks/useScholarshipStats';
 import { formatCurrency } from '../../../utils/feeValidation';
 
 const ChairmanMobileDashboard: React.FC = () => {
+  console.log('👑 ChairmanMobileDashboard - Component rendering started');
+  
   const { user } = useAuth();
   const { analytics, loading, getTotalStats } = useFeeTypeAnalytics();
   const { stats: institutionalStats, loading: statsLoading } = useInstitutionalStats();
   const { stats: scholarshipStats, loading: scholarshipLoading } = useScholarshipStats();
+  
+  console.log('👑 ChairmanMobileDashboard - Hook states:', {
+    user: user ? { id: user.id, role: user.role } : null,
+    analyticsLoading: loading,
+    statsLoading,
+    scholarshipLoading,
+    analyticsCount: analytics?.length || 0
+  });
   
   const totalStats = getTotalStats();
 
@@ -67,6 +77,7 @@ const ChairmanMobileDashboard: React.FC = () => {
   ];
 
   if (loading || statsLoading || scholarshipLoading) {
+    console.log('👑 ChairmanMobileDashboard - Still loading, showing loading state');
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
@@ -75,6 +86,8 @@ const ChairmanMobileDashboard: React.FC = () => {
       </div>
     );
   }
+
+  console.log('👑 ChairmanMobileDashboard - Rendering full dashboard');
 
   return (
     <div className="space-y-6">
