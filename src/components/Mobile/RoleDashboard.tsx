@@ -18,28 +18,48 @@ const RoleDashboard: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
 
-  if (!user) return null;
+  console.log('RoleDashboard - User:', user);
+  console.log('RoleDashboard - Current path:', location.pathname);
+
+  if (!user) {
+    console.log('RoleDashboard - No user found');
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('RoleDashboard - User role:', user.role);
 
   // For Chairman role, use organized components based on current route
   if (user.role === 'chairman') {
+    console.log('RoleDashboard - Chairman detected, routing based on path:', location.pathname);
+    
     switch (location.pathname) {
       case '/students':
+        console.log('RoleDashboard - Rendering ChairmanStudentManagement');
         return <ChairmanStudentManagement />;
       case '/faculty':
+        console.log('RoleDashboard - Rendering ChairmanFacultyManagement');
         return <ChairmanFacultyManagement />;
       case '/fees':
+        console.log('RoleDashboard - Rendering MobileFeeManagementHub');
         return <MobileFeeManagementHub />;
       case '/dashboard':
       case '/':
-        // Use the main dashboard for chairman on dashboard route
-        return <ChairmanMobileDashboard />;
       default:
+        console.log('RoleDashboard - Rendering ChairmanMobileDashboard');
         return <ChairmanMobileDashboard />;
     }
   }
 
   // For other roles, use their respective dashboards
   const renderDashboard = () => {
+    console.log('RoleDashboard - Rendering dashboard for role:', user.role);
+    
     switch (user.role) {
       case 'admin':
         return <AdminMobileDashboard />;
@@ -52,6 +72,7 @@ const RoleDashboard: React.FC = () => {
       case 'student':
         return <StudentMobileDashboard />;
       default:
+        console.log('RoleDashboard - Unknown role, defaulting to StudentMobileDashboard');
         return <StudentMobileDashboard />;
     }
   };

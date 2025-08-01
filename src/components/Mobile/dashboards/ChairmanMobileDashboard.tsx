@@ -19,6 +19,9 @@ const ChairmanMobileDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  console.log('ChairmanMobileDashboard - Component loaded');
+  console.log('ChairmanMobileDashboard - User:', user);
+
   const stats = [
     {
       title: 'Total Students',
@@ -113,12 +116,19 @@ const ChairmanMobileDashboard: React.FC = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Chairman Dashboard</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Welcome back, {user?.name}
+            Welcome back, {user?.name || 'Chairman'}
           </p>
         </div>
       </div>
 
       <div className="p-4 space-y-6">
+        {/* Test Content */}
+        <div className="bg-red-100 border border-red-300 p-4 rounded-lg">
+          <p className="text-red-800 font-medium">DEBUG: Chairman Dashboard is rendering</p>
+          <p className="text-red-600 text-sm mt-1">User role: {user?.role}</p>
+          <p className="text-red-600 text-sm">User name: {user?.name}</p>
+        </div>
+
         {/* Institution Stats */}
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Institution Overview</h2>
