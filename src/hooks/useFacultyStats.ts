@@ -66,76 +66,55 @@ export const useFacultyStats = () => {
       setLoading(true);
       setError('');
 
-      // Fetch faculty data with department information and faculty profile details
+      // Fetch real faculty data using the updated function
       const { data: facultyData, error: facultyError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          name,
-          email,
-          department_id,
-          phone,
-          is_active,
-          departments:department_id (
-            name,
-            code
-          ),
-          faculty_profiles!faculty_profiles_user_id_fkey (
-            designation,
-            employee_code
-          )
-        `)
-        .eq('role', 'faculty')
-        .order('name');
+        .rpc('get_faculty_with_details', { p_user_id: user.id });
 
       if (facultyError) throw facultyError;
 
-      const faculty: FacultyMember[] = (facultyData || []).map((member: any) => {
-        // Generate mock performance data for demonstration
-        const mockAttendanceRate = 85 + Math.random() * 15; // 85-100%
-        const mockSubjectsTaught = Math.floor(Math.random() * 4) + 1; // 1-4 subjects
-        const mockResearchPapers = Math.floor(Math.random() * 10); // 0-9 papers
-        const mockYearsAtInstitution = Math.floor(Math.random() * 15) + 1; // 1-15 years
-        const mockExperience = Math.floor(Math.random() * 20) + 1; // 1-20 years
+      const faculty: FacultyMember[] = (facultyData || []).map((member: any) => ({
+        id: member.faculty_id,
+        name: member.name || 'N/A',
+        email: member.email || 'N/A',
+        department_id: member.department_id,
+        department_name: member.department_name || 'Unknown',
+        department_code: member.department_code || 'N/A',
+        designation: member.designation || 'Faculty',
+        experience: member.years_of_experience || 0,
+        qualification: 'N/A', // Will be filled from real data when available
+        specialization: 'N/A', // Will be filled from real data when available
+        phone: member.phone,
+        is_active: member.is_active,
+        attendance_rate: member.attendance_percentage || 0,
+        subjects_taught: 0, // Will be calculated from real course assignments
+        research_papers: 0, // Will be calculated from real research data
+        years_at_institution: member.years_of_experience || 0
+      }));
 
-        return {
-          id: member.id,
-          name: member.name || 'N/A',
-          email: member.email || 'N/A',
-          department_id: member.department_id,
-          department_name: member.departments?.name || 'Unknown',
-          department_code: member.departments?.code || 'N/A',
-          designation: member.faculty_profiles?.[0]?.designation || 'Faculty',
-          experience: mockExperience,
-          qualification: 'M.Tech', // Mock data
-          specialization: 'Computer Science', // Mock data
-          phone: member.phone,
-          is_active: member.is_active,
-          attendance_rate: mockAttendanceRate,
-          subjects_taught: mockSubjectsTaught,
-          research_papers: mockResearchPapers,
-          years_at_institution: mockYearsAtInstitution
-        };
-      });
-
-      // Calculate statistics
+      // Calculate real statistics
       const totalFaculty = faculty.length;
       const activeFaculty = faculty.filter(f => f.is_active).length;
-      const experiences = faculty.filter(f => f.experience).map(f => f.experience || 0);
+      
+      // Calculate experience stats from real data
+      const experiences = faculty.filter(f => f.experience && f.experience > 0).map(f => f.experience || 0);
       const avgExperience = experiences.length > 0 
         ? experiences.reduce((sum, exp) => sum + exp, 0) / experiences.length 
         : 0;
       
       const seniorFaculty = faculty.filter(f => (f.experience || 0) >= 10).length;
       const juniorFaculty = faculty.filter(f => (f.experience || 0) < 5).length;
-      const excellentPerformers = faculty.filter(f => (f.attendance_rate || 0) >= 95).length;
+      
+      // Calculate attendance stats from real data
       const attendanceRates = faculty.map(f => f.attendance_rate || 0);
       const avgAttendance = attendanceRates.length > 0 
         ? attendanceRates.reduce((sum, rate) => sum + rate, 0) / attendanceRates.length 
         : 0;
+      const excellentPerformers = faculty.filter(f => (f.attendance_rate || 0) >= 95).length;
+      
+      // Research papers will be calculated from real data when available
       const topPerformers = faculty.filter(f => (f.research_papers || 0) >= 5).length;
 
-      // Calculate department statistics
+      // Calculate department statistics from real data
       const departmentStats: Record<string, any> = {};
       faculty.forEach(member => {
         const deptName = member.department_name;
@@ -150,7 +129,7 @@ export const useFacultyStats = () => {
         }
         departmentStats[deptName].total += 1;
         if (member.is_active) departmentStats[deptName].active += 1;
-        if (member.experience) {
+        if (member.experience && member.experience > 0) {
           departmentStats[deptName].totalExperience += member.experience;
           departmentStats[deptName].experienceCount += 1;
         }
@@ -204,6 +183,6 @@ export const useFacultyStats = () => {
     loading,
     error,
     refetch,
-    fetchStats: refetch // Alias for compatibility
+    fetchStats: refetch
   };
 };

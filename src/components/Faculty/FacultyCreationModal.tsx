@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
-import { DEPARTMENT_CODES } from '../../constants/institutional';
+import { Loader2, Mail, CheckCircle } from 'lucide-react';
 
 interface FacultyCreationModalProps {
   isOpen: boolean;
@@ -38,7 +37,6 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
   React.useEffect(() => {
     if (isOpen) {
       fetchDepartments();
-      // Reset state when modal opens
       setInvitationSent(false);
     }
   }, [isOpen]);
@@ -61,17 +59,6 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     return `inv_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
   };
 
-  // Map department codes to valid enum values
-  const mapDepartmentCodeToEnum = (departmentCode: string) => {
-    const validCodes = Object.keys(DEPARTMENT_CODES);
-    if (validCodes.includes(departmentCode)) {
-      return departmentCode;
-    }
-    // Default to CSE if department code is not found
-    console.warn(`Department code ${departmentCode} not found in enum, defaulting to CSE`);
-    return 'CSE';
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -84,28 +71,21 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         throw new Error('Please select a department');
       }
 
-      console.log('Selected department:', department);
-
       // Generate secure token
       const invitationToken = generateInvitationToken();
 
-      // Map department code to valid enum value
-      const validDepartmentCode = mapDepartmentCodeToEnum(department.code);
-
-      console.log('Using department code for invitation:', validDepartmentCode);
-
-      // Create user invitation with mapped department code
+      // Create user invitation with department_id instead of department enum
       const { data: invitationData, error: invitationError } = await supabase
         .from('user_invitations')
         .insert({
           email: formData.email,
           role: 'faculty' as const,
-          department: validDepartmentCode as any,
+          department_id: formData.department_id, // Use department_id directly
           employee_id: formData.employee_code,
           invited_by: user.id,
           is_active: true,
           token: invitationToken,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         })
         .select()
         .single();
@@ -123,17 +103,18 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         body: {
           email: formData.email,
           role: 'faculty',
-          department: validDepartmentCode,
+          department_id: formData.department_id,
           invitedBy: user.id,
           invitationId: invitationData.id,
           employeeId: formData.employee_code,
-          token: invitationToken
+          token: invitationToken,
+          name: formData.name,
+          designation: formData.designation
         }
       });
 
       if (emailError) {
         console.error('Error sending invitation email:', emailError);
-        // Don't fail the entire process, but show warning
         toast({
           title: "Invitation Created",
           description: "Faculty invitation created but email could not be sent. Please contact the faculty member directly.",

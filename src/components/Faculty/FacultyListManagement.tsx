@@ -7,7 +7,7 @@ import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Search, Filter, Users, Mail, Phone, Calendar, Building } from 'lucide-react';
+import { Search, Filter, Users, Mail, Phone, Calendar, Building, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FacultyMember {
@@ -64,7 +64,7 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
     try {
       setLoading(true);
       
-      // Use the database function to get faculty with details
+      // Use the updated database function to get real faculty data
       const { data, error } = await supabase.rpc('get_faculty_with_details', {
         p_user_id: user?.id
       });
@@ -124,6 +124,29 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show empty state if no faculty members exist
+  if (facultyList.length === 0) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12">
+            <Users className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Faculty Members Found</h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              There are no faculty members in the system yet. Start by inviting faculty members to join your institution.
+            </p>
+            <div className="flex gap-2">
+              <Button className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Invite Faculty Member
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -283,19 +306,21 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
       </div>
 
       {/* Summary */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>
-              Showing {filteredFaculty.length} of {facultyList.length} faculty members
-            </span>
-            <span>
-              Active: {facultyList.filter(f => f.is_active).length} | 
-              Inactive: {facultyList.filter(f => !f.is_active).length}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      {filteredFaculty.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>
+                Showing {filteredFaculty.length} of {facultyList.length} faculty members
+              </span>
+              <span>
+                Active: {facultyList.filter(f => f.is_active).length} | 
+                Inactive: {facultyList.filter(f => !f.is_active).length}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

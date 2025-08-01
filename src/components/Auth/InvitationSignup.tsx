@@ -1,225 +1,72 @@
+
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '../../integrations/supabase/client';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react';
-import { supabase } from '../../integrations/supabase/client';
+import { Loader2, CheckCircle, AlertCircle, Mail, User, Phone, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface InvitationData {
-  id: string;
-  email: string;
-  role: string;
-  department_id?: string;
-  department?: string; // Legacy field - current schema
-  department_name?: string;
-  department_code?: string;
-  roll_number?: string;
-  employee_id?: string;
-  is_valid: boolean;
-  token: string;
-}
-
-const InvitationSignup: React.FC = () => {
+const InvitationSignup = () => {
   const [searchParams] = useSearchParams();
-  const { token } = useParams();
   const navigate = useNavigate();
+  const token = searchParams.get('token');
   
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(true);
-  const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
+  const [invitationData, setInvitationData] = useState<any>(null);
   const [error, setError] = useState('');
+  const [step, setStep] = useState<'validate' | 'signup' | 'complete'>('validate');
 
-  const [formData, setFormData] = useState({
-    name: '',
+  const [signupForm, setSignupForm] = useState({
+    email: '',
     password: '',
-    confirmPassword: '',
+    confirmPassword: ''
+  });
+
+  const [profileForm, setProfileForm] = useState({
+    name: '',
     phone: '',
     address: '',
-    guardian_name: '',
-    guardian_phone: ''
+    gender: '',
+    age: ''
   });
 
   useEffect(() => {
-    // Get token from URL params or search params
-    const invitationToken = token || searchParams.get('token');
-    const email = searchParams.get('email');
-
-    if (invitationToken) {
-      validateInvitationByToken(invitationToken);
-    } else if (email) {
-      // Fallback to email-based validation for backward compatibility
-      validateInvitationByEmail(email);
+    if (token) {
+      validateInvitation();
     } else {
-      setError('Invalid invitation link - missing token or email parameter');
+      setError('Invalid invitation link');
       setValidating(false);
     }
-  }, [token, searchParams]);
+  }, [token]);
 
-  const validateInvitationByToken = async (invitationToken: string) => {
+  const validateInvitation = async () => {
     try {
-      setValidating(true);
-      console.log('Validating invitation token:', invitationToken);
-      
-      const { data, error } = await supabase
-        .rpc('validate_invitation_token', { p_token: invitationToken });
-
-      if (error) {
-        console.error('Token validation error:', error);
-        setError(error.message || 'Failed to validate invitation');
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        setError('Invalid invitation token');
-        return;
-      }
-
-      const invitation = data[0];
-      if (!invitation.is_valid) {
-        setError(invitation.error_message || 'Invalid or expired invitation');
-        return;
-      }
-
-      // Check if user already exists by checking profiles table
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', invitation.email)
-        .single();
-
-      if (existingProfile && !profileError) {
-        setError('User already exists. Please use the login page instead.');
-        return;
-      }
-
-      // Get department details - handle both old and new structure
-      let departmentName = 'Unknown Department';
-      let departmentCode = 'UNK';
-      let departmentId = null;
-      
-      // For now, we only have the department enum from the RPC response
-      if (invitation.department) {
-        try {
-          const { data: deptData } = await supabase
-            .from('departments')
-            .select('id, name, code')
-            .eq('code', invitation.department)
-            .single();
-
-          if (deptData) {
-            departmentId = deptData.id;
-            departmentName = deptData.name;
-            departmentCode = deptData.code;
-          }
-        } catch (error) {
-          console.error('Error fetching department by code:', error);
-        }
-      }
-
-      setInvitationData({
-        id: invitation.id,
-        email: invitation.email,
-        role: invitation.role,
-        department_id: departmentId,
-        department: invitation.department,
-        department_name: departmentName,
-        department_code: departmentCode,
-        roll_number: invitation.roll_number,
-        employee_id: invitation.employee_id,
-        is_valid: true,
-        token: invitationToken
+      const { data, error } = await supabase.rpc('validate_invitation_token', {
+        p_token: token
       });
-    } catch (error: any) {
-      console.error('Error validating invitation:', error);
-      setError('Failed to validate invitation');
-    } finally {
-      setValidating(false);
-    }
-  };
 
-  const validateInvitationByEmail = async (email: string) => {
-    try {
-      setValidating(true);
-      
-      const { data, error } = await supabase
-        .from('user_invitations')
-        .select(`
-          id,
-          email,
-          role,
-          department,
-          roll_number,
-          employee_id,
-          token,
-          is_active,
-          expires_at,
-          used_at
-        `)
-        .eq('email', email)
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString())
-        .is('used_at', null)
-        .single();
-
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         setError('Invalid or expired invitation');
         return;
       }
 
-      // Check if user already exists
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingProfile && !profileError) {
-        setError('User already exists. Please use the login page instead.');
+      const invitation = data[0];
+      
+      if (!invitation.is_valid) {
+        setError(invitation.error_message || 'Invalid invitation');
         return;
       }
 
-      // Get department details using the department enum
-      let departmentName = 'Unknown Department';
-      let departmentCode = 'UNK';
-      let departmentId = null;
-      
-      if (data.department) {
-        try {
-          const { data: deptData } = await supabase
-            .from('departments')
-            .select('id, name, code')
-            .eq('code', data.department)
-            .single();
-
-          if (deptData) {
-            departmentId = deptData.id;
-            departmentName = deptData.name;
-            departmentCode = deptData.code;
-          }
-        } catch (error) {
-          console.error('Error fetching department by code:', error);
-        }
-      }
-
-      setInvitationData({
-        id: data.id,
-        email: data.email,
-        role: data.role,
-        department_id: departmentId,
-        department: data.department,
-        department_name: departmentName,
-        department_code: departmentCode,
-        roll_number: data.roll_number,
-        employee_id: data.employee_id,
-        is_valid: true,
-        token: data.token || ''
-      });
-    } catch (error: any) {
-      console.error('Error validating invitation:', error);
+      setInvitationData(invitation);
+      setSignupForm(prev => ({ ...prev, email: invitation.email }));
+      setStep('signup');
+    } catch (err: any) {
+      console.error('Invitation validation error:', err);
       setError('Failed to validate invitation');
     } finally {
       setValidating(false);
@@ -229,120 +76,116 @@ const InvitationSignup: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!invitationData) {
-      setError('Invalid invitation data');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
+    if (signupForm.password !== signupForm.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (signupForm.password.length < 6) {
       setError('Password must be at least 6 characters long');
       return;
     }
 
+    setLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-      setError('');
-
-      console.log('Starting signup process for:', invitationData.email);
-
-      // Step 1: Sign up the user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: invitationData.email,
-        password: formData.password,
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: signupForm.email,
+        password: signupForm.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
-            name: formData.name,
             role: invitationData.role,
-            department_id: invitationData.department_id,
-            phone: formData.phone,
-            roll_number: invitationData.roll_number,
             employee_id: invitationData.employee_id,
-            guardian_name: formData.guardian_name,
-            guardian_phone: formData.guardian_phone,
-            address: formData.address
+            invitation_id: invitationData.id
           }
         }
       });
 
-      if (signUpError) {
-        console.error('Signup error:', signUpError);
-        throw signUpError;
+      if (authError) throw authError;
+
+      if (authData.user) {
+        setStep('complete');
+      }
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileCompletion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not found');
       }
 
-      if (!authData.user) {
-        throw new Error('User creation failed');
-      }
+      // Update user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          name: profileForm.name,
+          phone: profileForm.phone,
+          address: profileForm.address,
+          gender: profileForm.gender,
+          age: profileForm.age ? parseInt(profileForm.age) : null,
+          is_active: true,
+          profile_completed: true
+        })
+        .eq('id', user.id);
 
-      console.log('User created successfully:', authData.user.id);
+      if (profileError) throw profileError;
 
-      // Step 2: Complete profile setup using the database function
-      const { error: profileError } = await supabase.rpc('complete_invitation_profile', {
-        p_user_id: authData.user.id,
-        p_invitation_id: invitationData.id,
-        p_profile_data: {
-          name: formData.name,
-          phone: formData.phone,
-          roll_number: invitationData.roll_number,
-          employee_id: invitationData.employee_id,
-          guardian_name: formData.guardian_name,
-          guardian_phone: formData.guardian_phone,
-          address: formData.address
-        }
-      });
-
-      if (profileError) {
-        console.error('Profile completion error:', profileError);
-        throw profileError;
-      }
-
-      console.log('Profile completed successfully');
-
-      // Step 3: For faculty, link the faculty profile
-      if (invitationData.role === 'faculty' && invitationData.employee_id) {
-        console.log('Linking faculty profile...');
-        
-        try {
-          const { data: linkResult, error: linkError } = await supabase.functions.invoke('link_faculty_profile', {
+      // For faculty members, create or link faculty profile
+      if (invitationData.role === 'faculty') {
+        const { data: facultyResult, error: facultyError } = await supabase.functions.invoke(
+          'create_or_link_faculty_profile',
+          {
             body: {
-              userId: authData.user.id,
-              email: invitationData.email,
-              employeeId: invitationData.employee_id
+              userId: user.id,
+              email: user.email,
+              employeeId: invitationData.employee_id,
+              name: profileForm.name,
+              designation: 'Faculty' // Default designation, can be updated later
             }
-          });
-
-          if (linkError) {
-            console.error('Faculty profile linking error:', linkError);
-            toast.error('Account created but faculty profile linking failed');
-          } else if (linkResult?.success) {
-            console.log('Faculty profile linked successfully');
-            toast.success('Faculty account created and profile linked successfully!');
           }
-        } catch (linkError) {
-          console.error('Faculty profile linking error:', linkError);
-          toast.error('Account created but faculty profile linking failed');
+        );
+
+        if (facultyError) {
+          console.error('Faculty profile creation error:', facultyError);
+          // Don't fail the entire process, just log the error
+          toast.error('Profile created but faculty profile linking failed');
+        } else if (facultyResult?.success) {
+          console.log('Faculty profile created/linked successfully:', facultyResult);
         }
       }
 
-      // Success! Redirect based on role
-      toast.success('Account created successfully! Please check your email to verify your account.');
-      
-      // Redirect to appropriate dashboard based on role
-      const redirectPath = invitationData.role === 'student' ? '/dashboard' : 
-                          invitationData.role === 'faculty' ? '/faculty' : '/dashboard';
-      
-      setTimeout(() => {
-        navigate(redirectPath);
-      }, 2000);
+      // Mark invitation as used
+      const { error: invitationError } = await supabase.rpc('mark_invitation_used', {
+        invitation_email: invitationData.email
+      });
 
-    } catch (error: any) {
-      console.error('Signup process error:', error);
-      setError(error.message || 'Failed to create account');
+      if (invitationError) {
+        console.error('Error marking invitation as used:', invitationError);
+      }
+
+      toast.success('Profile completed successfully!');
+      
+      // Redirect to appropriate dashboard
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
+
+    } catch (err: any) {
+      console.error('Profile completion error:', err);
+      setError(err.message || 'Failed to complete profile');
     } finally {
       setLoading(false);
     }
@@ -350,11 +193,14 @@ const InvitationSignup: React.FC = () => {
 
   if (validating) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-            <p className="text-gray-600">Validating invitation...</p>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Validating Invitation</h2>
+              <p className="text-gray-600">Please wait while we verify your invitation...</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -363,37 +209,17 @@ const InvitationSignup: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              Invitation Error
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-            <Button 
-              className="w-full mt-4" 
-              onClick={() => navigate('/auth?mode=login')}
-            >
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!invitationData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center p-8">
-            <AlertCircle className="h-8 w-8 text-red-600 mb-4" />
-            <p className="text-gray-600">Invalid invitation data</p>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="mx-auto h-12 w-12 text-red-600 mb-4" />
+              <h2 className="text-xl font-semibold mb-2 text-red-600">Invitation Error</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button variant="outline" onClick={() => navigate('/auth')}>
+                Go to Login
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -401,133 +227,174 @@ const InvitationSignup: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-center">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            Complete Your Registration
+          <CardTitle className="text-center">
+            {step === 'signup' && 'Create Your Account'}
+            {step === 'complete' && 'Complete Your Profile'}
           </CardTitle>
-          <div className="text-center text-sm text-gray-600">
-            <p>You've been invited as: <strong className="capitalize">{invitationData.role}</strong></p>
-            <p>Email: <strong>{invitationData.email}</strong></p>
-            <p>Department: <strong>{invitationData.department_name} ({invitationData.department_code})</strong></p>
-            {invitationData.employee_id && (
-              <p>Employee ID: <strong>{invitationData.employee_id}</strong></p>
-            )}
-            {invitationData.roll_number && (
-              <p>Roll Number: <strong>{invitationData.roll_number}</strong></p>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Full Name *</Label>
-              <Input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                required
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                required
-                minLength={6}
-                placeholder="Minimum 6 characters"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                required
-                minLength={6}
-                placeholder="Re-enter your password"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="Your phone number"
-              />
-            </div>
-
-            {invitationData.role === 'student' && (
-              <>
-                <div>
-                  <Label htmlFor="guardian_name">Guardian Name</Label>
-                  <Input
-                    id="guardian_name"
-                    type="text"
-                    value={formData.guardian_name}
-                    onChange={(e) => setFormData({...formData, guardian_name: e.target.value})}
-                    placeholder="Parent/Guardian name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="guardian_phone">Guardian Phone</Label>
-                  <Input
-                    id="guardian_phone"
-                    type="tel"
-                    value={formData.guardian_phone}
-                    onChange={(e) => setFormData({...formData, guardian_phone: e.target.value})}
-                    placeholder="Parent/Guardian phone number"
-                  />
-                </div>
-              </>
-            )}
-
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="Your address"
-              />
-            </div>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Complete Registration
-                </>
+          {invitationData && (
+            <div className="text-center text-sm text-gray-600">
+              <p>Invited as: <span className="font-semibold capitalize">{invitationData.role}</span></p>
+              {invitationData.employee_id && (
+                <p>Employee ID: <span className="font-semibold">{invitationData.employee_id}</span></p>
               )}
-            </Button>
-          </form>
+            </div>
+          )}
+        </CardHeader>
+        
+        <CardContent>
+          {step === 'signup' && (
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={signupForm.email}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={signupForm.password}
+                  onChange={(e) => setSignupForm(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={signupForm.confirmPassword}
+                  onChange={(e) => setSignupForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    <User className="mr-2 h-4 w-4" />
+                    Create Account
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
+
+          {step === 'complete' && (
+            <form onSubmit={handleProfileCompletion} className="space-y-4">
+              <div className="text-center mb-4">
+                <CheckCircle className="mx-auto h-8 w-8 text-green-600 mb-2" />
+                <p className="text-sm text-gray-600">Account created successfully! Please complete your profile.</p>
+              </div>
+
+              <div>
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
+                  id="name"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    value={profileForm.age}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, age: e.target.value }))}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="gender">Gender</Label>
+                <select
+                  id="gender"
+                  value={profileForm.gender}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, gender: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={profileForm.address}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
+                  disabled={loading}
+                />
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Completing Profile...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Complete Profile
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
