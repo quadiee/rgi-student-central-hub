@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../integrations/supabase/client';
@@ -167,29 +168,29 @@ const InvitationSignup = () => {
 
       console.log('Profile updated successfully');
 
-      // For faculty members, create or link faculty profile
+      // For faculty members, create faculty profile directly
       if (invitationData.role === 'faculty') {
         console.log('Creating faculty profile for:', user.id);
         
-        const { data: facultyResult, error: facultyError } = await supabase.functions.invoke(
-          'create_or_link_faculty_profile',
-          {
-            body: {
-              userId: user.id,
-              email: user.email,
-              employeeId: invitationData.employee_id,
-              name: profileForm.name,
-              designation: 'Faculty',
-              departmentId: invitationData.department_id
-            }
-          }
-        );
+        // Create faculty profile directly in the database
+        const { data: facultyProfile, error: facultyError } = await supabase
+          .from('faculty_profiles')
+          .insert({
+            user_id: user.id,
+            employee_code: invitationData.employee_id,
+            designation: 'Faculty',
+            joining_date: new Date().toISOString().split('T')[0], // Today's date
+            is_active: true,
+            created_by: user.id
+          })
+          .select()
+          .single();
 
         if (facultyError) {
           console.error('Faculty profile creation error:', facultyError);
-          toast.error('Profile created but faculty profile linking failed');
-        } else if (facultyResult?.success) {
-          console.log('Faculty profile created/linked successfully:', facultyResult);
+          toast.error('Profile created but faculty profile creation failed');
+        } else {
+          console.log('Faculty profile created successfully:', facultyProfile);
           toast.success('Faculty profile created successfully!');
         }
       }
