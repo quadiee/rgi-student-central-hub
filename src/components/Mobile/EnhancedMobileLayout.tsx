@@ -77,9 +77,11 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
         shouldShowDefaultHeader ? "pt-16 pb-20" : "pb-20"
       )}>
         <div className="animate-fade-in">
-          {/* FORCE RENDER ROLEDASHBOARD FOR DEBUGGING */}
-          {console.log('%c RENDERING ROLE DASHBOARD NOW!', 'background: cyan; color: black; font-size: 16px;')}
-          <RoleDashboard />
+          {/* RENDER ROLEDASHBOARD */}
+          {(() => {
+            console.log('%c RENDERING ROLE DASHBOARD NOW!', 'background: cyan; color: black; font-size: 16px;');
+            return <RoleDashboard />;
+          })()}
         </div>
       </main>
 
