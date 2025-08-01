@@ -7,11 +7,13 @@ import FacultyCreationModal from './FacultyCreationModal';
 import FacultyEditModal from './FacultyEditModal';
 import FacultyDetailsModal from './FacultyDetailsModal';
 import FacultyAttendanceManagement from './FacultyAttendanceManagement';
+import FacultyEmptyState from './FacultyEmptyState';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp, Clock } from 'lucide-react';
+import { Users, UserPlus, BarChart3, BookOpen, Calendar, Award, TrendingUp, Clock, Loader2 } from 'lucide-react';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useFacultyStats } from '../../hooks/useFacultyStats';
 
 interface FacultyMember {
   id: string;
@@ -43,6 +45,7 @@ interface FacultyMember {
 const FacultyManagement: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const { stats, loading, error, refetch } = useFacultyStats();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -90,38 +93,98 @@ const FacultyManagement: React.FC = () => {
 
   const handleFacultyUpdate = () => {
     setRefreshTrigger(prev => prev + 1);
+    refetch();
   };
 
+  const handleAddFaculty = () => {
+    setShowCreateModal(true);
+  };
+
+  // If there are no faculty members, show empty state
+  if (!loading && stats.totalFaculty === 0) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Faculty Management</h1>
+            <p className="text-muted-foreground">
+              Comprehensive faculty information and attendance management system
+            </p>
+          </div>
+        </div>
+        
+        <FacultyEmptyState onAddFaculty={handleAddFaculty} />
+
+        {showCreateModal && (
+          <FacultyCreationModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleFacultyUpdate}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Real statistics from the database
   const quickStats = [
     {
       title: 'Total Faculty',
-      value: '45',
-      change: '+3 this month',
+      value: stats.totalFaculty.toString(),
+      change: `${stats.activeFaculty} active`,
       icon: Users,
       color: 'text-primary'
     },
     {
-      title: 'Active Courses',
-      value: '128',
-      change: '+12 this semester',
+      title: 'Departments',
+      value: stats.totalDepartments.toString(),
+      change: 'Active departments',
       icon: BookOpen,
       color: 'text-success'
     },
     {
-      title: 'On Leave',
-      value: '3',
-      change: 'Currently',
-      icon: Calendar,
+      title: 'Avg Experience',
+      value: `${Math.round(stats.avgExperience)}yr`,
+      change: `${stats.seniorFaculty} senior faculty`,
+      icon: Award,
       color: 'text-warning'
     },
     {
       title: 'Attendance Rate',
-      value: '94%',
-      change: '+2% this week',
+      value: `${Math.round(stats.avgAttendance)}%`,
+      change: `${stats.excellentPerformers} excellent`,
       icon: Clock,
       color: 'text-green-600'
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading faculty data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold text-destructive">Error Loading Data</h3>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={refetch}>Try Again</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -152,7 +215,7 @@ const FacultyManagement: React.FC = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Quick Stats */}
+          {/* Quick Stats - Now using real data */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickStats.map((stat, index) => (
               <Card key={index} className="hover:shadow-md transition-shadow">
@@ -184,11 +247,19 @@ const FacultyManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                  onClick={() => setShowCreateModal(true)}
+                >
                   <UserPlus className="h-6 w-6" />
                   <span>Add New Faculty</span>
                 </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                  onClick={() => setActiveTab('attendance')}
+                >
                   <Clock className="h-6 w-6" />
                   <span>Mark Attendance</span>
                 </Button>
@@ -204,7 +275,11 @@ const FacultyManagement: React.FC = () => {
                   <Award className="h-6 w-6" />
                   <span>Evaluations</span>
                 </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                  onClick={() => setActiveTab('analytics')}
+                >
                   <BarChart3 className="h-6 w-6" />
                   <span>Reports</span>
                 </Button>

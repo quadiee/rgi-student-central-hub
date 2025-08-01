@@ -7,8 +7,9 @@ import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Search, Filter, Users, Mail, Phone, Calendar, Building, UserPlus } from 'lucide-react';
+import { Search, Filter, Users, Mail, Phone, Calendar, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import FacultyEmptyState from './FacultyEmptyState';
 
 interface FacultyMember {
   faculty_id: string;
@@ -131,23 +132,13 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
   // Show empty state if no faculty members exist
   if (facultyList.length === 0) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-12">
-            <Users className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Faculty Members Found</h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              There are no faculty members in the system yet. Start by inviting faculty members to join your institution.
-            </p>
-            <div className="flex gap-2">
-              <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Invite Faculty Member
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FacultyEmptyState 
+        onAddFaculty={() => {
+          // This will be handled by the parent component
+          // Since this component doesn't have direct access to the creation modal
+          toast.info('Please use the "Add Faculty" button in the header to invite faculty members');
+        }} 
+      />
     );
   }
 
