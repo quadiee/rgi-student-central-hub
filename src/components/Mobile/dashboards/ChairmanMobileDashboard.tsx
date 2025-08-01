@@ -19,6 +19,7 @@ const ChairmanMobileDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  console.log('=== ChairmanMobileDashboard START ===');
   console.log('ChairmanMobileDashboard - Component loaded');
   console.log('ChairmanMobileDashboard - User:', user);
 
@@ -111,8 +112,14 @@ const ChairmanMobileDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950">
+      {/* DEBUG Header */}
+      <div className="bg-green-100 border-b-4 border-green-400 p-4 sticky top-0 z-50">
+        <p className="text-green-800 font-bold text-center">✅ SUCCESS: ChairmanMobileDashboard is rendering!</p>
+        <p className="text-green-600 text-sm text-center mt-1">User: {user?.name} | Role: {user?.role}</p>
+      </div>
+
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-lg border-b border-purple-200 p-4 sticky top-0 z-10">
+      <div className="bg-white/80 backdrop-blur-lg border-b border-purple-200 p-4 sticky top-16 z-10">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Chairman Dashboard</h1>
           <p className="text-sm text-gray-600 mt-1">
@@ -122,11 +129,13 @@ const ChairmanMobileDashboard: React.FC = () => {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Test Content */}
-        <div className="bg-red-100 border border-red-300 p-4 rounded-lg">
-          <p className="text-red-800 font-medium">DEBUG: Chairman Dashboard is rendering</p>
-          <p className="text-red-600 text-sm mt-1">User role: {user?.role}</p>
-          <p className="text-red-600 text-sm">User name: {user?.name}</p>
+        {/* Success Indicator */}
+        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            <p className="text-green-800 font-medium">Dashboard Successfully Loaded</p>
+          </div>
+          <p className="text-green-600 text-sm mt-1">All components are rendering correctly</p>
         </div>
 
         {/* Institution Stats */}
@@ -221,6 +230,14 @@ const ChairmanMobileDashboard: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Footer Debug Info */}
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-8">
+          <p className="text-blue-800 font-medium text-center">🎉 Dashboard Fully Loaded</p>
+          <p className="text-blue-600 text-sm text-center mt-1">
+            Timestamp: {new Date().toLocaleTimeString()}
+          </p>
         </div>
       </div>
     </div>
