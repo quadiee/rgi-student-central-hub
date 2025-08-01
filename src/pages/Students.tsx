@@ -1,21 +1,42 @@
 
 import React from 'react';
-import { useIsMobile } from '../hooks/use-mobile';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import StudentManagement from '../components/Students/StudentManagement';
 import ChairmanStudentManagement from '../components/Mobile/ChairmanStudentManagement';
+import EnhancedMobileLayout from '../components/Mobile/EnhancedMobileLayout';
+import ModernLayout from '../components/Layout/ModernLayout';
+import { useIsMobile } from '../hooks/use-mobile';
 
 const Students: React.FC = () => {
-  const isMobile = useIsMobile();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
-  // Use organized Chairman component on mobile
-  if (isMobile && user?.role === 'chairman') {
-    return <ChairmanStudentManagement />;
+  if (!user) return null;
+
+  // For Chairman on mobile, use the specialized component
+  if (isMobile && user.role === 'chairman') {
+    return (
+      <EnhancedMobileLayout>
+        <ChairmanStudentManagement />
+      </EnhancedMobileLayout>
+    );
   }
 
-  // Use regular component for desktop or other roles
-  return <StudentManagement />;
+  // For mobile (non-chairman users)
+  if (isMobile) {
+    return (
+      <EnhancedMobileLayout>
+        <StudentManagement />
+      </EnhancedMobileLayout>
+    );
+  }
+
+  // For desktop
+  return (
+    <ModernLayout>
+      <StudentManagement />
+    </ModernLayout>
+  );
 };
 
 export default Students;

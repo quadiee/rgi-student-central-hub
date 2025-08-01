@@ -1,21 +1,42 @@
 
 import React from 'react';
-import { useIsMobile } from '../hooks/use-mobile';
 import { useAuth } from '../contexts/SupabaseAuthContext';
-import StreamlinedFacultyManagement from '../components/Faculty/StreamlinedFacultyManagement';
+import FacultyManagement from '../components/Faculty/FacultyManagement';
 import ChairmanFacultyManagement from '../components/Mobile/ChairmanFacultyManagement';
+import EnhancedMobileLayout from '../components/Mobile/EnhancedMobileLayout';
+import ModernLayout from '../components/Layout/ModernLayout';
+import { useIsMobile } from '../hooks/use-mobile';
 
 const Faculty: React.FC = () => {
-  const isMobile = useIsMobile();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
-  // Use organized Chairman component on mobile
-  if (isMobile && user?.role === 'chairman') {
-    return <ChairmanFacultyManagement />;
+  if (!user) return null;
+
+  // For Chairman on mobile, use the specialized component
+  if (isMobile && user.role === 'chairman') {
+    return (
+      <EnhancedMobileLayout>
+        <ChairmanFacultyManagement />
+      </EnhancedMobileLayout>
+    );
   }
 
-  // Use regular component for desktop or other roles
-  return <StreamlinedFacultyManagement />;
+  // For mobile (non-chairman users)
+  if (isMobile) {
+    return (
+      <EnhancedMobileLayout>
+        <FacultyManagement />
+      </EnhancedMobileLayout>
+    );
+  }
+
+  // For desktop
+  return (
+    <ModernLayout>
+      <FacultyManagement />
+    </ModernLayout>
+  );
 };
 
 export default Faculty;
