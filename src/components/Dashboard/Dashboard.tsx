@@ -28,13 +28,12 @@ const Dashboard: React.FC = () => {
     return <RoleDashboard />;
   }
 
-  // Desktop dashboard logic with enhanced chairman view
+  // Desktop dashboard logic - no wrapper needed as ModernLayout handles it
   const renderDashboard = () => {
     switch (user?.role) {
       case 'student':
         return <StudentDashboard />;
       case 'chairman':
-        // Chairman gets the personalized enhanced dashboard
         return <ChairmanDashboard />;
       case 'principal':
         return <PrincipalDashboard />;
@@ -46,7 +45,6 @@ const Dashboard: React.FC = () => {
           </div>
         );
       case 'admin':
-        // Admin gets full access with enhanced dashboard
         return (
           <div className="space-y-6">
             <RealTimeStats />
@@ -58,11 +56,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {renderDashboard()}
-    </div>
-  );
+  return renderDashboard();
 };
 
 export default Dashboard;

@@ -5,7 +5,7 @@ import AppSidebar from './AppSidebar';
 import EnhancedMobileLayout from '../Mobile/EnhancedMobileLayout';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
-import { Bell, Search, Menu } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Avatar, AvatarFallback } from '../ui/avatar';
@@ -40,7 +40,7 @@ const ModernLayout: React.FC<ModernLayoutProps> = ({ children }) => {
   };
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         
