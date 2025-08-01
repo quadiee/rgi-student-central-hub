@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { Loader2, Mail, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface FacultyCreationModalProps {
   isOpen: boolean;
@@ -22,6 +22,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
   const [loading, setLoading] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [invitationSent, setInvitationSent] = useState(false);
+  const [existingInvitation, setExistingInvitation] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,6 +39,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     if (isOpen) {
       fetchDepartments();
       setInvitationSent(false);
+      setExistingInvitation(null);
     }
   }, [isOpen]);
 
@@ -55,13 +57,105 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     }
   };
 
+  const checkExistingInvitation = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select(`
+          id, 
+          email, 
+          role, 
+          department_id, 
+          employee_id,
+          is_active,
+          expires_at,
+          used_at,
+          email_sent,
+          departments:department_id (
+            name,
+            code
+          )
+        `)
+        .eq('email', email.trim().toLowerCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error checking existing invitation:', error);
+      return null;
+    }
+  };
+
   const generateInvitationToken = () => {
     return `inv_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+  };
+
+  const resendExistingInvitation = async () => {
+    if (!existingInvitation || !user) return;
+
+    setEmailSending(true);
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+        body: {
+          email: existingInvitation.email,
+          role: 'faculty',
+          departmentId: existingInvitation.department_id,
+          invitedBy: user.id,
+          invitationId: existingInvitation.id,
+          employeeId: existingInvitation.employee_id,
+          name: formData.name,
+          designation: formData.designation
+        }
+      });
+
+      if (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        toast({
+          title: "Email Error",
+          description: "Invitation exists but email could not be resent. Please contact the faculty member directly.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Existing invitation email resent successfully!"
+        });
+        setInvitationSent(true);
+      }
+
+      onSuccess();
+      
+      // Close modal after a brief delay
+      setTimeout(() => {
+        onClose();
+        setInvitationSent(false);
+        setExistingInvitation(null);
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Error resending invitation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend invitation",
+        variant: "destructive"
+      });
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // First check if invitation already exists
+    const existing = await checkExistingInvitation(formData.email);
+    if (existing) {
+      setExistingInvitation(existing);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -99,7 +193,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
 
       // Send invitation email
       setEmailSending(true);
-      const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+      const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
         body: {
           email: formData.email,
           role: 'faculty',
@@ -121,7 +215,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
           variant: "default"
         });
       } else {
-        console.log('Invitation email sent successfully:', emailResult);
+        console.log('Invitation email sent successfully');
         toast({
           title: "Success",
           description: "Faculty invitation created and email sent successfully!"
@@ -165,8 +259,95 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
     if (!loading && !emailSending) {
       onClose();
       setInvitationSent(false);
+      setExistingInvitation(null);
     }
   };
+
+  // Show existing invitation dialog
+  if (existingInvitation) {
+    const isExpired = new Date(existingInvitation.expires_at) < new Date();
+    const isUsed = !!existingInvitation.used_at;
+
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              Invitation Already Exists
+            </DialogTitle>
+            <DialogDescription>
+              An invitation for <strong>{existingInvitation.email}</strong> already exists.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="space-y-2 text-sm">
+                <p><strong>Email:</strong> {existingInvitation.email}</p>
+                <p><strong>Role:</strong> Faculty</p>
+                <p><strong>Department:</strong> {existingInvitation.departments?.name} ({existingInvitation.departments?.code})</p>
+                <p><strong>Employee ID:</strong> {existingInvitation.employee_id || 'Not specified'}</p>
+                <p><strong>Status:</strong> 
+                  {isUsed ? (
+                    <span className="text-green-600 font-medium"> Used</span>
+                  ) : isExpired ? (
+                    <span className="text-red-600 font-medium"> Expired</span>
+                  ) : existingInvitation.email_sent ? (
+                    <span className="text-blue-600 font-medium"> Email Sent</span>
+                  ) : (
+                    <span className="text-orange-600 font-medium"> Email Pending</span>
+                  )}
+                </p>
+                <p><strong>Expires:</strong> {new Date(existingInvitation.expires_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            {!isUsed && !isExpired && (
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleClose}
+                  disabled={emailSending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={resendExistingInvitation}
+                  disabled={emailSending}
+                >
+                  {emailSending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Resending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Resend Invitation
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {(isUsed || isExpired) && (
+              <div className="flex justify-end">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleClose}
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
