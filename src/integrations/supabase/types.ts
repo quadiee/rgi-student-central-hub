@@ -2651,7 +2651,9 @@ export type Database = {
           id: string
           email: string
           role: Database["public"]["Enums"]["user_role"]
-          department: Database["public"]["Enums"]["department"]
+          department_id: string
+          department_name: string
+          department_code: string
           roll_number: string
           employee_id: string
           is_valid: boolean

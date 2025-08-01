@@ -72,7 +72,7 @@ const InvitationSignup = () => {
         return;
       }
 
-      // Now the data structure is consistent from the database function
+      // Set the invitation data with the new structure
       setInvitationData(invitation);
       setSignupForm(prev => ({ ...prev, email: invitation.email }));
       setStep('signup');
@@ -144,7 +144,7 @@ const InvitationSignup = () => {
 
       console.log('Completing profile for user:', user.id);
 
-      // Update user profile
+      // Update user profile with the correct department_id
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
