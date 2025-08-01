@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import ChairmanMobileDashboard from './dashboards/ChairmanMobileDashboard';
@@ -18,88 +17,91 @@ const RoleDashboard: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
 
-  console.log('=== RoleDashboard START ===');
-  console.log('RoleDashboard - User:', user);
-  console.log('RoleDashboard - Current path:', location.pathname);
+  // EXTREME DEBUGGING
+  console.log('%c=== ROLE DASHBOARD EXTREME DEBUG ===', 'background: purple; color: white; font-size: 20px; padding: 15px;');
+  console.log('RoleDashboard - Timestamp:', new Date().toISOString());
+  console.log('RoleDashboard - Current URL:', window.location.href);
+  console.log('RoleDashboard - Location pathname:', location.pathname);
+  console.log('RoleDashboard - User object:', user);
   console.log('RoleDashboard - User role:', user?.role);
+  console.log('RoleDashboard - User name:', user?.name);
+  console.log('RoleDashboard - Document title:', document.title);
+  console.log('RoleDashboard - Window innerWidth:', window.innerWidth);
+  console.log('RoleDashboard - Window innerHeight:', window.innerHeight);
 
-  // Force render something visible for debugging
+  // Force render something immediately visible
   if (!user) {
-    console.log('RoleDashboard - No user, showing loading');
+    console.log('%c❌ NO USER - SHOWING RED SCREEN', 'background: red; color: white; font-size: 16px;');
     return (
-      <div className="flex items-center justify-center min-h-screen bg-red-100">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-          <p className="text-red-600 font-bold">DEBUG: No User Found</p>
-          <p className="text-gray-600">Loading user data...</p>
+      <div 
+        className="fixed inset-0 z-[9999] bg-red-600 flex items-center justify-center text-white"
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          zIndex: 9999, 
+          backgroundColor: '#dc2626' 
+        }}
+      >
+        <div className="text-center p-8">
+          <h1 className="text-3xl font-bold mb-4">🚨 NO USER FOUND</h1>
+          <p className="text-xl">Loading user data...</p>
+          <p className="text-sm mt-2">Time: {new Date().toLocaleTimeString()}</p>
         </div>
       </div>
     );
   }
 
-  console.log('RoleDashboard - User found, role:', user.role);
+  console.log('%c✅ USER FOUND - ROLE:', user.role, 'background: green; color: white; font-size: 16px;');
 
-  // For Chairman role, use organized components based on current route
+  // For Chairman role - FORCE IMMEDIATE RENDER
   if (user.role === 'chairman') {
-    console.log('RoleDashboard - Chairman detected, routing based on path:', location.pathname);
+    console.log('%c👑 CHAIRMAN DETECTED - ROUTING', 'background: gold; color: black; font-size: 16px;');
+    console.log('Chairman routing - Path:', location.pathname);
     
-    // Always render something visible for Chairman
+    // For dashboard routes, render ChairmanMobileDashboard immediately
+    if (location.pathname === '/dashboard' || location.pathname === '/') {
+      console.log('%c🎯 RENDERING CHAIRMAN DASHBOARD NOW!', 'background: blue; color: white; font-size: 16px;');
+      return <ChairmanMobileDashboard />;
+    }
+    
+    // Other routes
     switch (location.pathname) {
       case '/students':
-        console.log('RoleDashboard - Rendering ChairmanStudentManagement');
+        console.log('Rendering ChairmanStudentManagement');
         return <ChairmanStudentManagement />;
       case '/faculty':
-        console.log('RoleDashboard - Rendering ChairmanFacultyManagement');
+        console.log('Rendering ChairmanFacultyManagement');
         return <ChairmanFacultyManagement />;
       case '/fees':
-        console.log('RoleDashboard - Rendering MobileFeeManagementHub');
+        console.log('Rendering MobileFeeManagementHub');
         return <MobileFeeManagementHub />;
-      case '/dashboard':
-      case '/':
       default:
-        console.log('RoleDashboard - Rendering ChairmanMobileDashboard for path:', location.pathname);
-        return (
-          <div className="min-h-screen bg-purple-50">
-            <div className="p-4 bg-red-100 border-b-2 border-red-300">
-              <p className="text-red-800 font-bold">DEBUG: About to render ChairmanMobileDashboard</p>
-              <p className="text-red-600 text-sm">Path: {location.pathname}</p>
-              <p className="text-red-600 text-sm">User: {user.name} ({user.role})</p>
-            </div>
-            <ChairmanMobileDashboard />
-          </div>
-        );
+        console.log('Chairman - Default case, rendering dashboard');
+        return <ChairmanMobileDashboard />;
     }
   }
 
-  // For other roles, use their respective dashboards
-  const renderDashboard = () => {
-    console.log('RoleDashboard - Rendering dashboard for role:', user.role);
-    
-    switch (user.role) {
-      case 'admin':
-        return <AdminMobileDashboard />;
-      case 'principal':
-        return <PrincipalMobileDashboard />;
-      case 'hod':
-        return <HODMobileDashboard />;
-      case 'faculty':
-        return <FacultyMobileDashboard />;
-      case 'student':
-        return <StudentMobileDashboard />;
-      default:
-        console.log('RoleDashboard - Unknown role, defaulting to StudentMobileDashboard');
-        return <StudentMobileDashboard />;
-    }
-  };
-
-  return (
-    <div className="animate-fade-in min-h-screen bg-gray-50">
-      <div className="p-4 bg-yellow-100 border-b-2 border-yellow-300">
-        <p className="text-yellow-800 font-bold">DEBUG: Non-Chairman Role Dashboard</p>
-        <p className="text-yellow-600 text-sm">Role: {user.role}</p>
-      </div>
-      {renderDashboard()}
-    </div>
-  );
+  // For other roles
+  console.log('RoleDashboard - Rendering for role:', user.role);
+  
+  switch (user.role) {
+    case 'admin':
+      return <AdminMobileDashboard />;
+    case 'principal':
+      return <PrincipalMobileDashboard />;
+    case 'hod':
+      return <HODMobileDashboard />;
+    case 'faculty':
+      return <FacultyMobileDashboard />;
+    case 'student':
+      return <StudentMobileDashboard />;
+    default:
+      console.log('Unknown role, defaulting to StudentMobileDashboard');
+      return <StudentMobileDashboard />;
+  }
 };
 
 export default RoleDashboard;

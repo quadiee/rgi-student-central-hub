@@ -19,225 +19,116 @@ const ChairmanMobileDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  console.log('=== ChairmanMobileDashboard START ===');
-  console.log('ChairmanMobileDashboard - Component loaded');
+  // Force console logs
+  console.log('%c=== CHAIRMAN MOBILE DASHBOARD RENDERING ===', 'background: red; color: white; font-size: 16px; padding: 10px;');
+  console.log('ChairmanMobileDashboard - Component loaded at:', new Date().toISOString());
   console.log('ChairmanMobileDashboard - User:', user);
+  console.log('ChairmanMobileDashboard - Window location:', window.location.href);
+  console.log('ChairmanMobileDashboard - Document ready state:', document.readyState);
 
-  const stats = [
-    {
-      title: 'Total Students',
-      value: '2,847',
-      change: '+12% from last month',
-      icon: GraduationCap,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-    },
-    {
-      title: 'Faculty Members',
-      value: '156',
-      change: '+3 new this month',
-      icon: Users,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-    },
-    {
-      title: 'Fee Collection',
-      value: '₹1.2Cr',
-      change: '85% collected',
-      icon: CreditCard,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
-    },
-    {
-      title: 'Departments',
-      value: '8',
-      change: 'All active',
-      icon: Building,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-    }
-  ];
-
-  const quickActions = [
-    {
-      title: 'Student Management',
-      description: 'View all students across departments',
-      icon: GraduationCap,
-      route: '/students',
-      color: 'bg-blue-50 hover:bg-blue-100 border-blue-200'
-    },
-    {
-      title: 'Faculty Overview',
-      description: 'Manage faculty across all departments',
-      icon: Users,
-      route: '/faculty',
-      color: 'bg-green-50 hover:bg-green-100 border-green-200'
-    },
-    {
-      title: 'Fee Management',
-      description: 'Monitor fee collection and payments',
-      icon: CreditCard,
-      route: '/fees',
-      color: 'bg-purple-50 hover:bg-purple-100 border-purple-200'
-    },
-    {
-      title: 'Reports & Analytics',
-      description: 'View institutional reports',
-      icon: BarChart3,
-      route: '/reports',
-      color: 'bg-orange-50 hover:bg-orange-100 border-orange-200'
-    }
-  ];
-
-  const recentActivity = [
-    {
-      action: 'New faculty member added',
-      department: 'Computer Science',
-      time: '2 hours ago',
-      icon: Users
-    },
-    {
-      action: 'Fee payment received',
-      department: 'Electronics & Communication',
-      time: '4 hours ago',
-      icon: CreditCard
-    },
-    {
-      action: 'Student enrollment completed',
-      department: 'Mechanical Engineering',
-      time: '1 day ago',
-      icon: GraduationCap
-    }
-  ];
-
+  // Force a visible, unmistakable render
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950">
-      {/* DEBUG Header */}
-      <div className="bg-green-100 border-b-4 border-green-400 p-4 sticky top-0 z-50">
-        <p className="text-green-800 font-bold text-center">✅ SUCCESS: ChairmanMobileDashboard is rendering!</p>
-        <p className="text-green-600 text-sm text-center mt-1">User: {user?.name} | Role: {user?.role}</p>
-      </div>
+    <div 
+      className="fixed inset-0 z-[9999] bg-red-500 overflow-auto"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        backgroundColor: '#ef4444',
+        overflow: 'auto'
+      }}
+    >
+      {/* EMERGENCY VISIBILITY TEST */}
+      <div 
+        className="w-full h-screen bg-yellow-400 p-4"
+        style={{
+          width: '100%',
+          height: '100vh',
+          backgroundColor: '#facc15',
+          padding: '16px',
+          minHeight: '100vh'
+        }}
+      >
+        <div className="bg-green-500 p-8 rounded-lg text-center text-white font-bold text-2xl mb-4">
+          🚨 CHAIRMAN DASHBOARD IS RENDERING! 🚨
+        </div>
+        
+        <div className="bg-blue-500 p-4 rounded text-white mb-4">
+          <h1 className="text-xl font-bold mb-2">EMERGENCY DEBUG INFO</h1>
+          <p>✅ Component: ChairmanMobileDashboard</p>
+          <p>✅ Time: {new Date().toLocaleTimeString()}</p>
+          <p>✅ User: {user?.name || 'No user'}</p>
+          <p>✅ Role: {user?.role || 'No role'}</p>
+          <p>✅ Path: {window.location.pathname}</p>
+        </div>
 
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-lg border-b border-purple-200 p-4 sticky top-16 z-10">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Chairman Dashboard</h1>
-          <p className="text-sm text-gray-600 mt-1">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Chairman Dashboard</h2>
+          <p className="text-gray-700 mb-4">
             Welcome back, {user?.name || 'Chairman'}
           </p>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-6">
-        {/* Success Indicator */}
-        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-            <p className="text-green-800 font-medium">Dashboard Successfully Loaded</p>
+          
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-blue-100 p-4 rounded-lg text-center">
+              <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+              <p className="text-sm font-medium">Total Students</p>
+              <p className="text-xl font-bold">2,847</p>
+            </div>
+            <div className="bg-green-100 p-4 rounded-lg text-center">
+              <Building className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <p className="text-sm font-medium">Faculty</p>
+              <p className="text-xl font-bold">156</p>
+            </div>
           </div>
-          <p className="text-green-600 text-sm mt-1">All components are rendering correctly</p>
-        </div>
 
-        {/* Institution Stats */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Institution Overview</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat, index) => (
-              <Card key={index} className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-600 truncate">{stat.title}</p>
-                      <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-                      <p className="text-xs text-gray-500 truncate">{stat.change}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            {quickActions.map((action, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className={`w-full p-4 h-auto justify-start ${action.color}`}
-                onClick={() => navigate(action.route)}
-              >
-                <div className="flex items-center space-x-4 w-full">
-                  <action.icon className="h-6 w-6 text-gray-700" />
-                  <div className="text-left flex-1">
-                    <div className="font-medium text-gray-900">{action.title}</div>
-                    <div className="text-sm text-gray-600">{action.description}</div>
-                  </div>
+            <Button
+              className="w-full p-4 h-auto bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => navigate('/students')}
+            >
+              <div className="flex items-center space-x-4 w-full">
+                <GraduationCap className="h-6 w-6" />
+                <div className="text-left flex-1">
+                  <div className="font-medium">Student Management</div>
+                  <div className="text-sm opacity-90">View all students</div>
                 </div>
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <div className="p-2 rounded-lg bg-gray-100">
-                      <activity.icon className="h-4 w-4 text-gray-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                      <p className="text-xs text-gray-600">{activity.department} • {activity.time}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </Button>
 
-        {/* System Status */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">System Status</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
-              <CardContent className="p-4 text-center">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <Button
+              className="w-full p-4 h-auto bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => navigate('/faculty')}
+            >
+              <div className="flex items-center space-x-4 w-full">
+                <Users className="h-6 w-6" />
+                <div className="text-left flex-1">
+                  <div className="font-medium">Faculty Overview</div>
+                  <div className="text-sm opacity-90">Manage faculty</div>
                 </div>
-                <p className="text-sm font-medium text-gray-900">All Systems</p>
-                <p className="text-xs text-green-600">Operational</p>
-              </CardContent>
-            </Card>
+              </div>
+            </Button>
 
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-sm">
-              <CardContent className="p-4 text-center">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
+            <Button
+              className="w-full p-4 h-auto bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => navigate('/fees')}
+            >
+              <div className="flex items-center space-x-4 w-full">
+                <CreditCard className="h-6 w-6" />
+                <div className="text-left flex-1">
+                  <div className="font-medium">Fee Management</div>
+                  <div className="text-sm opacity-90">Monitor payments</div>
                 </div>
-                <p className="text-sm font-medium text-gray-900">Academic Year</p>
-                <p className="text-xs text-blue-600">2024-25</p>
-              </CardContent>
-            </Card>
+              </div>
+            </Button>
           </div>
         </div>
 
-        {/* Footer Debug Info */}
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-8">
-          <p className="text-blue-800 font-medium text-center">🎉 Dashboard Fully Loaded</p>
-          <p className="text-blue-600 text-sm text-center mt-1">
-            Timestamp: {new Date().toLocaleTimeString()}
-          </p>
+        <div className="bg-orange-500 p-4 rounded mt-4 text-white text-center">
+          <p className="font-bold">🎯 IF YOU CAN SEE THIS, THE COMPONENT IS WORKING!</p>
+          <p className="text-sm mt-1">Timestamp: {new Date().toISOString()}</p>
         </div>
       </div>
     </div>
