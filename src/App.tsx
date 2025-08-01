@@ -45,121 +45,121 @@ function AppContent() {
   }
 
   return (
-    <Router>
-      <Routes>
-        {/* Faculty has dedicated dashboard route */}
-        <Route
-          path="/faculty-dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['faculty']}>
-              <FacultyDashboard />
-            </ProtectedRoute>
-          }
-        />
+    <Routes>
+      {/* Faculty has dedicated dashboard route */}
+      <Route
+        path="/faculty-dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['faculty']}>
+            <FacultyDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* All other routes use ModernLayout */}
-        <Route path="/*" element={
-          <ModernLayout>
-            <Routes>
-              {/* Dashboard routes */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
+      {/* All other routes use ModernLayout */}
+      <Route path="/*" element={
+        <ModernLayout>
+          <Routes>
+            {/* Dashboard routes */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Management routes */}
-              <Route
-                path="/students"
-                element={
-                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
-                    <StudentManagement />
-                  </ProtectedRoute>
-                }
-              />
+            {/* Management routes */}
+            <Route
+              path="/students"
+              element={
+                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
+                  <StudentManagement />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/faculty"
-                element={
-                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
-                    <StreamlinedFacultyManagement />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/faculty"
+              element={
+                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
+                  <StreamlinedFacultyManagement />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/fees"
-                element={
-                  <ProtectedRoute>
-                    <FeeManagementHub />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/fees"
+              element={
+                <ProtectedRoute>
+                  <FeeManagementHub />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/user-management"
-                element={
-                  <ProtectedRoute allowedRoles={['principal', 'admin', 'chairman']}>
-                    <UserManagementHub />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/user-management"
+              element={
+                <ProtectedRoute allowedRoles={['principal', 'admin', 'chairman']}>
+                  <UserManagementHub />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
-                    <ReportGenerator />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
+                  <ReportGenerator />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/attendance"
-                element={
-                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
-                    <AttendanceManagement />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/attendance"
+              element={
+                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
+                  <AttendanceManagement />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/exams"
-                element={
-                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
-                    <ExamManagement />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/exams"
+              element={
+                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
+                  <ExamManagement />
+                </ProtectedRoute>
+              }
+            />
 
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute allowedRoles={['principal', 'admin']}>
-                    <AdminPanel />
-                  </ProtectedRoute>
-                }
-              />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['principal', 'admin']}>
+                  <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Catch all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ModernLayout>
-        } />
-      </Routes>
-      <Toaster />
-    </Router>
+            {/* Catch all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ModernLayout>
+      } />
+    </Routes>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <Router>
+        <AppContent />
+        <Toaster />
+      </Router>
     </QueryClientProvider>
   );
 }
