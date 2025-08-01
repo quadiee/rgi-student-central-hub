@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ValidationRequest {
-  email: string;
+  email?: string;
   token?: string;
 }
 
@@ -28,46 +28,16 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email, token }: ValidationRequest = await req.json();
 
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
+    console.log('Received request with email:', email, 'token:', token);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Check if user exists in auth.users
-    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error('Error checking auth users:', authError);
-      return new Response(
-        JSON.stringify({ 
-          userExists: false, 
-          invitationValid: false,
-          error: "Failed to verify user existence",
-          redirect: 'invalid'
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    const userExists = authData.users.some(user => user.email === email);
-
-    // If token is provided, validate invitation
-    let invitationData = null;
-    let invitationValid = false;
-    
+    // If we have a token, validate the invitation first
     if (token) {
+      console.log('Validating token:', token);
+      
       const { data: invitationResults, error: invitationError } = await supabase
         .from('user_invitations')
         .select('*')
@@ -75,45 +45,160 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('is_active', true)
         .single();
 
-      if (!invitationError && invitationResults) {
-        const now = new Date();
-        const expiresAt = new Date(invitationResults.expires_at);
-        
-        invitationValid = 
-          invitationResults.email === email &&
-          now <= expiresAt &&
-          !invitationResults.used_at;
-        
-        if (invitationValid) {
-          invitationData = invitationResults;
-        }
+      console.log('Invitation query result:', { invitationResults, invitationError });
+
+      if (invitationError || !invitationResults) {
+        console.log('Invalid token or invitation not found');
+        return new Response(
+          JSON.stringify({ 
+            userExists: false, 
+            invitationValid: false,
+            error: "Invalid or expired invitation token",
+            redirect: 'invalid'
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
       }
+
+      // Check if invitation is expired
+      const now = new Date();
+      const expiresAt = new Date(invitationResults.expires_at);
+      
+      if (now > expiresAt) {
+        console.log('Invitation expired');
+        return new Response(
+          JSON.stringify({ 
+            userExists: false, 
+            invitationValid: false,
+            error: "Invitation has expired",
+            redirect: 'invalid'
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
+      // Check if invitation has been used
+      if (invitationResults.used_at) {
+        console.log('Invitation already used');
+        return new Response(
+          JSON.stringify({ 
+            userExists: false, 
+            invitationValid: false,
+            error: "Invitation has already been used",
+            redirect: 'invalid'
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
+      // Get the email from the invitation
+      const invitationEmail = invitationResults.email;
+      console.log('Invitation email:', invitationEmail);
+
+      // Check if user exists in auth.users
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error checking auth users:', authError);
+        return new Response(
+          JSON.stringify({ 
+            userExists: false, 
+            invitationValid: false,
+            error: "Failed to verify user existence",
+            redirect: 'invalid'
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
+      const userExists = authData.users.some(user => user.email === invitationEmail);
+      console.log('User exists:', userExists);
+
+      // Determine redirect based on user existence
+      let redirect: ValidationResponse['redirect'] = 'signup';
+      
+      if (userExists) {
+        redirect = 'password-setup';
+      }
+
+      const response: ValidationResponse = {
+        userExists,
+        invitationValid: true,
+        invitationData: invitationResults,
+        redirect
+      };
+
+      console.log('Returning response:', response);
+
+      return new Response(
+        JSON.stringify(response),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
-    // Determine redirect based on user existence and invitation status
-    let redirect: ValidationResponse['redirect'] = 'invalid';
-    
-    if (token && !invitationValid) {
-      redirect = 'invalid';
-    } else if (token && invitationValid && userExists) {
-      redirect = 'password-setup';
-    } else if (token && invitationValid && !userExists) {
-      redirect = 'signup';
-    } else if (!token && userExists) {
-      redirect = 'login';
+    // If no token provided but email is provided
+    if (email) {
+      // Check if user exists in auth.users
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error checking auth users:', authError);
+        return new Response(
+          JSON.stringify({ 
+            userExists: false, 
+            invitationValid: false,
+            error: "Failed to verify user existence",
+            redirect: 'invalid'
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
+      const userExists = authData.users.some(user => user.email === email);
+
+      const response: ValidationResponse = {
+        userExists,
+        invitationValid: false,
+        redirect: userExists ? 'login' : 'invalid'
+      };
+
+      return new Response(
+        JSON.stringify(response),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
-    const response: ValidationResponse = {
-      userExists,
-      invitationValid,
-      invitationData,
-      redirect
-    };
-
+    // Neither email nor token provided
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify({ 
+        userExists: false, 
+        invitationValid: false,
+        error: "Email or token is required",
+        redirect: 'invalid'
+      }),
       {
-        status: 200,
+        status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );

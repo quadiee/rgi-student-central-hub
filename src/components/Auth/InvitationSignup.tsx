@@ -46,34 +46,40 @@ const InvitationSignup = () => {
     try {
       console.log('Validating invitation token:', token);
       
-      const { data, error } = await supabase.rpc('validate_invitation_token', {
-        p_token: token
+      // Call the edge function with just the token
+      const { data, error } = await supabase.functions.invoke('check-user-exists', {
+        body: { token }
       });
 
       console.log('Validation result:', { data, error });
 
       if (error) {
-        console.error('RPC error:', error);
+        console.error('Edge function error:', error);
         setError(`Validation failed: ${error.message}`);
         return;
       }
 
-      if (!data || data.length === 0) {
-        setError('Invalid or expired invitation');
+      if (!data.invitationValid) {
+        setError(data.error || 'Invalid or expired invitation');
         return;
       }
 
-      const invitation = data[0];
+      // Set the invitation data
+      setInvitationData(data.invitationData);
+      setSignupForm(prev => ({ ...prev, email: data.invitationData.email }));
       
-      if (!invitation.is_valid) {
-        setError(invitation.error_message || 'Invalid invitation');
+      // Determine the next step based on whether user exists
+      if (data.userExists) {
+        // User exists, redirect to login or password setup
+        setError('User already exists. Please sign in instead.');
+        setTimeout(() => {
+          navigate('/auth');
+        }, 2000);
         return;
+      } else {
+        // User doesn't exist, proceed with signup
+        setStep('signup');
       }
-
-      // Set the invitation data with the new structure
-      setInvitationData(invitation);
-      setSignupForm(prev => ({ ...prev, email: invitation.email }));
-      setStep('signup');
       
     } catch (err: any) {
       console.error('Invitation validation error:', err);
