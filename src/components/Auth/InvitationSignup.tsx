@@ -72,14 +72,15 @@ const InvitationSignup = () => {
         return;
       }
 
-      // Set invitation data with proper structure - using the returned field names
+      // Set invitation data with proper structure - handle both old and new formats
       const invitationInfo = {
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
-        department_id: invitation.department_id,
-        department_name: invitation.department_name,
-        department_code: invitation.department_code,
+        // Handle both old (department enum) and new (department_id) formats
+        department_id: invitation.department_id || null,
+        department_name: invitation.department_name || (invitation.department ? invitation.department : null),
+        department_code: invitation.department_code || (invitation.department ? invitation.department : null),
         employee_id: invitation.employee_id,
         roll_number: invitation.roll_number
       };
