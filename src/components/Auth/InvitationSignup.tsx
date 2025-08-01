@@ -72,15 +72,18 @@ const InvitationSignup = () => {
         return;
       }
 
+      // Use type assertion to handle the mismatch between actual return and TypeScript types
+      const invitationWithDept = invitation as any;
+
       // Set invitation data with proper structure - handle both old and new formats
       const invitationInfo = {
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
-        // Handle both old (department enum) and new (department_id) formats
-        department_id: invitation.department_id || null,
-        department_name: invitation.department_name || (invitation.department ? invitation.department : null),
-        department_code: invitation.department_code || (invitation.department ? invitation.department : null),
+        // Safely access properties using type assertion
+        department_id: invitationWithDept.department_id || null,
+        department_name: invitationWithDept.department_name || (invitation.department ? invitation.department : null),
+        department_code: invitationWithDept.department_code || (invitation.department ? invitation.department : null),
         employee_id: invitation.employee_id,
         roll_number: invitation.roll_number
       };
