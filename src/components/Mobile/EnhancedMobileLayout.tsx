@@ -17,14 +17,6 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // EXTREME DEBUGGING FOR MOBILE LAYOUT
-  console.log('%c=== ENHANCED MOBILE LAYOUT DEBUG ===', 'background: magenta; color: white; font-size: 18px; padding: 10px;');
-  console.log('EnhancedMobileLayout - User:', user);
-  console.log('EnhancedMobileLayout - User Role:', user?.role);
-  console.log('EnhancedMobileLayout - Location:', location.pathname);
-  console.log('EnhancedMobileLayout - Children provided:', !!children);
-  console.log('EnhancedMobileLayout - Timestamp:', new Date().toISOString());
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -53,12 +45,8 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
     }
   };
 
-  // For Chairman role, don't show default header on dashboard
-  const shouldShowDefaultHeader = user?.role !== 'chairman' || 
-    (user?.role === 'chairman' && !['/dashboard', '/'].includes(location.pathname));
-
-  console.log('EnhancedMobileLayout - Should show header:', shouldShowDefaultHeader);
-  console.log('EnhancedMobileLayout - About to render main content');
+  // For Chairman role, don't render the default header as the organized components have their own
+  const shouldShowDefaultHeader = user?.role !== 'chairman' || location.pathname === '/dashboard';
 
   return (
     <div className={cn(
@@ -73,15 +61,12 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
       )}
       
       <main className={cn(
-        "relative min-h-screen",
+        "relative",
         shouldShowDefaultHeader ? "pt-16 pb-20" : "pb-20"
       )}>
         <div className="animate-fade-in">
-          {/* RENDER ROLEDASHBOARD */}
-          {(() => {
-            console.log('%c RENDERING ROLE DASHBOARD NOW!', 'background: cyan; color: black; font-size: 16px;');
-            return <RoleDashboard />;
-          })()}
+          {/* Use RoleDashboard for organized routing or children if provided */}
+          {children ? children : <RoleDashboard />}
         </div>
       </main>
 
