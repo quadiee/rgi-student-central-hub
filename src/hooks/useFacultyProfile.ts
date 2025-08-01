@@ -45,7 +45,7 @@ export const useFacultyProfile = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchFacultyProfile = async () => {
-    if (!user || user.role !== 'faculty') {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -54,6 +54,13 @@ export const useFacultyProfile = () => {
       setLoading(true);
       setError(null);
 
+      // First check if user has faculty role
+      if (user.role !== 'faculty') {
+        setLoading(false);
+        return;
+      }
+
+      // Try to get faculty profile with profile data
       const { data, error: fetchError } = await supabase
         .from('faculty_profiles')
         .select(`
@@ -69,9 +76,10 @@ export const useFacultyProfile = () => {
           )
         `)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
+        console.error('Error fetching faculty profile:', fetchError);
         throw fetchError;
       }
 
@@ -86,6 +94,10 @@ export const useFacultyProfile = () => {
         };
 
         setFacultyProfile(profile);
+      } else {
+        // No faculty profile found, but user is faculty - this might be a new signup
+        console.log('No faculty profile found for user:', user.id);
+        setFacultyProfile(null);
       }
     } catch (err) {
       console.error('Error fetching faculty profile:', err);

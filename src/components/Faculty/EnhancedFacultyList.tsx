@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFacultyAttendance } from '../../hooks/useFacultyAttendance';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -8,6 +10,7 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Search, Filter, Eye, Calendar, Phone, Mail, MapPin } from 'lucide-react';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { toast } from 'sonner';
 
 interface EnhancedFacultyMember {
   faculty_id: string;
@@ -42,18 +45,125 @@ interface EnhancedFacultyListProps {
 const EnhancedFacultyList: React.FC<EnhancedFacultyListProps> = ({
   onViewDetails
 }) => {
-  const { enhancedFacultyList, loading, fetchEnhancedFacultyList } = useFacultyAttendance();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
   
+  const [enhancedFacultyList, setEnhancedFacultyList] = useState<EnhancedFacultyMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [filteredFaculty, setFilteredFaculty] = useState<EnhancedFacultyMember[]>([]);
 
+  const fetchEnhancedFacultyList = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.rpc('get_faculty_with_details', {
+        p_user_id: user?.id
+      });
+
+      if (error) {
+        console.error('Error fetching enhanced faculty list:', error);
+        
+        // Fallback to basic faculty data
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('faculty_profiles')
+          .select(`
+            id,
+            user_id,
+            employee_code,
+            designation,
+            joining_date,
+            is_active,
+            profiles!faculty_profiles_user_id_fkey (
+              name,
+              email,
+              phone,
+              gender,
+              age,
+              departments (
+                name,
+                code
+              )
+            )
+          `)
+          .eq('is_active', true);
+
+        if (fallbackError) {
+          throw fallbackError;
+        }
+
+        const mappedFallbackData: EnhancedFacultyMember[] = (fallbackData || []).map((faculty: any) => ({
+          faculty_id: faculty.id,
+          user_id: faculty.user_id,
+          name: faculty.profiles?.name || 'N/A',
+          email: faculty.profiles?.email || 'N/A',
+          employee_code: faculty.employee_code || 'N/A',
+          designation: faculty.designation || 'N/A',
+          department_name: faculty.profiles?.departments?.name || 'Unknown',
+          department_code: faculty.profiles?.departments?.code || 'N/A',
+          joining_date: faculty.joining_date || '',
+          phone: faculty.profiles?.phone,
+          gender: faculty.profiles?.gender,
+          age: faculty.profiles?.age,
+          years_of_experience: faculty.joining_date ? 
+            Math.floor((new Date().getTime() - new Date(faculty.joining_date).getTime()) / (1000 * 60 * 60 * 24 * 365)) : 0,
+          is_active: faculty.is_active || false,
+          emergency_contact_name: null,
+          emergency_contact_phone: null,
+          current_address: null,
+          blood_group: null,
+          marital_status: null,
+          total_attendance_days: 0,
+          present_days: 0,
+          absent_days: 0,
+          attendance_percentage: 0
+        }));
+
+        setEnhancedFacultyList(mappedFallbackData);
+        return;
+      }
+
+      const mappedData: EnhancedFacultyMember[] = (data || []).map((faculty: any) => ({
+        faculty_id: faculty.faculty_id,
+        user_id: faculty.user_id,
+        name: faculty.name || 'N/A',
+        email: faculty.email || 'N/A',
+        employee_code: faculty.employee_code || 'N/A',
+        designation: faculty.designation || 'N/A',
+        department_name: faculty.department_name || 'Unknown',
+        department_code: faculty.department_code || 'N/A',
+        joining_date: faculty.joining_date || '',
+        phone: faculty.phone,
+        gender: faculty.gender,
+        age: faculty.age,
+        years_of_experience: faculty.years_of_experience || 0,
+        is_active: faculty.is_active || false,
+        emergency_contact_name: faculty.emergency_contact_name,
+        emergency_contact_phone: faculty.emergency_contact_phone,
+        current_address: faculty.current_address,
+        blood_group: faculty.blood_group,
+        marital_status: faculty.marital_status,
+        total_attendance_days: faculty.total_attendance_days || 0,
+        present_days: faculty.present_days || 0,
+        absent_days: faculty.absent_days || 0,
+        attendance_percentage: faculty.attendance_percentage || 0
+      }));
+
+      setEnhancedFacultyList(mappedData);
+    } catch (error) {
+      console.error('Error fetching enhanced faculty list:', error);
+      toast.error('Failed to fetch faculty data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchEnhancedFacultyList();
-  }, [fetchEnhancedFacultyList]);
+  }, [user]);
 
   useEffect(() => {
     let filtered = enhancedFacultyList;

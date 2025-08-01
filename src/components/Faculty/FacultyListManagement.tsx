@@ -65,18 +65,61 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
     try {
       setLoading(true);
       
-      // Use the updated database function to get real faculty data
+      // Check if the get_faculty_with_details function exists and works
       const { data, error } = await supabase.rpc('get_faculty_with_details', {
         p_user_id: user?.id
       });
 
       if (error) {
-        console.error('Error fetching faculty:', error);
-        toast.error('Failed to fetch faculty members');
+        console.error('Error with RPC function, falling back to direct query:', error);
+        
+        // Fallback to direct query if RPC fails
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('faculty_profiles')
+          .select(`
+            id,
+            user_id,
+            employee_code,
+            designation,
+            joining_date,
+            is_active,
+            profiles!faculty_profiles_user_id_fkey (
+              name,
+              email,
+              phone,
+              departments (
+                name,
+                code
+              )
+            )
+          `)
+          .eq('is_active', true);
+
+        if (fallbackError) {
+          console.error('Fallback query also failed:', fallbackError);
+          toast.error('Failed to fetch faculty members');
+          return;
+        }
+
+        // Map fallback data to our interface
+        const mappedFallbackData: FacultyMember[] = (fallbackData || []).map((faculty: any) => ({
+          faculty_id: faculty.id,
+          user_id: faculty.user_id,
+          name: faculty.profiles?.name || 'N/A',
+          email: faculty.profiles?.email || 'N/A',
+          employee_code: faculty.employee_code || 'N/A',
+          designation: faculty.designation || 'N/A',
+          department_name: faculty.profiles?.departments?.name || 'Unknown Department',
+          joining_date: faculty.joining_date || '',
+          phone: faculty.profiles?.phone,
+          is_active: faculty.is_active || false
+        }));
+
+        setFacultyList(mappedFallbackData);
         return;
       }
 
-      // Map the data to our interface
+      // Map RPC data to our interface
       const mappedData: FacultyMember[] = (data || []).map((faculty: any) => ({
         faculty_id: faculty.faculty_id,
         user_id: faculty.user_id,
@@ -91,6 +134,7 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
       }));
 
       setFacultyList(mappedData);
+      console.log('Faculty data fetched successfully:', mappedData);
     } catch (error) {
       console.error('Error fetching faculty members:', error);
       toast.error('Failed to fetch faculty members');
@@ -134,8 +178,6 @@ const FacultyListManagement: React.FC<FacultyListManagementProps> = ({
     return (
       <FacultyEmptyState 
         onAddFaculty={() => {
-          // This will be handled by the parent component
-          // Since this component doesn't have direct access to the creation modal
           toast.info('Please use the "Add Faculty" button in the header to invite faculty members');
         }} 
       />
