@@ -51,7 +51,7 @@ function AppContent() {
         <Route
           path="/faculty-dashboard"
           element={
-            <ProtectedRoute requiredRoles={['faculty']}>
+            <ProtectedRoute allowedRoles={['faculty']}>
               <FacultyDashboard />
             </ProtectedRoute>
           }
@@ -76,7 +76,7 @@ function AppContent() {
               <Route
                 path="/students"
                 element={
-                  <ProtectedRoute requiredRoles={['hod', 'principal', 'admin', 'chairman']}>
+                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
                     <StudentManagement />
                   </ProtectedRoute>
                 }
@@ -85,7 +85,7 @@ function AppContent() {
               <Route
                 path="/faculty"
                 element={
-                  <ProtectedRoute requiredRoles={['hod', 'principal', 'admin', 'chairman']}>
+                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
                     <StreamlinedFacultyManagement />
                   </ProtectedRoute>
                 }
@@ -103,7 +103,7 @@ function AppContent() {
               <Route
                 path="/user-management"
                 element={
-                  <ProtectedRoute requiredRoles={['principal', 'admin', 'chairman']}>
+                  <ProtectedRoute allowedRoles={['principal', 'admin', 'chairman']}>
                     <UserManagementHub />
                   </ProtectedRoute>
                 }
@@ -112,7 +112,7 @@ function AppContent() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute requiredRoles={['hod', 'principal', 'admin', 'chairman']}>
+                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
                     <ReportGenerator />
                   </ProtectedRoute>
                 }
@@ -121,7 +121,7 @@ function AppContent() {
               <Route
                 path="/attendance"
                 element={
-                  <ProtectedRoute requiredRoles={['hod', 'principal', 'admin']}>
+                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
                     <AttendanceManagement />
                   </ProtectedRoute>
                 }
@@ -130,7 +130,7 @@ function AppContent() {
               <Route
                 path="/exams"
                 element={
-                  <ProtectedRoute requiredRoles={['hod', 'principal', 'admin']}>
+                  <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
                     <ExamManagement />
                   </ProtectedRoute>
                 }
@@ -139,7 +139,7 @@ function AppContent() {
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute requiredRoles={['principal', 'admin']}>
+                  <ProtectedRoute allowedRoles={['principal', 'admin']}>
                     <AdminPanel />
                   </ProtectedRoute>
                 }
