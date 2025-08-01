@@ -1,18 +1,27 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 import RoleDashboard from '../Mobile/RoleDashboard';
 import StudentDashboard from './StudentDashboard';
 import HODDashboard from './HODDashboard';
 import PrincipalDashboard from './PrincipalDashboard';
 import ChairmanDashboard from './ChairmanDashboard';
 import RealTimeStats from './RealTimeStats';
-import FeeManagementHub from '../Fees/FeeManagementHub';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect faculty users to their dedicated dashboard
+    if (user?.role === 'faculty') {
+      navigate('/faculty-dashboard', { replace: true });
+      return;
+    }
+  }, [user, navigate]);
 
   // Use enhanced mobile dashboard for mobile devices
   if (isMobile) {

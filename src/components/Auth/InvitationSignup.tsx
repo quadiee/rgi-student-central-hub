@@ -46,7 +46,6 @@ const InvitationSignup = () => {
     try {
       console.log('Validating invitation token:', token);
       
-      // Call the edge function with just the token
       const { data, error } = await supabase.functions.invoke('check-user-exists', {
         body: { token }
       });
@@ -64,20 +63,16 @@ const InvitationSignup = () => {
         return;
       }
 
-      // Set the invitation data
       setInvitationData(data.invitationData);
       setSignupForm(prev => ({ ...prev, email: data.invitationData.email }));
       
-      // Determine the next step based on whether user exists
       if (data.userExists) {
-        // User exists, redirect to login or password setup
         setError('User already exists. Please sign in instead.');
         setTimeout(() => {
           navigate('/auth');
         }, 2000);
         return;
       } else {
-        // User doesn't exist, proceed with signup
         setStep('signup');
       }
       
@@ -211,8 +206,13 @@ const InvitationSignup = () => {
 
       toast.success('Profile completed successfully!');
       
+      // Redirect based on role
       setTimeout(() => {
-        navigate('/dashboard');
+        if (invitationData.role === 'faculty') {
+          navigate('/faculty-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       }, 1000);
 
     } catch (err: any) {
