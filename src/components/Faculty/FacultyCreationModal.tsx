@@ -74,13 +74,13 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
       // Generate secure token
       const invitationToken = generateInvitationToken();
 
-      // Create user invitation with department_id instead of department enum
+      // Create user invitation with department_id
       const { data: invitationData, error: invitationError } = await supabase
         .from('user_invitations')
         .insert({
           email: formData.email,
           role: 'faculty' as const,
-          department_id: formData.department_id, // Use department_id directly
+          department_id: formData.department_id,
           employee_id: formData.employee_code,
           invited_by: user.id,
           is_active: true,
@@ -103,7 +103,7 @@ const FacultyCreationModal: React.FC<FacultyCreationModalProps> = ({ isOpen, onC
         body: {
           email: formData.email,
           role: 'faculty',
-          department_id: formData.department_id,
+          departmentId: formData.department_id,
           invitedBy: user.id,
           invitationId: invitationData.id,
           employeeId: formData.employee_code,
