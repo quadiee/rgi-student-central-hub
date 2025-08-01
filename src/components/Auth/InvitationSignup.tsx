@@ -39,18 +39,29 @@ const InvitationSignup = () => {
     if (token) {
       validateInvitation();
     } else {
-      setError('Invalid invitation link');
+      setError('Invalid invitation link - no token provided');
       setValidating(false);
     }
   }, [token]);
 
   const validateInvitation = async () => {
     try {
+      console.log('Validating invitation token:', token);
+      
+      // Call the database function directly to validate the invitation
       const { data, error } = await supabase.rpc('validate_invitation_token', {
         p_token: token
       });
 
-      if (error || !data || data.length === 0) {
+      console.log('Validation result:', { data, error });
+
+      if (error) {
+        console.error('RPC error:', error);
+        setError(`Validation failed: ${error.message}`);
+        return;
+      }
+
+      if (!data || data.length === 0) {
         setError('Invalid or expired invitation');
         return;
       }
@@ -62,12 +73,25 @@ const InvitationSignup = () => {
         return;
       }
 
-      setInvitationData(invitation);
+      // Set invitation data with proper structure
+      const invitationInfo = {
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        department_id: invitation.department_id,
+        department_name: invitation.department_name,
+        department_code: invitation.department_code,
+        employee_id: invitation.employee_id,
+        roll_number: invitation.roll_number
+      };
+
+      setInvitationData(invitationInfo);
       setSignupForm(prev => ({ ...prev, email: invitation.email }));
       setStep('signup');
+      
     } catch (err: any) {
       console.error('Invitation validation error:', err);
-      setError('Failed to validate invitation');
+      setError(`Failed to validate invitation: ${err.message}`);
     } finally {
       setValidating(false);
     }
@@ -97,7 +121,9 @@ const InvitationSignup = () => {
           data: {
             role: invitationData.role,
             employee_id: invitationData.employee_id,
-            invitation_id: invitationData.id
+            roll_number: invitationData.roll_number,
+            invitation_id: invitationData.id,
+            department_id: invitationData.department_id
           }
         }
       });
@@ -105,6 +131,7 @@ const InvitationSignup = () => {
       if (authError) throw authError;
 
       if (authData.user) {
+        console.log('User signed up successfully:', authData.user.id);
         setStep('complete');
       }
     } catch (err: any) {
@@ -127,7 +154,9 @@ const InvitationSignup = () => {
         throw new Error('User not found');
       }
 
-      // Update user profile
+      console.log('Completing profile for user:', user.id);
+
+      // Update user profile with proper department_id
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -136,15 +165,25 @@ const InvitationSignup = () => {
           address: profileForm.address,
           gender: profileForm.gender,
           age: profileForm.age ? parseInt(profileForm.age) : null,
+          department_id: invitationData.department_id,
+          employee_id: invitationData.employee_id,
+          roll_number: invitationData.roll_number,
           is_active: true,
           profile_completed: true
         })
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw profileError;
+      }
+
+      console.log('Profile updated successfully');
 
       // For faculty members, create or link faculty profile
       if (invitationData.role === 'faculty') {
+        console.log('Creating faculty profile for:', user.id);
+        
         const { data: facultyResult, error: facultyError } = await supabase.functions.invoke(
           'create_or_link_faculty_profile',
           {
@@ -165,13 +204,15 @@ const InvitationSignup = () => {
           toast.error('Profile created but faculty profile linking failed');
         } else if (facultyResult?.success) {
           console.log('Faculty profile created/linked successfully:', facultyResult);
+          toast.success('Faculty profile created successfully!');
         }
       }
 
       // Mark invitation as used
-      const { error: invitationError } = await supabase.rpc('mark_invitation_used', {
-        invitation_email: invitationData.email
-      });
+      const { error: invitationError } = await supabase
+        .from('user_invitations')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', invitationData.id);
 
       if (invitationError) {
         console.error('Error marking invitation as used:', invitationError);
@@ -241,6 +282,9 @@ const InvitationSignup = () => {
               <p>Department: <span className="font-semibold">{invitationData.department_name}</span></p>
               {invitationData.employee_id && (
                 <p>Employee ID: <span className="font-semibold">{invitationData.employee_id}</span></p>
+              )}
+              {invitationData.roll_number && (
+                <p>Roll Number: <span className="font-semibold">{invitationData.roll_number}</span></p>
               )}
             </div>
           )}
