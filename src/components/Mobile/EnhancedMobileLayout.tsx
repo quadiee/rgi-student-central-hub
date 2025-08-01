@@ -5,10 +5,11 @@ import { useLocation } from 'react-router-dom';
 import AdaptiveMobileHeader from './AdaptiveMobileHeader';
 import SmartBottomNav from './SmartBottomNav';
 import MobileFloatingActions from './MobileFloatingActions';
+import RoleDashboard from './RoleDashboard';
 import { cn } from '../../lib/utils';
 
 interface EnhancedMobileLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children }) => {
@@ -44,19 +45,28 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
     }
   };
 
+  // For Chairman role, don't render the default header as the organized components have their own
+  const shouldShowDefaultHeader = user?.role !== 'chairman' || location.pathname === '/dashboard';
+
   return (
     <div className={cn(
       "lg:hidden min-h-screen relative",
       getRoleTheme()
     )}>
-      <AdaptiveMobileHeader 
-        isScrolled={isScrolled} 
-        currentRoute={location.pathname}
-      />
+      {shouldShowDefaultHeader && (
+        <AdaptiveMobileHeader 
+          isScrolled={isScrolled} 
+          currentRoute={location.pathname}
+        />
+      )}
       
-      <main className="pt-16 pb-20 relative">
+      <main className={cn(
+        "relative",
+        shouldShowDefaultHeader ? "pt-16 pb-20" : "pb-20"
+      )}>
         <div className="animate-fade-in">
-          {children}
+          {/* Use RoleDashboard for organized routing or children if provided */}
+          {children ? children : <RoleDashboard />}
         </div>
       </main>
 
@@ -64,7 +74,7 @@ const EnhancedMobileLayout: React.FC<EnhancedMobileLayoutProps> = ({ children })
       <MobileFloatingActions currentRoute={location.pathname} />
       
       {/* Scroll indicator */}
-      {isScrolled && (
+      {isScrolled && shouldShowDefaultHeader && (
         <div className="fixed top-16 left-0 right-0 h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20 z-30 animate-pulse" />
       )}
     </div>

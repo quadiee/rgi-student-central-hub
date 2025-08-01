@@ -8,15 +8,35 @@ import HODMobileDashboard from './dashboards/HODMobileDashboard';
 import FacultyMobileDashboard from './dashboards/FacultyMobileDashboard';
 import StudentMobileDashboard from './dashboards/StudentMobileDashboard';
 
+// Import the organized Chairman components
+import ChairmanStudentManagement from './ChairmanStudentManagement';
+import ChairmanFacultyManagement from './ChairmanFacultyManagement';
+import MobileFeeManagementHub from '../Fees/MobileFeeManagementHub';
+import { useLocation } from 'react-router-dom';
+
 const RoleDashboard: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
 
   if (!user) return null;
 
+  // For Chairman role, use organized components based on current route
+  if (user.role === 'chairman') {
+    switch (location.pathname) {
+      case '/students':
+        return <ChairmanStudentManagement />;
+      case '/faculty':
+        return <ChairmanFacultyManagement />;
+      case '/fees':
+        return <MobileFeeManagementHub />;
+      default:
+        return <ChairmanMobileDashboard />;
+    }
+  }
+
+  // For other roles, use their respective dashboards
   const renderDashboard = () => {
     switch (user.role) {
-      case 'chairman':
-        return <ChairmanMobileDashboard />;
       case 'admin':
         return <AdminMobileDashboard />;
       case 'principal':
