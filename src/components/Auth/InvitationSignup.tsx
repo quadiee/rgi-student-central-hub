@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../integrations/supabase/client';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -11,9 +10,8 @@ import { Loader2, CheckCircle, AlertCircle, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 const InvitationSignup = () => {
-  const [searchParams] = useSearchParams();
+  const { token } = useParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token');
   
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(true);
