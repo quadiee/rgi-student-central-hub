@@ -2050,6 +2050,7 @@ export type Database = {
       user_invitations: {
         Row: {
           department: Database["public"]["Enums"]["department"] | null
+          department_id: string | null
           email: string
           email_sent: boolean | null
           email_sent_at: string | null
@@ -2066,6 +2067,7 @@ export type Database = {
         }
         Insert: {
           department?: Database["public"]["Enums"]["department"] | null
+          department_id?: string | null
           email: string
           email_sent?: boolean | null
           email_sent_at?: string | null
@@ -2082,6 +2084,7 @@ export type Database = {
         }
         Update: {
           department?: Database["public"]["Enums"]["department"] | null
+          department_id?: string | null
           email?: string
           email_sent?: boolean | null
           email_sent_at?: string | null
@@ -2097,6 +2100,34 @@ export type Database = {
           used_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_invitations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "department_fee_analytics"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hod_department_summary"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "scholarship_summary"
+            referencedColumns: ["department_id"]
+          },
           {
             foreignKeyName: "user_invitations_invited_by_fkey"
             columns: ["invited_by"]

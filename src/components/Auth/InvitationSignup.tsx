@@ -73,7 +73,7 @@ const InvitationSignup = () => {
         return;
       }
 
-      // Set invitation data with proper structure
+      // Set invitation data with proper structure - using the correct field names
       const invitationInfo = {
         id: invitation.id,
         email: invitation.email,
