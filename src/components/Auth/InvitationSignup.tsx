@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../integrations/supabase/client';
@@ -73,7 +72,7 @@ const InvitationSignup = () => {
         return;
       }
 
-      // Set invitation data with proper structure - using the correct field names
+      // Set invitation data with proper structure - using the returned field names
       const invitationInfo = {
         id: invitation.id,
         email: invitation.email,
@@ -279,7 +278,7 @@ const InvitationSignup = () => {
           {invitationData && (
             <div className="text-center text-sm text-gray-600">
               <p>Invited as: <span className="font-semibold capitalize">{invitationData.role}</span></p>
-              <p>Department: <span className="font-semibold">{invitationData.department_name}</span></p>
+              <p>Department: <span className="font-semibold">{invitationData.department_name || invitationData.department_code}</span></p>
               {invitationData.employee_id && (
                 <p>Employee ID: <span className="font-semibold">{invitationData.employee_id}</span></p>
               )}
