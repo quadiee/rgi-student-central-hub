@@ -12,14 +12,15 @@ import AdminReportGenerator from './AdminReportGenerator';
 import BulkFeeActions from './BulkFeeActions';
 import EnhancedFeeAssignment from './EnhancedFeeAssignment';
 import { Button } from '../ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
+import ChairmanMobileHeader from '../Mobile/ChairmanMobileHeader';
+import ChairmanMobileTabs from '../Mobile/ChairmanMobileTabs';
+import { cn } from '../../lib/utils';
 
 const MobileFeeManagementHub: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('analytics');
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
-  const [showTabMenu, setShowTabMenu] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
   const [permissions, setPermissions] = useState({
@@ -48,7 +49,6 @@ const MobileFeeManagementHub: React.FC = () => {
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    setShowTabMenu(false);
   };
 
   const handleBulkUpdate = () => {
@@ -138,7 +138,6 @@ const MobileFeeManagementHub: React.FC = () => {
   };
 
   const tabs = getAllTabs();
-  const currentTab = tabs.find(tab => tab.id === activeTab);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -228,23 +227,29 @@ const MobileFeeManagementHub: React.FC = () => {
     );
   }
 
-  // Mobile-optimized version - removed duplicate header since EnhancedMobileLayout provides it
+  // Mobile-optimized version for Chairman
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Tab Selector and Refresh Button */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-lg border-b border-gray-200 px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-gray-700 flex items-center">
-              {currentTab?.icon && <currentTab.icon className={`w-4 h-4 mr-2 ${currentTab.color}`} />}
-              {currentTab?.label || 'Fee Management'}
-            </h3>
-            <p className="text-xs text-gray-500 truncate">
-              {currentTab?.description || 'Fee Management Hub'}
-            </p>
-          </div>
-          
-          <div className="flex items-center space-x-2 ml-2">
+    <div className={cn(
+      "min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50",
+      user?.role === 'chairman' ? 'pb-20' : 'pb-4'
+    )}>
+      {/* Enhanced Header for Chairman */}
+      {user?.role === 'chairman' ? (
+        <ChairmanMobileHeader
+          title="Fee Management"
+          subtitle="Institutional Fee Oversight"
+          onSearch={() => {}}
+          showNotifications={true}
+          notificationCount={5}
+        />
+      ) : (
+        // Standard header for other roles
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-lg border-b border-gray-200 px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">Fee Management</h1>
+              <p className="text-xs text-gray-600">Manage fee operations</p>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -254,73 +259,26 @@ const MobileFeeManagementHub: React.FC = () => {
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
-            
-            {/* Mobile Tab Selector */}
-            <Sheet open={showTabMenu} onOpenChange={setShowTabMenu}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Menu className="w-4 h-4 mr-2" />
-                  Sections
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="max-h-[60vh] pb-safe">
-                <div className="py-4">
-                  <h3 className="font-semibold text-gray-900 mb-4 text-center">
-                    Select Section
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {tabs.map(tab => {
-                      const Icon = tab.icon;
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <Button
-                          key={tab.id}
-                          variant={isActive ? "default" : "outline"}
-                          onClick={() => handleTabChange(tab.id)}
-                          className={`h-20 flex flex-col items-center justify-center gap-2 transition-all duration-200 ${
-                            isActive 
-                              ? user?.role === 'chairman' 
-                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
-                                : 'bg-blue-600 hover:bg-blue-700' 
-                              : 'hover:bg-gray-50 hover:border-gray-300'
-                          }`}
-                        >
-                          <Icon className={`w-5 h-5 ${
-                            isActive ? 'text-white' : tab.color
-                          }`} />
-                          <div className="text-center">
-                            <span className={`text-xs font-medium ${
-                              isActive ? 'text-white' : 'text-gray-700'
-                            }`}>
-                              {tab.label}
-                            </span>
-                            <p className={`text-xs ${
-                              isActive ? 'text-blue-100' : 'text-gray-500'
-                            }`}>
-                              {tab.description}
-                            </p>
-                          </div>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
-      </div>
+      )}
+      
+      {/* Enhanced Tabs for Chairman */}
+      <ChairmanMobileTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        title="Fee Management Sections"
+      />
 
-      {/* Mobile Content */}
-      <div className="flex-1 overflow-auto px-4 py-4">
-        <div className="animate-fade-in">
-          {renderTabContent()}
-        </div>
+      {/* Content */}
+      <div className="animate-fade-in">
+        {renderTabContent()}
       </div>
 
       {/* Chairman Role Indicator */}
       {user?.role === 'chairman' && (
-        <div className="sticky bottom-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-center shadow-lg">
+        <div className="fixed bottom-16 left-0 right-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-center shadow-lg">
           <div className="flex items-center justify-center space-x-2">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
             <p className="text-xs font-medium">Chairman's View • Read-Only Access</p>
