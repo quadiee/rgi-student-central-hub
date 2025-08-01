@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../integrations/supabase/client';
@@ -47,7 +48,6 @@ const InvitationSignup = () => {
     try {
       console.log('Validating invitation token:', token);
       
-      // Call the database function directly to validate the invitation
       const { data, error } = await supabase.rpc('validate_invitation_token', {
         p_token: token
       });
@@ -72,23 +72,8 @@ const InvitationSignup = () => {
         return;
       }
 
-      // Use type assertion to handle the mismatch between actual return and TypeScript types
-      const invitationWithDept = invitation as any;
-
-      // Set invitation data with proper structure - handle both old and new formats
-      const invitationInfo = {
-        id: invitation.id,
-        email: invitation.email,
-        role: invitation.role,
-        // Safely access properties using type assertion
-        department_id: invitationWithDept.department_id || null,
-        department_name: invitationWithDept.department_name || (invitation.department ? invitation.department : null),
-        department_code: invitationWithDept.department_code || (invitation.department ? invitation.department : null),
-        employee_id: invitation.employee_id,
-        roll_number: invitation.roll_number
-      };
-
-      setInvitationData(invitationInfo);
+      // Now the data structure is consistent from the database function
+      setInvitationData(invitation);
       setSignupForm(prev => ({ ...prev, email: invitation.email }));
       setStep('signup');
       
@@ -159,7 +144,7 @@ const InvitationSignup = () => {
 
       console.log('Completing profile for user:', user.id);
 
-      // Update user profile with proper department_id
+      // Update user profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -195,7 +180,7 @@ const InvitationSignup = () => {
               email: user.email,
               employeeId: invitationData.employee_id,
               name: profileForm.name,
-              designation: 'Faculty', // Default designation, can be updated later
+              designation: 'Faculty',
               departmentId: invitationData.department_id
             }
           }
@@ -203,7 +188,6 @@ const InvitationSignup = () => {
 
         if (facultyError) {
           console.error('Faculty profile creation error:', facultyError);
-          // Don't fail the entire process, just log the error
           toast.error('Profile created but faculty profile linking failed');
         } else if (facultyResult?.success) {
           console.log('Faculty profile created/linked successfully:', facultyResult);
@@ -223,7 +207,6 @@ const InvitationSignup = () => {
 
       toast.success('Profile completed successfully!');
       
-      // Redirect to appropriate dashboard
       setTimeout(() => {
         navigate('/dashboard');
       }, 1000);
@@ -282,7 +265,7 @@ const InvitationSignup = () => {
           {invitationData && (
             <div className="text-center text-sm text-gray-600">
               <p>Invited as: <span className="font-semibold capitalize">{invitationData.role}</span></p>
-              <p>Department: <span className="font-semibold">{invitationData.department_name || invitationData.department_code}</span></p>
+              <p>Department: <span className="font-semibold">{invitationData.department_name || invitationData.department_code || 'Not specified'}</span></p>
               {invitationData.employee_id && (
                 <p>Employee ID: <span className="font-semibold">{invitationData.employee_id}</span></p>
               )}
