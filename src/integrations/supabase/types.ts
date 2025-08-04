@@ -942,6 +942,20 @@ export type Database = {
             referencedRelation: "student_fee_summary"
             referencedColumns: ["student_id"]
           },
+          {
+            foreignKeyName: "faculty_profiles_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_profiles_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
         ]
       }
       faculty_qualifications: {
@@ -2014,6 +2028,352 @@ export type Database = {
           },
         ]
       }
+      student_attendance: {
+        Row: {
+          absent_periods: number
+          attendance_date: string
+          attendance_percentage: number | null
+          created_at: string | null
+          excused_periods: number
+          id: string
+          late_periods: number
+          leave_id: string | null
+          overall_status: string | null
+          present_periods: number
+          student_id: string
+          total_periods: number
+          updated_at: string | null
+        }
+        Insert: {
+          absent_periods?: number
+          attendance_date: string
+          attendance_percentage?: number | null
+          created_at?: string | null
+          excused_periods?: number
+          id?: string
+          late_periods?: number
+          leave_id?: string | null
+          overall_status?: string | null
+          present_periods?: number
+          student_id: string
+          total_periods?: number
+          updated_at?: string | null
+        }
+        Update: {
+          absent_periods?: number
+          attendance_date?: string
+          attendance_percentage?: number | null
+          created_at?: string | null
+          excused_periods?: number
+          id?: string
+          late_periods?: number
+          leave_id?: string | null
+          overall_status?: string | null
+          present_periods?: number
+          student_id?: string
+          total_periods?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
+      student_attendance_corrections: {
+        Row: {
+          admin_remarks: string | null
+          approval_date: string | null
+          approved_by: string | null
+          attendance_session_id: string
+          created_at: string | null
+          id: string
+          original_status: string
+          reason: string
+          request_date: string | null
+          requested_by: string
+          requested_status: string
+          status: string | null
+          student_id: string
+          supporting_documents: string[] | null
+        }
+        Insert: {
+          admin_remarks?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          attendance_session_id: string
+          created_at?: string | null
+          id?: string
+          original_status: string
+          reason: string
+          request_date?: string | null
+          requested_by: string
+          requested_status: string
+          status?: string | null
+          student_id: string
+          supporting_documents?: string[] | null
+        }
+        Update: {
+          admin_remarks?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          attendance_session_id?: string
+          created_at?: string | null
+          id?: string
+          original_status?: string
+          reason?: string
+          request_date?: string | null
+          requested_by?: string
+          requested_status?: string
+          status?: string | null
+          student_id?: string
+          supporting_documents?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_attendance_corrections_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_corrections_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "student_attendance_corrections_attendance_session_id_fkey"
+            columns: ["attendance_session_id"]
+            isOneToOne: false
+            referencedRelation: "student_attendance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_corrections_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_corrections_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "student_attendance_corrections_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_corrections_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
+      student_attendance_sessions: {
+        Row: {
+          actual_end_time: string | null
+          actual_start_time: string | null
+          class_section: string
+          created_at: string | null
+          faculty_id: string | null
+          id: string
+          marked_by: string | null
+          marking_method: string | null
+          period_number: number
+          remarks: string | null
+          scheduled_end_time: string
+          scheduled_start_time: string
+          session_date: string
+          status: string
+          student_id: string
+          subject_name: string
+          timetable_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
+          class_section: string
+          created_at?: string | null
+          faculty_id?: string | null
+          id?: string
+          marked_by?: string | null
+          marking_method?: string | null
+          period_number: number
+          remarks?: string | null
+          scheduled_end_time: string
+          scheduled_start_time: string
+          session_date: string
+          status?: string
+          student_id: string
+          subject_name: string
+          timetable_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
+          class_section?: string
+          created_at?: string | null
+          faculty_id?: string | null
+          id?: string
+          marked_by?: string | null
+          marking_method?: string | null
+          period_number?: number
+          remarks?: string | null
+          scheduled_end_time?: string
+          scheduled_start_time?: string
+          session_date?: string
+          status?: string
+          student_id?: string
+          subject_name?: string
+          timetable_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_attendance_sessions_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_sessions_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_sessions_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "student_attendance_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+          {
+            foreignKeyName: "student_attendance_sessions_timetable_id_fkey"
+            columns: ["timetable_id"]
+            isOneToOne: false
+            referencedRelation: "student_timetable"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_timetable: {
+        Row: {
+          academic_year: string
+          class_section: string
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          faculty_id: string | null
+          id: string
+          is_active: boolean | null
+          period_number: number
+          room_number: string | null
+          semester: number
+          start_time: string
+          student_id: string
+          subject_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year?: string
+          class_section: string
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          faculty_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          period_number: number
+          room_number?: string | null
+          semester: number
+          start_time: string
+          student_id: string
+          subject_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string
+          class_section?: string
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          faculty_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          period_number?: number
+          room_number?: string | null
+          semester?: number
+          start_time?: string
+          student_id?: string
+          subject_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_timetable_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_timetable_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_timetable_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_summary"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
       user_activity_logs: {
         Row: {
           activity_description: string
@@ -2577,6 +2937,23 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      get_student_with_attendance_details: {
+        Args: { p_user_id: string }
+        Returns: {
+          student_id: string
+          user_id: string
+          name: string
+          email: string
+          roll_number: string
+          department_name: string
+          year: number
+          semester: number
+          total_attendance_days: number
+          present_days: number
+          absent_days: number
+          attendance_percentage: number
+        }[]
+      }
       get_students_with_filters: {
         Args: {
           p_user_id: string
@@ -2635,6 +3012,10 @@ export type Database = {
       }
       update_daily_faculty_attendance: {
         Args: { p_faculty_id: string; p_date: string }
+        Returns: undefined
+      }
+      update_daily_student_attendance: {
+        Args: { p_student_id: string; p_date: string }
         Returns: undefined
       }
       user_has_permission: {
