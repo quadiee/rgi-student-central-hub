@@ -36,10 +36,7 @@ const StudentAttendanceOverview: React.FC = () => {
 
   useEffect(() => {
     fetchDepartments();
-    if (user) {
-      fetchStudentsWithAttendance();
-    }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -248,7 +245,9 @@ const StudentAttendanceOverview: React.FC = () => {
                 {attendanceRecords.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No attendance records found for this date
+                      No attendance records found for this date. 
+                      <br />
+                      <span className="text-sm">This is expected as the system is newly set up.</span>
                     </td>
                   </tr>
                 ) : (
@@ -303,7 +302,9 @@ const StudentAttendanceOverview: React.FC = () => {
                 {studentsWithAttendance.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No student data available
+                      No student attendance data available yet.
+                      <br />
+                      <span className="text-sm">Start marking attendance to see data here.</span>
                     </td>
                   </tr>
                 ) : (

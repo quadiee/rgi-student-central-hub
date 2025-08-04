@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../contexts/SupabaseAuthContext';
@@ -305,6 +304,14 @@ export const useStudentAttendance = () => {
       throw err;
     }
   };
+
+  // Initialize data fetch on component mount
+  useEffect(() => {
+    if (user) {
+      fetchStudentsWithAttendance();
+      fetchAttendanceRecords();
+    }
+  }, [user]);
 
   return {
     attendanceRecords,
