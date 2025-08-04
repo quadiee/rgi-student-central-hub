@@ -13,18 +13,16 @@ import { useStudentAttendance } from '../hooks/useStudentAttendance';
 const AttendanceHub: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const { facultyStats, loading: facultyLoading } = useFacultyStats();
+  const { stats: facultyStats, loading: facultyLoading } = useFacultyStats();
   const { studentsWithAttendance, loading: studentLoading } = useStudentAttendance();
 
   const canManageAttendance = user?.role && ['admin', 'principal', 'chairman', 'hod', 'faculty'].includes(user.role);
   const isStudent = user?.role === 'student';
 
   // Calculate real-time stats from actual data
-  const facultyPresentToday = facultyStats?.filter(f => f.attendance_percentage > 0).length || 0;
+  const facultyPresentToday = facultyStats?.faculty?.filter(f => (f.attendance_rate || 0) > 0).length || 0;
   const studentPresentToday = studentsWithAttendance?.filter(s => s.attendance_percentage > 0).length || 0;
-  const avgFacultyAttendance = facultyStats?.length > 0 
-    ? Math.round((facultyStats.reduce((sum, f) => sum + f.attendance_percentage, 0) / facultyStats.length)) 
-    : 0;
+  const avgFacultyAttendance = facultyStats?.avgAttendance || 0;
   const avgStudentAttendance = studentsWithAttendance?.length > 0 
     ? Math.round((studentsWithAttendance.reduce((sum, s) => sum + s.attendance_percentage, 0) / studentsWithAttendance.length)) 
     : 0;
@@ -84,15 +82,15 @@ const AttendanceHub: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm">Total Faculty</span>
-                        <span className="text-sm font-medium">{facultyStats?.length || 0}</span>
+                        <span className="text-sm font-medium">{facultyStats?.totalFaculty || 0}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm">Active Today</span>
-                        <span className="text-sm font-medium">{facultyPresentToday}</span>
+                        <span className="text-sm">Active Faculty</span>
+                        <span className="text-sm font-medium">{facultyStats?.activeFaculty || 0}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Average Attendance</span>
-                        <span className="text-sm font-medium">{avgFacultyAttendance}%</span>
+                        <span className="text-sm font-medium">{Math.round(avgFacultyAttendance)}%</span>
                       </div>
                     </div>
                   )}
