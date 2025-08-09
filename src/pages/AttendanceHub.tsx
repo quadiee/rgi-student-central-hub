@@ -20,11 +20,13 @@ const AttendanceHub: React.FC = () => {
   const isStudent = user?.role === 'student';
 
   // Calculate real-time stats from actual data
-  const facultyPresentToday = facultyStats?.faculty?.filter(f => (f.attendance_rate || 0) > 0).length || 0;
-  const studentPresentToday = studentsWithAttendance?.filter(s => s.attendance_percentage > 0).length || 0;
+  const totalFaculty = facultyStats?.totalFaculty || 0;
+  const activeFaculty = facultyStats?.activeFaculty || 0;
   const avgFacultyAttendance = facultyStats?.avgAttendance || 0;
-  const avgStudentAttendance = studentsWithAttendance?.length > 0 
-    ? Math.round((studentsWithAttendance.reduce((sum, s) => sum + s.attendance_percentage, 0) / studentsWithAttendance.length)) 
+  
+  const totalStudents = studentsWithAttendance?.length || 0;
+  const avgStudentAttendance = totalStudents > 0 
+    ? Math.round((studentsWithAttendance.reduce((sum, s) => sum + s.attendance_percentage, 0) / totalStudents)) 
     : 0;
   const lowAttendanceStudents = studentsWithAttendance?.filter(s => s.attendance_percentage < 75).length || 0;
 
@@ -82,11 +84,11 @@ const AttendanceHub: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm">Total Faculty</span>
-                        <span className="text-sm font-medium">{facultyStats?.totalFaculty || 0}</span>
+                        <span className="text-sm font-medium">{totalFaculty}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Active Faculty</span>
-                        <span className="text-sm font-medium">{facultyStats?.activeFaculty || 0}</span>
+                        <span className="text-sm font-medium">{activeFaculty}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Average Attendance</span>
@@ -115,7 +117,7 @@ const AttendanceHub: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm">Total Students</span>
-                        <span className="text-sm font-medium">{studentsWithAttendance?.length || 0}</span>
+                        <span className="text-sm font-medium">{totalStudents}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Average Attendance</span>

@@ -2,164 +2,104 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from './components/ui/sonner';
-import { useAuth } from './contexts/SupabaseAuthContext';
+import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
+import { Toaster } from './components/ui/toaster';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
-import AuthFlowManager from './components/Auth/AuthFlowManager';
+import SupabaseAuthPage from './components/Auth/SupabaseAuthPage';
 import ModernLayout from './components/Layout/ModernLayout';
 import Dashboard from './components/Dashboard/Dashboard';
+import AttendanceHub from './pages/AttendanceHub';
+import EnhancedFeeManagement from './components/Fees/EnhancedFeeManagement';
+import Students from './pages/Students';
+import Faculty from './pages/Faculty';
 import FacultyDashboard from './pages/FacultyDashboard';
-import StudentManagement from './components/Students/StudentManagement';
-import StreamlinedFacultyManagement from './components/Faculty/StreamlinedFacultyManagement';
-import FeeManagementHub from './components/Fees/FeeManagementHub';
-import UserManagementHub from './components/UserManagement/UserManagementHub';
-import ReportGenerator from './components/Reports/ReportGenerator';
-import AttendanceManagement from './components/Attendance/AttendanceManagement';
-import ExamManagement from './components/Exams/ExamManagement';
-import AdminPanel from './components/Admin/AdminPanel';
-import NotFound from './pages/NotFound';
+import UserManagement from './pages/UserManagement';
 import './App.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
       retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-function AppContent() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthFlowManager />;
-  }
-
-  return (
-    <Routes>
-      {/* Faculty has dedicated dashboard route */}
-      <Route
-        path="/faculty-dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['faculty']}>
-            <FacultyDashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* All other routes use ModernLayout */}
-      <Route path="/*" element={
-        <ModernLayout>
-          <Routes>
-            {/* Dashboard routes */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Management routes */}
-            <Route
-              path="/students"
-              element={
-                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
-                  <StudentManagement />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/faculty"
-              element={
-                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
-                  <StreamlinedFacultyManagement />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/fees"
-              element={
-                <ProtectedRoute>
-                  <FeeManagementHub />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/user-management"
-              element={
-                <ProtectedRoute allowedRoles={['principal', 'admin', 'chairman']}>
-                  <UserManagementHub />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin', 'chairman']}>
-                  <ReportGenerator />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/attendance"
-              element={
-                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
-                  <AttendanceManagement />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/exams"
-              element={
-                <ProtectedRoute allowedRoles={['hod', 'principal', 'admin']}>
-                  <ExamManagement />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={['principal', 'admin']}>
-                  <AdminPanel />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Catch all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </ModernLayout>
-      } />
-    </Routes>
-  );
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AppContent />
-        <Toaster />
-      </Router>
+      <SupabaseAuthProvider>
+        <Router>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/auth" element={<SupabaseAuthPage />} />
+            
+            {/* Protected routes with layout */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <ModernLayout>
+                  <Dashboard />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/attendance" element={
+              <ProtectedRoute>
+                <ModernLayout>
+                  <AttendanceHub />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/fees" element={
+              <ProtectedRoute>
+                <ModernLayout>
+                  <EnhancedFeeManagement />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/students" element={
+              <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
+                <ModernLayout>
+                  <Students />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/faculty" element={
+              <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
+                <ModernLayout>
+                  <Faculty />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/faculty-dashboard" element={
+              <ProtectedRoute allowedRoles={['faculty']}>
+                <ModernLayout>
+                  <FacultyDashboard />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/user-management" element={
+              <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman']}>
+                <ModernLayout>
+                  <UserManagement />
+                </ModernLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Redirect root to dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            {/* Catch all - redirect to dashboard */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </SupabaseAuthProvider>
     </QueryClientProvider>
   );
 }

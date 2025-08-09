@@ -1,259 +1,116 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, IndianRupee, AlertTriangle, Eye } from 'lucide-react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
-import { supabase } from '../../integrations/supabase/client';
-import { useToast } from '../ui/use-toast';
-import { Card, CardContent } from '../ui/card';
-import { formatCurrency } from '../../utils/feeValidation';
-import { usePaymentBreakdown } from '../../hooks/usePaymentBreakdown';
-import PaymentBreakdown from '../Fees/PaymentBreakdown';
-import DashboardFeeTypeWidget from './DashboardFeeTypeWidget';
-import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
 
-interface DashboardStats {
-  totalStudents: number;
-  totalRevenue: number;
-  totalOutstanding: number;
-  overdueStudents: number;
-  recentPaymentIds: string[];
-}
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Users, GraduationCap, DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
+import { useDashboardStats } from '../../hooks/useDashboardStats';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 
 const RealTimeStats: React.FC = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { 
-    selectedPaymentId, 
-    isShowingBreakdown, 
-    showPaymentBreakdown, 
-    hidePaymentBreakdown,
-    breadcrumbItems 
-  } = usePaymentBreakdown();
-  
-  const { getTotalStats } = useFeeTypeAnalytics();
-
-  useEffect(() => {
-    if (user) {
-      loadStats();
-    }
-  }, [user]);
-
-  const loadStats = async () => {
-    try {
-      setLoading(true);
-
-      // Get basic statistics
-      const { data: feeRecords, error: feeError } = await supabase
-        .from('fee_records')
-        .select(`
-          *,
-          profiles!student_id (
-            name,
-            roll_number,
-            departments:department_id (name)
-          )
-        `);
-
-      if (feeError) throw feeError;
-
-      // Get recent payments
-      const { data: recentPayments, error: paymentsError } = await supabase
-        .from('payment_transactions')
-        .select('id')
-        .eq('status', 'Success')
-        .order('processed_at', { ascending: false })
-        .limit(5);
-
-      if (paymentsError) throw paymentsError;
-
-      const uniqueStudentIds = new Set(feeRecords?.map(record => record.student_id).filter(Boolean));
-      const totalStudents = uniqueStudentIds.size;
-
-      const { data: payments } = await supabase
-        .from('payment_transactions')
-        .select('*')
-        .eq('status', 'Success');
-
-      const totalRevenue = payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
-      const totalOutstanding = feeRecords?.reduce((sum, record) => 
-        sum + (Number(record.final_amount) - Number(record.paid_amount || 0)), 0) || 0;
-
-      // Count overdue students
-      const overdueCount = feeRecords?.filter(record => 
-        record.status === 'Overdue' || 
-        (new Date(record.due_date) < new Date() && record.status !== 'Paid')
-      ).length || 0;
-
-      setStats({
-        totalStudents,
-        totalRevenue,
-        totalOutstanding,
-        overdueStudents: overdueCount,
-        recentPaymentIds: recentPayments?.map(p => p.id) || []
-      });
-    } catch (error) {
-      console.error('Error loading dashboard stats:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard statistics",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatClick = async (statType: string) => {
-    if (statType === 'revenue' && stats?.recentPaymentIds.length) {
-      // Show breakdown for most recent payment
-      const paymentId = stats.recentPaymentIds[0];
-      showPaymentBreakdown(paymentId, [
-        { label: 'Dashboard' },
-        { label: 'Revenue Breakdown' }
-      ]);
-    } else if (statType === 'outstanding') {
-      // For outstanding, we could show a different breakdown or list
-      toast({
-        title: "Outstanding Fees",
-        description: "Detailed breakdown coming soon",
-      });
-    }
-  };
-
-  if (isShowingBreakdown && selectedPaymentId) {
-    return (
-      <PaymentBreakdown
-        paymentId={selectedPaymentId}
-        onBack={hidePaymentBreakdown}
-        breadcrumbItems={breadcrumbItems}
-      />
-    );
-  }
+  const { stats, loading, error } = useDashboardStats();
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-16 bg-gray-200 rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-64 bg-gray-200 rounded"></div>
-              </CardContent>
-            </Card>
-          </div>
-          <div>
-            <Card className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-64 bg-gray-200 rounded"></div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="pb-2">
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-full"></div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
-  if (!stats) return null;
+  if (error) {
+    return (
+      <Card className="col-span-full">
+        <CardContent className="pt-6">
+          <div className="flex items-center text-red-600">
+            <AlertTriangle className="h-5 w-5 mr-2" />
+            <span>Error loading dashboard stats: {error}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const statsCards = [
+    {
+      title: 'Total Students',
+      value: stats.totalStudents.toLocaleString(),
+      icon: GraduationCap,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      description: 'Active students enrolled',
+      show: ['admin', 'principal', 'chairman', 'hod'].includes(user?.role || '')
+    },
+    {
+      title: 'Faculty Members',
+      value: stats.totalFaculty.toLocaleString(),
+      icon: Users,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      description: 'Active faculty members',
+      show: ['admin', 'principal', 'chairman', 'hod'].includes(user?.role || '')
+    },
+    {
+      title: 'Total Revenue',
+      value: formatCurrency(stats.totalRevenue),
+      icon: DollarSign,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      description: 'Fees collected',
+      show: ['admin', 'principal', 'chairman', 'hod'].includes(user?.role || '')
+    },
+    {
+      title: 'Pending Fees',
+      value: formatCurrency(stats.pendingFees),
+      icon: TrendingUp,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      description: 'Outstanding payments',
+      show: true // Show to all users
+    }
+  ];
+
+  const visibleStats = statsCards.filter(stat => stat.show);
 
   return (
-    <div className="space-y-6">
-      {/* Main Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Total Students */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalStudents}</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {visibleStats.map((stat) => (
+        <Card key={stat.title} className="relative overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center justify-between">
+              {stat.title}
+              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </div>
-              <Users className="w-8 h-8 text-blue-500" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {stat.value}
             </div>
+            <p className="text-xs text-gray-500">
+              {stat.description}
+            </p>
           </CardContent>
         </Card>
-
-        {/* Total Revenue - Clickable */}
-        <Card 
-          className="hover:shadow-lg transition-shadow cursor-pointer group"
-          onClick={() => handleStatClick('revenue')}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  Total Revenue
-                  <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-                </p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(stats.totalRevenue)}
-                </p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Outstanding Amount - Clickable */}
-        <Card 
-          className="hover:shadow-lg transition-shadow cursor-pointer group"
-          onClick={() => handleStatClick('outstanding')}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  Outstanding
-                  <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100" />
-                </p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {formatCurrency(stats.totalOutstanding)}
-                </p>
-              </div>
-              <IndianRupee className="w-8 h-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Overdue Students */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{stats.overdueStudents}</p>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Fee Type Analytics Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <DashboardFeeTypeWidget />
-        </div>
-        <div>
-          {/* Additional widget space for future enhancements */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center text-gray-500">
-                <p className="text-sm">Additional analytics widgets coming soon</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      ))}
     </div>
   );
 };
