@@ -2,6 +2,8 @@
 import React from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useIsMobile } from '../hooks/use-mobile';
+import EnhancedMobileLayout from '../components/Mobile/EnhancedMobileLayout';
+import ModernLayout from '../components/Layout/ModernLayout';
 import FacultyMobileDashboard from '../components/Mobile/dashboards/FacultyMobileDashboard';
 import FacultyDesktopDashboard from '../components/Faculty/FacultyDesktopDashboard';
 
@@ -20,13 +22,19 @@ const FacultyDashboard: React.FC = () => {
     );
   }
 
-  // Return components without additional layout wrappers
-  // ModernLayout/EnhancedMobileLayout is handled at the app level
   if (isMobile) {
-    return <FacultyMobileDashboard />;
+    return (
+      <EnhancedMobileLayout>
+        <FacultyMobileDashboard />
+      </EnhancedMobileLayout>
+    );
   }
 
-  return <FacultyDesktopDashboard />;
+  return (
+    <ModernLayout>
+      <FacultyDesktopDashboard />
+    </ModernLayout>
+  );
 };
 
 export default FacultyDashboard;
