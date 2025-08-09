@@ -34,7 +34,7 @@ export class RealFeeService {
     return await SupabaseFeeService.createFeeStructure(user, feeStructure);
   }
 
-  // Revenue and analytics methods
+  // Revenue and analytics methods - now using real Supabase data
   static async getTotalRevenue(user: User, dateRange?: { from: string; to: string }): Promise<number> {
     const permissions = this.getFeePermissions(user);
     
@@ -82,7 +82,7 @@ export class RealFeeService {
     return report.totalRevenue;
   }
 
-  // Fee calculation utilities
+  // Fee calculation utilities - these remain client-side for performance
   static calculateLateFee(originalAmount: number, dueDate: string, penaltyPercentage: number = 5): number {
     const today = new Date();
     const due = new Date(dueDate);
@@ -101,7 +101,7 @@ export class RealFeeService {
     return originalAmount - discountAmount + penaltyAmount;
   }
 
-  // Installment utilities
+  // Installment utilities - these remain client-side for performance
   static calculateInstallmentAmounts(totalAmount: number, numInstallments: number): number[] {
     const baseAmount = Math.floor(totalAmount / numInstallments * 100) / 100;
     const remainder = totalAmount - (baseAmount * (numInstallments - 1));
@@ -123,5 +123,33 @@ export class RealFeeService {
     }
     
     return dates;
+  }
+
+  // Real-time analytics methods
+  static async getRealTimeAnalytics(user: User) {
+    const permissions = this.getFeePermissions(user);
+    
+    if (!permissions.canGenerateReports) {
+      throw new Error('Insufficient permissions to view analytics');
+    }
+
+    try {
+      // This replaces any mock data with real backend calls
+      const [revenueReport, outstandingReport] = await Promise.all([
+        this.generateReport(user, { type: 'Revenue' }),
+        this.generateReport(user, { type: 'Outstanding' })
+      ]);
+
+      return {
+        totalRevenue: revenueReport.totalRevenue,
+        totalOutstanding: outstandingReport.totalOutstanding,
+        collectionRate: revenueReport.totalRevenue > 0 ? 
+          (revenueReport.totalRevenue / (revenueReport.totalRevenue + outstandingReport.totalOutstanding)) * 100 : 0,
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error fetching real-time analytics:', error);
+      throw error;
+    }
   }
 }
