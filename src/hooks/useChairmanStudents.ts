@@ -38,6 +38,7 @@ export const useChairmanStudents = () => {
       setError(null);
 
       // Get all students with their department and fee information
+      // Using the correct relationship specification to avoid ambiguity
       let query = supabase
         .from('profiles')
         .select(`
@@ -48,7 +49,7 @@ export const useChairmanStudents = () => {
           phone,
           email,
           department_id,
-          departments!inner (
+          departments!profiles_department_id_fkey (
             name,
             code
           ),
@@ -66,7 +67,16 @@ export const useChairmanStudents = () => {
 
       // Apply filters
       if (filters?.department && filters.department !== 'all') {
-        query = query.eq('departments.code', filters.department);
+        // First get the department ID from the code
+        const { data: deptData } = await supabase
+          .from('departments')
+          .select('id')
+          .eq('code', filters.department)
+          .single();
+        
+        if (deptData) {
+          query = query.eq('department_id', deptData.id);
+        }
       }
 
       if (filters?.semester && filters.semester !== 0) {
@@ -128,6 +138,7 @@ export const useChairmanStudents = () => {
         description: errorMessage,
         variant: "destructive"
       });
+      console.error('Error fetching students:', err);
     } finally {
       setLoading(false);
     }
