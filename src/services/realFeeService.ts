@@ -1,5 +1,6 @@
 
 import { supabase } from '../integrations/supabase/client';
+import { FeeRecord } from '../types';
 
 export interface DepartmentAnalytics {
   department_id: string;
@@ -36,23 +37,6 @@ export interface PaymentTrend {
   date: string;
   amount: number;
   count: number;
-}
-
-export interface FeeRecord {
-  id: string;
-  student_id: string;
-  semester: number;
-  original_amount: number;
-  discount_amount: number;
-  penalty_amount: number;
-  final_amount: number;
-  paid_amount: number;
-  status: string;
-  due_date: string;
-  academic_year: string;
-  fee_type_name?: string;
-  student_name?: string;
-  roll_number?: string;
 }
 
 export class RealFeeService {
@@ -106,7 +90,7 @@ export class RealFeeService {
     }
   }
 
-  static async getFeeRecords(filters?: any): Promise<FeeRecord[]> {
+  static async getFeeRecords(user: any): Promise<FeeRecord[]> {
     try {
       let query = supabase
         .from('fee_records')
@@ -116,16 +100,8 @@ export class RealFeeService {
           profiles!inner(name, roll_number)
         `);
 
-      if (filters?.studentId) {
-        query = query.eq('student_id', filters.studentId);
-      }
-
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-
-      if (filters?.semester) {
-        query = query.eq('semester', filters.semester);
+      if (user?.id) {
+        query = query.eq('student_id', user.id);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -135,21 +111,20 @@ export class RealFeeService {
         throw new Error(error.message);
       }
 
+      // Transform to match the expected FeeRecord interface
       return (data || []).map((record: any) => ({
         id: record.id,
-        student_id: record.student_id,
+        studentId: record.student_id,
+        feeType: record.fee_types?.name || 'Semester Fee',
+        amount: Number(record.final_amount),
+        dueDate: record.due_date,
+        paidDate: record.last_payment_date,
+        status: record.status === 'Paid' ? 'Paid' : 
+                record.status === 'Overdue' ? 'Overdue' : 'Pending',
         semester: record.semester,
-        original_amount: record.original_amount,
-        discount_amount: record.discount_amount || 0,
-        penalty_amount: record.penalty_amount || 0,
-        final_amount: record.final_amount,
-        paid_amount: record.paid_amount || 0,
-        status: record.status,
-        due_date: record.due_date,
-        academic_year: record.academic_year,
-        fee_type_name: record.fee_types?.name || 'Unknown',
-        student_name: record.profiles?.name || 'Unknown',
-        roll_number: record.profiles?.roll_number || 'N/A'
+        academicYear: record.academic_year,
+        paymentMethod: undefined,
+        receiptNumber: undefined
       }));
     } catch (error) {
       console.error('Failed to fetch fee records:', error);
@@ -157,23 +132,33 @@ export class RealFeeService {
     }
   }
 
-  static async processPayment(paymentData: {
-    feeRecordId: string;
-    amount: number;
-    paymentMethod: string;
-    studentId: string;
-  }): Promise<{ success: boolean; transactionId?: string; error?: string }> {
+  static async processPayment(
+    user: any,
+    paymentData: {
+      feeRecordId: string;
+      studentId: string;
+      amount: number;
+      paymentMethod: string;
+    }
+  ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     try {
+      // Validate payment method
+      const validPaymentMethods = ['Online', 'Cash', 'Cheque', 'DD', 'UPI', 'Scholarship'];
+      const paymentMethod = validPaymentMethods.includes(paymentData.paymentMethod) 
+        ? paymentData.paymentMethod as 'Online' | 'Cash' | 'Cheque' | 'DD' | 'UPI' | 'Scholarship'
+        : 'Online';
+
       const { data, error } = await supabase
         .from('payment_transactions')
         .insert({
           fee_record_id: paymentData.feeRecordId,
           student_id: paymentData.studentId,
           amount: paymentData.amount,
-          payment_method: paymentData.paymentMethod,
+          payment_method: paymentMethod,
           status: 'Success',
           receipt_number: `RCP-${Date.now()}`,
-          processed_at: new Date().toISOString()
+          processed_at: new Date().toISOString(),
+          processed_by: user?.id
         })
         .select()
         .single();
@@ -241,17 +226,15 @@ export class RealFeeService {
 
   static async getOverallStats() {
     try {
-      // Use maybeSingle() instead of single() for safety
+      // Use aggregate queries for better performance
       const { data: feeStats, error: feeError } = await supabase
         .from('fee_records')
-        .select('final_amount, paid_amount, status')
-        .maybeSingle();
+        .select('final_amount, paid_amount, status');
 
       const { data: paymentStats, error: paymentError } = await supabase
         .from('payment_transactions')
-        .select('amount, status')
-        .eq('status', 'Success')
-        .maybeSingle();
+        .select('amount')
+        .eq('status', 'Success');
 
       if (feeError && feeError.code !== 'PGRST116') {
         console.error('Error fetching fee stats:', feeError);
@@ -263,13 +246,17 @@ export class RealFeeService {
         throw new Error(paymentError.message);
       }
 
-      // Provide safe fallbacks
+      // Calculate totals
+      const totalRevenue = (paymentStats || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
+      const totalFees = (feeStats || []).reduce((sum, fee) => sum + Number(fee.final_amount), 0);
+      const totalPaid = (feeStats || []).reduce((sum, fee) => sum + Number(fee.paid_amount || 0), 0);
+      const pendingAmount = totalFees - totalPaid;
+      const collectionRate = totalFees > 0 ? (totalPaid / totalFees) * 100 : 0;
+
       return {
-        totalRevenue: paymentStats?.amount || 0,
-        pendingAmount: (feeStats?.final_amount || 0) - (feeStats?.paid_amount || 0),
-        collectionRate: feeStats?.final_amount > 0 
-          ? ((feeStats.paid_amount || 0) / feeStats.final_amount) * 100 
-          : 0
+        totalRevenue,
+        pendingAmount,
+        collectionRate
       };
     } catch (error) {
       console.error('Failed to fetch overall stats:', error);

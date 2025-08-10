@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -32,7 +31,7 @@ interface ChairmanFacultyManagementProps {
 }
 
 const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ className }) => {
-  const { stats, loading, error, fetchStats } = useFacultyStats();
+  const { stats, loading, error, refetch } = useFacultyStats();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedExperience, setSelectedExperience] = useState('all');
@@ -157,7 +156,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-6 text-center">
               <p className="text-red-600">{error}</p>
-              <Button onClick={fetchStats} className="mt-4">Retry</Button>
+              <Button onClick={refetch} className="mt-4">Retry</Button>
             </CardContent>
           </Card>
         </div>
@@ -324,6 +323,10 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
         );
     }
   };
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   return (
     <div className={cn("min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50", className)}>
