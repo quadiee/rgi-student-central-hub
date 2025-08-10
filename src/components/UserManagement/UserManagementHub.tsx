@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Users, UserPlus, Download, Upload, Settings, Filter } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -10,28 +9,23 @@ import UserCreationModal from './UserCreationModal';
 import BulkUserOperations from './BulkUserOperations';
 import UserInvitationManager from './UserInvitationManager';
 import UserAnalytics from './UserAnalytics';
-
 const UserManagementHub: React.FC = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
   const handleDataChange = () => {
     setRefreshTrigger(prev => prev + 1);
   };
-
   if (!user || !['admin', 'principal', 'chairman'].includes(user.role || '')) {
-    return (
-      <div className="flex items-center justify-center h-64">
+    return <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <p className="text-gray-600">Access denied. Admin privileges required.</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">User Management System</h1>
         <div className="text-sm text-gray-600">
@@ -106,31 +100,19 @@ const UserManagementHub: React.FC = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 px-0">
             <UserCreationModal onUserCreated={handleDataChange} />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full justify-start"
-              onClick={() => setActiveTab('invitations')}
-            >
+            <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setActiveTab('invitations')}>
               <UserPlus className="w-4 h-4 mr-2" />
               Send Invitations
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full justify-start"
-              onClick={() => setActiveTab('bulk-ops')}
-            >
+            <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setActiveTab('bulk-ops')}>
               <Settings className="w-4 h-4 mr-2" />
               Bulk Operations
             </Button>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default UserManagementHub;
