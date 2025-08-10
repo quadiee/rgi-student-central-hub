@@ -11,7 +11,6 @@ import { Calendar, Clock, Users, CheckCircle, XCircle, AlertTriangle, Plus, Down
 import { useStudentAttendance } from '../../hooks/useStudentAttendance';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useToast } from '../ui/use-toast';
-import { supabase } from '../../integrations/supabase/client';
 
 const StudentAttendanceManagement: React.FC = () => {
   const { user } = useAuth();
@@ -40,8 +39,8 @@ const StudentAttendanceManagement: React.FC = () => {
 
   useEffect(() => {
     // Extract unique classes and subjects from sessions
-    const uniqueClasses = [...new Set(attendanceSessions.map(s => s.class_section))];
-    const uniqueSubjects = [...new Set(attendanceSessions.map(s => s.subject_name))];
+    const uniqueClasses = [...new Set(attendanceSessions.map(s => s.class_section).filter(Boolean))];
+    const uniqueSubjects = [...new Set(attendanceSessions.map(s => s.subject_name).filter(Boolean))];
     setClasses(uniqueClasses);
     setSubjects(uniqueSubjects);
   }, [attendanceSessions]);

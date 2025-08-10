@@ -21,7 +21,7 @@ interface AttendanceStats {
 
 const StudentAttendanceOverview: React.FC = () => {
   const { user } = useAuth();
-  const { attendanceRecords, studentsWithAttendance, loading, fetchAttendanceRecords, fetchStudentsWithAttendance } = useStudentAttendance();
+  const { attendanceRecords, studentsWithAttendance, loading, fetchAttendanceRecords, refetch } = useStudentAttendance();
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats>({
     totalStudents: 0,
     presentToday: 0,
@@ -118,7 +118,7 @@ const StudentAttendanceOverview: React.FC = () => {
         <Button 
           onClick={() => {
             fetchAttendanceRecords(selectedDate, departmentFilter !== 'all' ? departmentFilter : undefined);
-            fetchStudentsWithAttendance();
+            refetch();
           }}
           variant="outline"
         >

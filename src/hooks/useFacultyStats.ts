@@ -8,11 +8,20 @@ export interface FacultyStats {
   totalFaculty: number;
   activeFaculty: number;
   avgAttendance: number;
+  totalDepartments: number;
+  avgExperience: number;
+  seniorFaculty: number;
+  excellentPerformers: number;
+  topPerformers: number;
+  faculty: any[];
   departmentStats: {
-    departmentName: string;
-    facultyCount: number;
-    avgAttendance: number;
-  }[];
+    [key: string]: {
+      total: number;
+      active: number;
+      avgExperience: number;
+      code: string;
+    };
+  };
 }
 
 export const useFacultyStats = () => {
@@ -22,7 +31,13 @@ export const useFacultyStats = () => {
     totalFaculty: 0,
     activeFaculty: 0,
     avgAttendance: 0,
-    departmentStats: []
+    totalDepartments: 0,
+    avgExperience: 0,
+    seniorFaculty: 0,
+    excellentPerformers: 0,
+    topPerformers: 0,
+    faculty: [],
+    departmentStats: {}
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +53,7 @@ export const useFacultyStats = () => {
       setLoading(true);
       setError(null);
 
-      // Use the existing function to get faculty with details
+      // Fetch faculty with details
       const { data: facultyData, error: facultyError } = await supabase
         .rpc('get_faculty_with_details', { p_user_id: user.id });
 
@@ -48,39 +63,66 @@ export const useFacultyStats = () => {
 
       const facultyList = facultyData || [];
       
-      // Calculate basic stats
+      // Fetch departments
+      const { data: departmentData, error: deptError } = await supabase
+        .from('departments')
+        .select('id, name, code')
+        .eq('is_active', true);
+
+      if (deptError) {
+        console.error('Error fetching departments:', deptError);
+      }
+
+      const departments = departmentData || [];
+
+      // Calculate stats
       const totalFaculty = facultyList.length;
       const activeFaculty = facultyList.filter((f: any) => f.is_active).length;
       const avgAttendance = totalFaculty > 0 
         ? facultyList.reduce((sum: number, f: any) => sum + (f.attendance_percentage || 0), 0) / totalFaculty
         : 0;
 
-      // Calculate department-wise stats
-      const departmentMap = new Map();
-      facultyList.forEach((faculty: any) => {
-        const deptName = faculty.department_name || 'Unknown';
-        if (!departmentMap.has(deptName)) {
-          departmentMap.set(deptName, {
-            departmentName: deptName,
-            facultyCount: 0,
-            totalAttendance: 0
-          });
-        }
-        const dept = departmentMap.get(deptName);
-        dept.facultyCount++;
-        dept.totalAttendance += faculty.attendance_percentage || 0;
-      });
+      // Calculate experience stats
+      const experienceValues = facultyList
+        .map((f: any) => f.years_of_experience || 0)
+        .filter((exp: number) => exp > 0);
+      
+      const avgExperience = experienceValues.length > 0
+        ? experienceValues.reduce((sum: number, exp: number) => sum + exp, 0) / experienceValues.length
+        : 0;
 
-      const departmentStats = Array.from(departmentMap.values()).map((dept: any) => ({
-        departmentName: dept.departmentName,
-        facultyCount: dept.facultyCount,
-        avgAttendance: dept.facultyCount > 0 ? dept.totalAttendance / dept.facultyCount : 0
-      }));
+      const seniorFaculty = facultyList.filter((f: any) => (f.years_of_experience || 0) >= 10).length;
+      const excellentPerformers = facultyList.filter((f: any) => (f.attendance_percentage || 0) >= 95).length;
+      const topPerformers = facultyList.filter((f: any) => (f.attendance_percentage || 0) >= 90).length;
+
+      // Calculate department-wise stats
+      const departmentStats: { [key: string]: any } = {};
+      departments.forEach((dept: any) => {
+        const deptFaculty = facultyList.filter((f: any) => f.department_id === dept.id);
+        const deptExperience = deptFaculty
+          .map((f: any) => f.years_of_experience || 0)
+          .filter((exp: number) => exp > 0);
+        
+        departmentStats[dept.name] = {
+          total: deptFaculty.length,
+          active: deptFaculty.filter((f: any) => f.is_active).length,
+          avgExperience: deptExperience.length > 0
+            ? deptExperience.reduce((sum: number, exp: number) => sum + exp, 0) / deptExperience.length
+            : 0,
+          code: dept.code
+        };
+      });
 
       setStats({
         totalFaculty,
         activeFaculty,
         avgAttendance,
+        totalDepartments: departments.length,
+        avgExperience,
+        seniorFaculty,
+        excellentPerformers,
+        topPerformers,
+        faculty: facultyList,
         departmentStats
       });
 
