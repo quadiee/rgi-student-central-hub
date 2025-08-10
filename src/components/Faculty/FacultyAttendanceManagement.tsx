@@ -1,344 +1,325 @@
 
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/SupabaseAuthContext';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
-import { Calendar, Clock, Users, FileSpreadsheet, Camera, CheckCircle, XCircle, AlertCircle, Upload } from 'lucide-react';
-import { useIsMobile } from '../../hooks/use-mobile';
+import { Calendar, Users, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useFacultyAttendance } from '../../hooks/useFacultyAttendance';
+import { useToast } from '../ui/use-toast';
+import { format } from 'date-fns';
 
 const FacultyAttendanceManagement: React.FC = () => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [activeTab, setActiveTab] = useState('daily');
+  const { toast } = useToast();
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedFaculty, setSelectedFaculty] = useState<string>('all');
+  
+  const {
+    attendanceRecords,
+    attendanceSessions,
+    enhancedFacultyList,
+    loading,
+    error,
+    fetchAttendanceRecords,
+    fetchAttendanceSessions,
+    fetchEnhancedFacultyList,
+    markAttendance
+  } = useFacultyAttendance();
 
-  const attendanceStats = [
-    {
-      title: 'Present Today',
-      value: '42',
-      total: '45',
-      percentage: '93%',
-      icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      title: 'Absent Today',
-      value: '2',
-      total: '45',
-      percentage: '4%',
-      icon: XCircle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50'
-    },
-    {
-      title: 'Late Arrivals',
-      value: '3',
-      total: '45',
-      percentage: '7%',
-      icon: AlertCircle,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50'
-    },
-    {
-      title: 'On Leave',
-      value: '1',
-      total: '45',
-      percentage: '2%',
-      icon: Calendar,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+  useEffect(() => {
+    fetchEnhancedFacultyList();
+    fetchAttendanceRecords(selectedDate);
+    fetchAttendanceSessions(selectedDate);
+  }, [selectedDate]);
+
+  const handleMarkAttendance = async (sessionId: string, status: string) => {
+    try {
+      await markAttendance(sessionId, status, new Date().toISOString().split('T')[1].substring(0, 8));
+      toast({
+        title: "Success",
+        description: "Attendance marked successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to mark attendance",
+        variant: "destructive"
+      });
     }
-  ];
+  };
 
-  const mockAttendanceData = [
-    {
-      id: '1',
-      facultyName: 'Dr. Sarah Johnson',
-      employeeCode: 'EMP001',
-      department: 'Computer Science',
-      firstPunch: '09:00 AM',
-      lastPunch: '05:30 PM',
-      totalHours: '8h 30m',
-      status: 'Present',
-      periods: { total: 6, present: 6, absent: 0 }
-    },
-    {
-      id: '2',
-      facultyName: 'Prof. Michael Chen',
-      employeeCode: 'EMP002',
-      department: 'Mathematics',
-      firstPunch: '09:15 AM',
-      lastPunch: '05:45 PM',
-      totalHours: '8h 30m',
-      status: 'Late',
-      periods: { total: 5, present: 5, absent: 0 }
-    },
-    {
-      id: '3',
-      facultyName: 'Dr. Emily Davis',
-      employeeCode: 'EMP003',
-      department: 'Physics',
-      firstPunch: '-',
-      lastPunch: '-',
-      totalHours: '-',
-      status: 'On Leave',
-      periods: { total: 4, present: 0, absent: 4 }
-    }
-  ];
-
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Present':
-        return <Badge className="bg-green-100 text-green-800">Present</Badge>;
-      case 'Absent':
-        return <Badge className="bg-red-100 text-red-800">Absent</Badge>;
-      case 'Late':
-        return <Badge className="bg-yellow-100 text-yellow-800">Late</Badge>;
-      case 'On Leave':
-        return <Badge className="bg-blue-100 text-blue-800">On Leave</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+      case 'Present': return 'text-green-600 bg-green-50';
+      case 'Absent': return 'text-red-600 bg-red-50';
+      case 'Late': return 'text-yellow-600 bg-yellow-50';
+      case 'On Leave': return 'text-blue-600 bg-blue-50';
+      default: return 'text-gray-600 bg-gray-50';
     }
   };
 
-  const handleExcelUpload = () => {
-    // Implementation for Excel upload
-    console.log('Excel upload functionality');
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Present': return CheckCircle;
+      case 'Absent': return XCircle;
+      case 'Late': return AlertCircle;
+      default: return Clock;
+    }
   };
 
-  const handleFacialRecognitionSync = () => {
-    // Implementation for facial recognition sync
-    console.log('Facial recognition sync functionality');
-  };
+  if (error) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
+            <p className="text-gray-600">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Faculty Attendance</h2>
-          <p className="text-muted-foreground">
-            Track and manage faculty attendance with multiple integration options
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900">Faculty Attendance Management</h2>
+          <p className="text-gray-600">Track and manage faculty attendance records</p>
         </div>
+        
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExcelUpload}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Excel Upload
-          </Button>
-          <Button variant="outline" onClick={handleFacialRecognitionSync}>
-            <Camera className="h-4 w-4 mr-2" />
-            Sync Facial Recognition
-          </Button>
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-40"
+          />
+          <Select value={selectedFaculty} onValueChange={setSelectedFaculty}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select Faculty" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Faculty</SelectItem>
+              {enhancedFacultyList.map((faculty) => (
+                <SelectItem key={faculty.faculty_id} value={faculty.faculty_id}>
+                  {faculty.name} ({faculty.employee_code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="cse">Computer Science</SelectItem>
-                  <SelectItem value="ece">Electronics & Communication</SelectItem>
-                  <SelectItem value="mech">Mechanical</SelectItem>
-                  <SelectItem value="civil">Civil</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">
-                Filter Results
-              </Button>
-            </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Faculty</p>
+                    <p className="text-2xl font-bold text-gray-900">{enhancedFacultyList.length}</p>
+                  </div>
+                  <Users className="w-8 h-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Present Today</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {attendanceRecords.filter(r => r.overall_status === 'Present').length}
+                    </p>
+                  </div>
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Absent Today</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {attendanceRecords.filter(r => r.overall_status === 'Absent').length}
+                    </p>
+                  </div>
+                  <XCircle className="w-8 h-8 text-red-600" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">On Leave</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {attendanceRecords.filter(r => r.overall_status === 'On Leave').length}
+                    </p>
+                  </div>
+                  <Calendar className="w-8 h-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {attendanceStats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {stat.value}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      /{stat.total}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {stat.percentage}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Attendance Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-          <TabsTrigger value="daily">Daily View</TabsTrigger>
-          <TabsTrigger value="sessions">Session View</TabsTrigger>
-          <TabsTrigger value="corrections">Corrections</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="daily">
+          {/* Daily Attendance Records */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Daily Attendance - {selectedDate}
+                <Calendar className="w-5 h-5" />
+                Daily Attendance Summary - {format(new Date(selectedDate), 'PPP')}
               </CardTitle>
-              <CardDescription>
-                Overall attendance summary for all faculty members
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-4">Faculty</th>
-                      <th className="text-left p-4">Employee Code</th>
-                      <th className="text-left p-4">Department</th>
-                      <th className="text-left p-4">First Punch</th>
-                      <th className="text-left p-4">Last Punch</th>
-                      <th className="text-left p-4">Total Hours</th>
-                      <th className="text-left p-4">Periods</th>
-                      <th className="text-left p-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockAttendanceData.map((record) => (
-                      <tr key={record.id} className="border-b hover:bg-muted/50">
-                        <td className="p-4 font-medium">{record.facultyName}</td>
-                        <td className="p-4">{record.employeeCode}</td>
-                        <td className="p-4">{record.department}</td>
-                        <td className="p-4">{record.firstPunch}</td>
-                        <td className="p-4">{record.lastPunch}</td>
-                        <td className="p-4">{record.totalHours}</td>
-                        <td className="p-4">
-                          <span className="text-sm">
-                            {record.periods.present}/{record.periods.total}
-                          </span>
-                        </td>
-                        <td className="p-4">{getStatusBadge(record.status)}</td>
+              {attendanceRecords.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No attendance records found for this date</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Faculty</th>
+                        <th className="text-left py-2">Department</th>
+                        <th className="text-center py-2">Total Periods</th>
+                        <th className="text-center py-2">Present</th>
+                        <th className="text-center py-2">Absent</th>
+                        <th className="text-center py-2">Status</th>
+                        <th className="text-center py-2">Working Hours</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {attendanceRecords.map((record) => {
+                        const StatusIcon = getStatusIcon(record.overall_status);
+                        return (
+                          <tr key={record.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3">
+                              <div>
+                                <p className="font-medium text-gray-900">{record.faculty_name}</p>
+                                <p className="text-sm text-gray-600">{record.employee_code}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 text-gray-900">{record.department_name}</td>
+                            <td className="py-3 text-center">{record.total_periods}</td>
+                            <td className="py-3 text-center text-green-600">{record.present_periods}</td>
+                            <td className="py-3 text-center text-red-600">{record.absent_periods}</td>
+                            <td className="py-3 text-center">
+                              <Badge className={getStatusColor(record.overall_status)}>
+                                <StatusIcon className="w-3 h-3 mr-1" />
+                                {record.overall_status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 text-center">
+                              {record.total_working_hours || 'N/A'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="sessions">
+          {/* Session-wise Attendance */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+                <Clock className="w-5 h-5" />
                 Session-wise Attendance
               </CardTitle>
-              <CardDescription>
-                Period-wise attendance tracking for individual classes
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Session View</h3>
-                <p className="text-muted-foreground">
-                  Detailed session-wise attendance tracking will be displayed here.
-                </p>
-              </div>
+              {attendanceSessions.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No sessions found for this date</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {attendanceSessions.map((session) => {
+                    const StatusIcon = getStatusIcon(session.status);
+                    return (
+                      <div key={session.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <p className="font-medium text-gray-900">{session.faculty_name}</p>
+                                <p className="text-sm text-gray-600">{session.employee_code}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  Period {session.period_number} - {session.subject_name}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {session.class_section} | {session.scheduled_start_time} - {session.scheduled_end_time}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getStatusColor(session.status)}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {session.status}
+                            </Badge>
+                            {session.status === 'Scheduled' && user?.role !== 'student' && (
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleMarkAttendance(session.id, 'Present')}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  Present
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleMarkAttendance(session.id, 'Absent')}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  Absent
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {session.actual_start_time && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            Actual: {session.actual_start_time} - {session.actual_end_time}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="corrections">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Attendance Corrections
-              </CardTitle>
-              <CardDescription>
-                Manage attendance correction requests and approvals
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Correction Requests</h3>
-                <p className="text-muted-foreground">
-                  All attendance correction requests will appear here.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5" />
-                Attendance Reports
-              </CardTitle>
-              <CardDescription>
-                Generate and download attendance reports
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-                  <FileSpreadsheet className="h-8 w-8" />
-                  <span>Monthly Report</span>
-                  <span className="text-sm text-muted-foreground">Download Excel</span>
-                </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-                  <Calendar className="h-8 w-8" />
-                  <span>Custom Range</span>
-                  <span className="text-sm text-muted-foreground">Select dates</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </>
+      )}
     </div>
   );
 };

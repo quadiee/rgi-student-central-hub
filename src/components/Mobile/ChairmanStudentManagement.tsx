@@ -7,26 +7,26 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { 
   Search, 
-  Filter, 
   Users, 
-  GraduationCap,
   TrendingUp,
-  Download,
   Eye,
-  Calendar,
-  MapPin,
-  BookOpen,
-  Star,
   CreditCard,
   CheckCircle,
   AlertCircle,
-  XCircle
+  XCircle,
+  Star,
+  BookOpen,
+  MapPin
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
 import ChairmanMobileHeader from './ChairmanMobileHeader';
 import ChairmanMobileStatsGrid from './ChairmanMobileStatsGrid';
 import ChairmanMobileTabs from './ChairmanMobileTabs';
+import { useChairmanStudents } from '../../hooks/useChairmanStudents';
+import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
+import { useScholarshipStats } from '../../hooks/useScholarshipStats';
+import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
 
 interface ChairmanStudentManagementProps {
   className?: string;
@@ -38,47 +38,59 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [selectedFeeStatus, setSelectedFeeStatus] = useState('all');
   const [activeSection, setActiveSection] = useState('overview');
-  const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual data fetching
-  const stats = [
-    {
-      title: 'Total Students',
-      value: '2,847',
-      subtitle: '2,689 active',
-      icon: Users,
-      trend: { value: 5, direction: 'up' as const, period: 'vs last sem' },
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Fee Collection',
-      value: '87.3%',
-      subtitle: '₹1.2Cr collected',
-      icon: CreditCard,
-      trend: { value: 12, direction: 'up' as const, period: 'vs last month' },
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      title: 'Academic Performance',
-      value: '92.1%',
-      subtitle: 'Pass percentage',
-      icon: TrendingUp,
-      trend: { value: 3, direction: 'up' as const, period: 'vs last year' },
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      title: 'Scholarships',
-      value: '347',
-      subtitle: '₹28L awarded',
-      icon: Star,
-      trend: { value: 18, direction: 'up' as const, period: 'vs last year' },
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
-    }
-  ];
+  const { students, loading: studentsLoading, fetchStudents } = useChairmanStudents();
+  const { stats: institutionalStats, loading: statsLoading } = useInstitutionalStats();
+  const { stats: scholarshipStats, loading: scholarshipLoading } = useScholarshipStats();
+  const { analytics: feeAnalytics } = useFeeTypeAnalytics();
+
+  const loading = studentsLoading || statsLoading || scholarshipLoading;
+
+  // Calculate real stats from data
+  const realStats = React.useMemo(() => {
+    const totalFees = feeAnalytics.reduce((sum, item) => sum + (item.total_fees || 0), 0);
+    const totalCollected = feeAnalytics.reduce((sum, item) => sum + (item.total_collected || 0), 0);
+    const collectionRate = totalFees > 0 ? (totalCollected / totalFees) * 100 : 0;
+
+    return [
+      {
+        title: 'Total Students',
+        value: institutionalStats.totalStudents.toString(),
+        subtitle: `${institutionalStats.activeStudents} active`,
+        icon: Users,
+        trend: { value: 5, direction: 'up' as const, period: 'vs last sem' },
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50'
+      },
+      {
+        title: 'Fee Collection',
+        value: `${Math.round(collectionRate)}%`,
+        subtitle: `₹${Math.round(totalCollected / 10000000)}Cr collected`,
+        icon: CreditCard,
+        trend: { value: 12, direction: 'up' as const, period: 'vs last month' },
+        color: 'text-green-600',
+        bgColor: 'bg-green-50'
+      },
+      {
+        title: 'Academic Performance',
+        value: '92.1%',
+        subtitle: 'Pass percentage',
+        icon: TrendingUp,
+        trend: { value: 3, direction: 'up' as const, period: 'vs last year' },
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50'
+      },
+      {
+        title: 'Scholarships',
+        value: scholarshipStats.scholarshipStudents.toString(),
+        subtitle: `₹${Math.round(scholarshipStats.totalReceivedAmount / 100000)}L awarded`,
+        icon: Star,
+        trend: { value: 18, direction: 'up' as const, period: 'vs last year' },
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50'
+      }
+    ];
+  }, [institutionalStats, scholarshipStats, feeAnalytics]);
 
   const sections = [
     {
@@ -90,70 +102,50 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       count: undefined
     },
     {
-      id: 'academics',
-      label: 'Academics',
-      icon: BookOpen,
-      description: 'Academic performance',
-      color: 'text-green-600',
-      count: 2847
-    },
-    {
-      id: 'fees',
-      label: 'Fee Status',
-      icon: CreditCard,
-      description: 'Fee collection status',
-      color: 'text-purple-600',
-      count: 362
-    },
-    {
-      id: 'scholarships',
-      label: 'Scholarships',
-      icon: Star,
-      description: 'Scholarship management',
-      color: 'text-orange-600',
-      count: 347
-    },
-    {
       id: 'directory',
       label: 'Directory',
       icon: Users,
       description: 'Student directory',
       color: 'text-indigo-600',
-      count: undefined
+      count: students.length
     }
   ];
 
-  const mockStudents = [
-    {
-      id: '1',
-      name: 'Rajesh Kumar',
-      rollNumber: '21CSE001',
-      department: 'CSE',
-      semester: 6,
-      feeStatus: 'Paid',
-      academicPerformance: 89.5,
-      scholarships: ['Merit Scholarship'],
-      phone: '+91 98765 43210',
-      email: 'rajesh.kumar@student.rgce.edu.in'
-    },
-    {
-      id: '2',
-      name: 'Priya Sharma',
-      rollNumber: '21ECE015',
-      department: 'ECE',
-      semester: 6,
-      feeStatus: 'Pending',
-      academicPerformance: 94.2,
-      scholarships: ['Merit Scholarship', 'Government Scholarship'],
-      phone: '+91 87654 32109',
-      email: 'priya.sharma@student.rgce.edu.in'
-    }
-  ];
+  // Department breakdown with real data
+  const departmentBreakdown = React.useMemo(() => {
+    const deptStats = students.reduce((acc, student) => {
+      if (!acc[student.department]) {
+        acc[student.department] = {
+          code: student.department,
+          students: 0,
+          feeCollection: 0,
+          totalPaid: 0,
+          totalStudents: 0
+        };
+      }
+      acc[student.department].students += 1;
+      acc[student.department].totalStudents += 1;
+      if (student.feeStatus === 'Paid') {
+        acc[student.department].totalPaid += 1;
+      }
+      return acc;
+    }, {} as any);
+
+    return Object.values(deptStats).map((dept: any) => ({
+      ...dept,
+      feeCollection: dept.totalStudents > 0 ? Math.round((dept.totalPaid / dept.totalStudents) * 100) : 0
+    }));
+  }, [students]);
 
   useEffect(() => {
-    // Simulate data loading
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
+    // Apply filters when they change
+    fetchStudents({
+      department: selectedDepartment,
+      semester: selectedSemester === 'all' ? undefined : parseInt(selectedSemester),
+      feeStatus: selectedFeeStatus,
+      searchTerm: searchTerm.trim() || undefined
+    });
+  }, [selectedDepartment, selectedSemester, selectedFeeStatus, searchTerm]);
 
   const getFeeStatusColor = (status: string) => {
     switch (status) {
@@ -188,10 +180,10 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       case 'overview':
         return (
           <div className="p-4 space-y-6">
-            <ChairmanMobileStatsGrid stats={stats} />
+            <ChairmanMobileStatsGrid stats={realStats} />
             
             {/* Department-wise Breakdown */}
-            <Card className="shadow-lg">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <MapPin className="w-5 h-5 text-blue-600" />
@@ -200,16 +192,10 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {[
-                    { dept: 'Computer Science & Engineering', code: 'CSE', students: 847, feeCollection: 92.3 },
-                    { dept: 'Electronics & Communication', code: 'ECE', students: 623, feeCollection: 89.1 },
-                    { dept: 'Mechanical Engineering', code: 'MECH', students: 567, feeCollection: 84.7 },
-                    { dept: 'Civil Engineering', code: 'CIVIL', students: 489, feeCollection: 91.2 },
-                    { dept: 'Electrical Engineering', code: 'EEE', students: 321, feeCollection: 88.9 }
-                  ].map((dept, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100">
+                  {departmentBreakdown.map((dept, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-100">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
                           <span className="text-white font-bold text-sm">{dept.code}</span>
                         </div>
                         <div>
@@ -240,7 +226,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                   placeholder="Search students..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/80 backdrop-blur-sm border-white/50 focus:bg-white"
+                  className="pl-10"
                 />
               </div>
 
@@ -254,6 +240,8 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                     <SelectItem value="CSE">CSE</SelectItem>
                     <SelectItem value="ECE">ECE</SelectItem>
                     <SelectItem value="MECH">MECH</SelectItem>
+                    <SelectItem value="CIVIL">CIVIL</SelectItem>
+                    <SelectItem value="EEE">EEE</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -285,55 +273,59 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
             {/* Student List */}
             <div className="space-y-3">
-              {mockStudents.map((student) => {
-                const StatusIcon = getFeeStatusIcon(student.feeStatus);
-                return (
-                  <MobileDataCard
-                    key={student.id}
-                    title={student.name}
-                    subtitle={`${student.rollNumber} • ${student.department} • Sem ${student.semester}`}
-                    status={{
-                      label: student.feeStatus,
-                      variant: student.feeStatus === 'Paid' ? 'default' : 'secondary'
-                    }}
-                    data={[
-                      {
-                        label: 'Performance',
-                        value: `${student.academicPerformance}%`,
-                        icon: TrendingUp,
-                        color: student.academicPerformance >= 90 ? 'text-green-600' : 'text-orange-600'
-                      },
-                      {
-                        label: 'Fee Status',
-                        value: student.feeStatus,
-                        icon: StatusIcon,
-                        color: getFeeStatusColor(student.feeStatus).split(' ')[0]
-                      },
-                      {
-                        label: 'Scholarships',
-                        value: `${student.scholarships.length} active`,
-                        icon: Star,
-                        color: 'text-purple-600'
-                      },
-                      {
-                        label: 'Contact',
-                        value: student.phone,
-                        icon: Calendar,
-                        color: 'text-blue-600'
-                      }
-                    ]}
-                    actions={[
-                      {
-                        label: 'View Profile',
-                        icon: Eye,
-                        onClick: () => console.log('View student:', student.id)
-                      }
-                    ]}
-                    onClick={() => console.log('Student clicked:', student.id)}
-                    className="hover:shadow-md transition-shadow"
-                  />
-                );
-              })}
+              {students.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No students found</p>
+                    <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                students.map((student) => {
+                  const StatusIcon = getFeeStatusIcon(student.feeStatus);
+                  return (
+                    <MobileDataCard
+                      key={student.id}
+                      title={student.name}
+                      subtitle={`${student.roll_number} • ${student.department} • Sem ${student.semester}`}
+                      status={{
+                        label: student.feeStatus,
+                        variant: student.feeStatus === 'Paid' ? 'default' : 'secondary'
+                      }}
+                      data={[
+                        {
+                          label: 'Fee Status',
+                          value: student.feeStatus,
+                          icon: StatusIcon,
+                          color: getFeeStatusColor(student.feeStatus).split(' ')[0]
+                        },
+                        {
+                          label: 'Scholarships',
+                          value: `${student.scholarships.length} active`,
+                          icon: Star,
+                          color: 'text-purple-600'
+                        },
+                        {
+                          label: 'Department',
+                          value: student.department,
+                          icon: BookOpen,
+                          color: 'text-blue-600'
+                        }
+                      ]}
+                      actions={[
+                        {
+                          label: 'View Profile',
+                          icon: Eye,
+                          onClick: () => console.log('View student:', student.id)
+                        }
+                      ]}
+                      onClick={() => console.log('Student clicked:', student.id)}
+                      className="hover:shadow-md transition-shadow"
+                    />
+                  );
+                })
+              )}
             </div>
           </div>
         );
@@ -343,7 +335,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
           <div className="p-4">
             <Card>
               <CardContent className="text-center py-8">
-                <GraduationCap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">Coming Soon</p>
                 <p className="text-sm text-gray-400 mt-1">This section is under development</p>
               </CardContent>
@@ -354,7 +346,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   };
 
   return (
-    <div className={cn("min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50", className)}>
+    <div className={cn("min-h-screen bg-gray-50", className)}>
       <ChairmanMobileHeader
         title="Student Management"
         subtitle="Institutional Student Oversight"
@@ -372,15 +364,6 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
       <div className="pb-20">
         {renderContent()}
-      </div>
-
-      {/* Chairman Role Indicator */}
-      <div className="fixed bottom-16 left-0 right-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-center shadow-lg">
-        <div className="flex items-center justify-center space-x-2">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-          <p className="text-xs font-medium">Chairman's View • Executive Access</p>
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-        </div>
       </div>
     </div>
   );
