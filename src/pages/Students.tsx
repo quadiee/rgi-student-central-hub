@@ -3,8 +3,6 @@ import React from 'react';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import StudentManagement from '../components/Students/StudentManagement';
 import ChairmanStudentManagement from '../components/Mobile/ChairmanStudentManagement';
-import EnhancedMobileLayout from '../components/Mobile/EnhancedMobileLayout';
-import ModernLayout from '../components/Layout/ModernLayout';
 import { useIsMobile } from '../hooks/use-mobile';
 
 const Students: React.FC = () => {
@@ -15,28 +13,12 @@ const Students: React.FC = () => {
 
   // For Chairman on mobile, use the specialized component
   if (isMobile && user.role === 'chairman') {
-    return (
-      <EnhancedMobileLayout>
-        <ChairmanStudentManagement />
-      </EnhancedMobileLayout>
-    );
+    return <ChairmanStudentManagement />;
   }
 
-  // For mobile (non-chairman users)
-  if (isMobile) {
-    return (
-      <EnhancedMobileLayout>
-        <StudentManagement />
-      </EnhancedMobileLayout>
-    );
-  }
-
-  // For desktop
-  return (
-    <ModernLayout>
-      <StudentManagement />
-    </ModernLayout>
-  );
+  // For mobile (non-chairman users) and desktop - no layout wrapper needed
+  // ModernLayout is already handled at the app level
+  return <StudentManagement />;
 };
 
 export default Students;
