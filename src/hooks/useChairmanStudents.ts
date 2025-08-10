@@ -57,9 +57,6 @@ export const useChairmanStudents = () => {
             status,
             final_amount,
             paid_amount
-          ),
-          scholarships (
-            scholarship_type
           )
         `)
         .eq('role', 'student')
@@ -91,6 +88,12 @@ export const useChairmanStudents = () => {
 
       if (fetchError) throw fetchError;
 
+      // Get scholarships separately to avoid relationship ambiguity
+      const { data: scholarshipsData } = await supabase
+        .from('scholarships')
+        .select('student_id, scholarship_type')
+        .in('student_id', (data || []).map(s => s.id));
+
       // Transform data
       const transformedStudents: ChairmanStudentData[] = (data || []).map((student: any) => {
         const feeRecords = student.fee_records || [];
@@ -104,7 +107,9 @@ export const useChairmanStudents = () => {
           feeStatus = 'Overdue';
         }
 
-        const scholarships = (student.scholarships || []).map((s: any) => s.scholarship_type);
+        const studentScholarships = (scholarshipsData || [])
+          .filter((s: any) => s.student_id === student.id)
+          .map((s: any) => s.scholarship_type);
 
         return {
           id: student.id,
@@ -113,7 +118,7 @@ export const useChairmanStudents = () => {
           department: student.departments?.code || 'N/A',
           semester: student.semester || 0,
           feeStatus,
-          scholarships,
+          scholarships: studentScholarships,
           phone: student.phone,
           email: student.email || '',
           department_id: student.department_id
