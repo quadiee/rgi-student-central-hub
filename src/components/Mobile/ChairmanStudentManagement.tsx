@@ -16,9 +16,7 @@ import {
   XCircle,
   Star,
   BookOpen,
-  MapPin,
-  Phone,
-  Mail
+  MapPin
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import MobileDataCard from './MobileDataCard';
@@ -29,14 +27,12 @@ import { useChairmanStudents } from '../../hooks/useChairmanStudents';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
 import { useScholarshipStats } from '../../hooks/useScholarshipStats';
 import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
-import { useToast } from '../ui/use-toast';
 
 interface ChairmanStudentManagementProps {
   className?: string;
 }
 
 const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ className }) => {
-  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedSemester, setSelectedSemester] = useState('all');
@@ -50,37 +46,17 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
   const loading = studentsLoading || statsLoading || scholarshipLoading;
 
-  // Calculate real stats from students data
+  // Calculate real stats from data
   const realStats = React.useMemo(() => {
-    // Calculate fee collection from actual student data
-    let totalFees = 0;
-    let totalCollected = 0;
-    
-    students.forEach(student => {
-      // For each student, we need to calculate their total fees and collected amount
-      // This is based on their fee records which are already processed in the hook
-      if (student.feeStatus === 'Paid') {
-        // If paid, assume they paid their full amount
-        const studentTotal = 50000; // Default fee amount - you might want to make this dynamic
-        totalFees += studentTotal;
-        totalCollected += studentTotal;
-      } else {
-        // If pending/overdue, add to total but not to collected
-        const studentTotal = 50000;
-        totalFees += studentTotal;
-        // Add any partial payments
-        totalCollected += studentTotal * 0.2; // Assuming 20% partial payment for demo
-      }
-    });
-
+    const totalFees = feeAnalytics.reduce((sum, item) => sum + (item.total_fees || 0), 0);
+    const totalCollected = feeAnalytics.reduce((sum, item) => sum + (item.total_collected || 0), 0);
     const collectionRate = totalFees > 0 ? (totalCollected / totalFees) * 100 : 0;
-    const collectedInCrores = totalCollected / 10000000; // Convert to crores
 
     return [
       {
         title: 'Total Students',
-        value: students.length.toString(),
-        subtitle: `${students.filter(s => s.feeStatus !== 'Inactive').length} active`,
+        value: institutionalStats.totalStudents.toString(),
+        subtitle: `${institutionalStats.activeStudents} active`,
         icon: Users,
         trend: { value: 5, direction: 'up' as const, period: 'vs last sem' },
         color: 'text-blue-600',
@@ -89,7 +65,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       {
         title: 'Fee Collection',
         value: `${Math.round(collectionRate)}%`,
-        subtitle: `₹${collectedInCrores.toFixed(1)}Cr collected`,
+        subtitle: `₹${Math.round(totalCollected / 10000000)}Cr collected`,
         icon: CreditCard,
         trend: { value: 12, direction: 'up' as const, period: 'vs last month' },
         color: 'text-green-600',
@@ -114,7 +90,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
         bgColor: 'bg-orange-50'
       }
     ];
-  }, [students, scholarshipStats]);
+  }, [institutionalStats, scholarshipStats, feeAnalytics]);
 
   const sections = [
     {
@@ -135,28 +111,29 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     }
   ];
 
-  // Department breakdown with real fee collection data
+  // Department breakdown with real data
   const departmentBreakdown = React.useMemo(() => {
     const deptStats = students.reduce((acc, student) => {
       if (!acc[student.department]) {
         acc[student.department] = {
           code: student.department,
           students: 0,
-          paidStudents: 0,
+          feeCollection: 0,
+          totalPaid: 0,
           totalStudents: 0
         };
       }
       acc[student.department].students += 1;
       acc[student.department].totalStudents += 1;
       if (student.feeStatus === 'Paid') {
-        acc[student.department].paidStudents += 1;
+        acc[student.department].totalPaid += 1;
       }
       return acc;
     }, {} as any);
 
     return Object.values(deptStats).map((dept: any) => ({
       ...dept,
-      feeCollection: dept.totalStudents > 0 ? Math.round((dept.paidStudents / dept.totalStudents) * 100) : 0
+      feeCollection: dept.totalStudents > 0 ? Math.round((dept.totalPaid / dept.totalStudents) * 100) : 0
     }));
   }, [students]);
 
@@ -168,7 +145,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       feeStatus: selectedFeeStatus,
       searchTerm: searchTerm.trim() || undefined
     });
-  }, [selectedDepartment, selectedSemester, selectedFeeStatus, searchTerm, fetchStudents]);
+  }, [selectedDepartment, selectedSemester, selectedFeeStatus, searchTerm]);
 
   const getFeeStatusColor = (status: string) => {
     switch (status) {
@@ -185,39 +162,6 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       case 'Pending': return AlertCircle;
       case 'Overdue': return XCircle;
       default: return AlertCircle;
-    }
-  };
-
-  const handleViewStudent = (student: any) => {
-    toast({
-      title: "Student Profile",
-      description: `Viewing profile for ${student.name} (${student.roll_number})`,
-    });
-    console.log('View student profile:', student);
-    // Here you would typically navigate to student details page
-  };
-
-  const handleContactStudent = (student: any) => {
-    if (student.phone) {
-      window.open(`tel:${student.phone}`, '_blank');
-    } else {
-      toast({
-        title: "No Phone Number",
-        description: "Phone number not available for this student",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleEmailStudent = (student: any) => {
-    if (student.email) {
-      window.open(`mailto:${student.email}`, '_blank');
-    } else {
-      toast({
-        title: "No Email",
-        description: "Email not available for this student",
-        variant: "destructive"
-      });
     }
   };
 
@@ -298,7 +242,6 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                     <SelectItem value="MECH">MECH</SelectItem>
                     <SelectItem value="CIVIL">CIVIL</SelectItem>
                     <SelectItem value="EEE">EEE</SelectItem>
-                    <SelectItem value="BME">BME</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -345,7 +288,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                     <MobileDataCard
                       key={student.id}
                       title={student.name}
-                      subtitle={`${student.roll_number} • ${student.department} • Sem ${student.semester || 'N/A'}`}
+                      subtitle={`${student.roll_number} • ${student.department} • Sem ${student.semester}`}
                       status={{
                         label: student.feeStatus,
                         variant: student.feeStatus === 'Paid' ? 'default' : 'secondary'
@@ -374,21 +317,11 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                         {
                           label: 'View Profile',
                           icon: Eye,
-                          onClick: () => handleViewStudent(student)
-                        },
-                        ...(student.phone ? [{
-                          label: 'Call',
-                          icon: Phone,
-                          onClick: () => handleContactStudent(student)
-                        }] : []),
-                        ...(student.email ? [{
-                          label: 'Email',
-                          icon: Mail,
-                          onClick: () => handleEmailStudent(student)
-                        }] : [])
+                          onClick: () => console.log('View student:', student.id)
+                        }
                       ]}
-                      onClick={() => handleViewStudent(student)}
-                      className="hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => console.log('Student clicked:', student.id)}
+                      className="hover:shadow-md transition-shadow"
                     />
                   );
                 })
