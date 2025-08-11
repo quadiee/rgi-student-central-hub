@@ -21,18 +21,23 @@ import MobileDataCard from './MobileDataCard';
 import ChairmanMobileHeader from './ChairmanMobileHeader';
 import ChairmanMobileStatsGrid from './ChairmanMobileStatsGrid';
 import ChairmanMobileTabs from './ChairmanMobileTabs';
+import FacultyDetailsModal from '../Faculty/FacultyDetailsModal';
 import { useFacultyStats } from '../../hooks/useFacultyStats';
 import { supabase } from '../../integrations/supabase/client';
+import { useToast } from '../ui/use-toast';
 
 interface ChairmanFacultyManagementProps {
   className?: string;
 }
 
 const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ className }) => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [activeSection, setActiveSection] = useState('overview');
   const [departments, setDepartments] = useState<any[]>([]);
+  const [selectedFaculty, setSelectedFaculty] = useState<any>(null);
+  const [showFacultyModal, setShowFacultyModal] = useState(false);
 
   const { stats, loading, refetch } = useFacultyStats();
 
@@ -129,6 +134,71 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
       return matchesSearch && matchesDepartment;
     });
   }, [stats.faculty, searchTerm, selectedDepartment]);
+
+  const handleViewFaculty = async (faculty: any) => {
+    try {
+      // Fetch complete faculty details from the database
+      const { data: facultyData, error } = await supabase
+        .from('faculty_profiles')
+        .select(`
+          *,
+          profiles!faculty_profiles_user_id_fkey (
+            id,
+            name,
+            email,
+            phone,
+            department_id,
+            departments (
+              name,
+              code
+            )
+          )
+        `)
+        .eq('id', faculty.faculty_id)
+        .single();
+
+      if (error) throw error;
+
+      if (facultyData) {
+        // Transform the data to match the expected structure
+        const transformedFaculty = {
+          faculty_id: facultyData.id,
+          user_id: facultyData.user_id,
+          name: facultyData.profiles?.name || 'N/A',
+          email: facultyData.profiles?.email || 'N/A',
+          employee_code: facultyData.employee_code,
+          designation: facultyData.designation,
+          department_name: facultyData.profiles?.departments?.name || 'N/A',
+          department_code: facultyData.profiles?.departments?.code || 'N/A',
+          joining_date: facultyData.joining_date,
+          phone: facultyData.profiles?.phone,
+          gender: faculty.gender,
+          age: faculty.age,
+          years_of_experience: faculty.years_of_experience,
+          is_active: facultyData.is_active,
+          emergency_contact_name: facultyData.emergency_contact_name,
+          emergency_contact_phone: facultyData.emergency_contact_phone,
+          current_address: facultyData.current_address,
+          blood_group: facultyData.blood_group,
+          marital_status: facultyData.marital_status,
+          total_attendance_days: faculty.total_attendance_days || 0,
+          present_days: faculty.present_days || 0,
+          absent_days: faculty.absent_days || 0,
+          attendance_percentage: faculty.attendance_percentage || 0
+        };
+
+        setSelectedFaculty(transformedFaculty);
+        setShowFacultyModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching faculty details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load faculty details",
+        variant: "destructive"
+      });
+    }
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -254,13 +324,13 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
                     ]}
                     actions={[
                       {
-                        label: 'View Profile',
+                        label: 'View Details',
                         icon: Eye,
-                        onClick: () => console.log('View faculty:', faculty.faculty_id)
+                        onClick: () => handleViewFaculty(faculty)
                       }
                     ]}
-                    onClick={() => console.log('Faculty clicked:', faculty.faculty_id)}
-                    className="hover:shadow-md transition-shadow"
+                    onClick={() => handleViewFaculty(faculty)}
+                    className="hover:shadow-md transition-shadow cursor-pointer"
                   />
                 ))
               )}
@@ -303,6 +373,18 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
       <div className="pb-20">
         {renderContent()}
       </div>
+
+      {/* Faculty Details Modal */}
+      {selectedFaculty && (
+        <FacultyDetailsModal
+          isOpen={showFacultyModal}
+          onClose={() => {
+            setShowFacultyModal(false);
+            setSelectedFaculty(null);
+          }}
+          faculty={selectedFaculty}
+        />
+      )}
     </div>
   );
 };

@@ -16,6 +16,9 @@ export interface ChairmanStudentData {
   phone?: string;
   email: string;
   department_id: string;
+  totalFees: number;
+  totalPaid: number;
+  dueAmount: number;
 }
 
 export const useChairmanStudents = () => {
@@ -38,7 +41,6 @@ export const useChairmanStudents = () => {
       setError(null);
 
       // Get all students with their department and fee information
-      // Using the correct relationship specification to avoid ambiguity
       let query = supabase
         .from('profiles')
         .select(`
@@ -52,11 +54,6 @@ export const useChairmanStudents = () => {
           departments!profiles_department_id_fkey (
             name,
             code
-          ),
-          fee_records (
-            status,
-            final_amount,
-            paid_amount
           )
         `)
         .eq('role', 'student')
@@ -64,7 +61,6 @@ export const useChairmanStudents = () => {
 
       // Apply filters
       if (filters?.department && filters.department !== 'all') {
-        // First get the department ID from the code
         const { data: deptData } = await supabase
           .from('departments')
           .select('id')
@@ -88,22 +84,30 @@ export const useChairmanStudents = () => {
 
       if (fetchError) throw fetchError;
 
-      // Get scholarships separately to avoid relationship ambiguity
+      // Get fee records for all students
+      const studentIds = (data || []).map(s => s.id);
+      const { data: feeData } = await supabase
+        .from('fee_records')
+        .select('student_id, original_amount, final_amount, paid_amount, status')
+        .in('student_id', studentIds);
+
+      // Get scholarships separately
       const { data: scholarshipsData } = await supabase
         .from('scholarships')
         .select('student_id, scholarship_type')
-        .in('student_id', (data || []).map(s => s.id));
+        .in('student_id', studentIds);
 
-      // Transform data
+      // Transform data with real fee calculations
       const transformedStudents: ChairmanStudentData[] = (data || []).map((student: any) => {
-        const feeRecords = student.fee_records || [];
-        const totalFees = feeRecords.reduce((sum: number, record: any) => sum + (record.final_amount || 0), 0);
-        const totalPaid = feeRecords.reduce((sum: number, record: any) => sum + (record.paid_amount || 0), 0);
+        const studentFees = (feeData || []).filter((fee: any) => fee.student_id === student.id);
+        const totalFees = studentFees.reduce((sum: number, fee: any) => sum + (Number(fee.final_amount) || 0), 0);
+        const totalPaid = studentFees.reduce((sum: number, fee: any) => sum + (Number(fee.paid_amount) || 0), 0);
+        const dueAmount = totalFees - totalPaid;
         
         let feeStatus: 'Paid' | 'Pending' | 'Overdue' = 'Pending';
         if (totalPaid >= totalFees && totalFees > 0) {
           feeStatus = 'Paid';
-        } else if (feeRecords.some((record: any) => record.status === 'Overdue')) {
+        } else if (studentFees.some((fee: any) => fee.status === 'Overdue')) {
           feeStatus = 'Overdue';
         }
 
@@ -121,7 +125,10 @@ export const useChairmanStudents = () => {
           scholarships: studentScholarships,
           phone: student.phone,
           email: student.email || '',
-          department_id: student.department_id
+          department_id: student.department_id,
+          totalFees,
+          totalPaid,
+          dueAmount
         };
       });
 
@@ -149,7 +156,6 @@ export const useChairmanStudents = () => {
     }
   }, [user, toast]);
 
-  // Only fetch once on mount, no automatic refetching
   useEffect(() => {
     if (user) {
       fetchStudents();

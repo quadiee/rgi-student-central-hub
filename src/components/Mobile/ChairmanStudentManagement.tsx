@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -25,12 +24,14 @@ import MobileDataCard from './MobileDataCard';
 import ChairmanMobileHeader from './ChairmanMobileHeader';
 import ChairmanMobileStatsGrid from './ChairmanMobileStatsGrid';
 import ChairmanMobileTabs from './ChairmanMobileTabs';
+import StudentDetailsModal from '../Students/StudentDetailsModal';
 import { useChairmanStudents } from '../../hooks/useChairmanStudents';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
 import { useScholarshipStats } from '../../hooks/useScholarshipStats';
 import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../ui/use-toast';
+import { supabase } from '../../integrations/supabase/client';
 
 interface ChairmanStudentManagementProps {
   className?: string;
@@ -43,6 +44,8 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [selectedFeeStatus, setSelectedFeeStatus] = useState('all');
   const [activeSection, setActiveSection] = useState('overview');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
   // Debounce search term to prevent excessive API calls
@@ -57,27 +60,8 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
   // Calculate real stats from students data
   const realStats = React.useMemo(() => {
-    // Calculate fee collection from actual student data
-    let totalFees = 0;
-    let totalCollected = 0;
-    
-    students.forEach(student => {
-      // For each student, we need to calculate their total fees and collected amount
-      // This is based on their fee records which are already processed in the hook
-      if (student.feeStatus === 'Paid') {
-        // If paid, assume they paid their full amount
-        const studentTotal = 50000; // Default fee amount - you might want to make this dynamic
-        totalFees += studentTotal;
-        totalCollected += studentTotal;
-      } else {
-        // If pending/overdue, add to total but not to collected
-        const studentTotal = 50000;
-        totalFees += studentTotal;
-        // Add any partial payments
-        totalCollected += studentTotal * 0.2; // Assuming 20% partial payment for demo
-      }
-    });
-
+    const totalFees = students.reduce((sum, student) => sum + student.totalFees, 0);
+    const totalCollected = students.reduce((sum, student) => sum + student.totalPaid, 0);
     const collectionRate = totalFees > 0 ? (totalCollected / totalFees) * 100 : 0;
     const collectedInCrores = totalCollected / 10000000; // Convert to crores
 
@@ -94,7 +78,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       {
         title: 'Fee Collection',
         value: `${Math.round(collectionRate)}%`,
-        subtitle: `₹${collectedInCrores.toFixed(1)}Cr collected`,
+        subtitle: `₹${collectedInCrores.toFixed(2)}Cr collected`,
         icon: CreditCard,
         trend: { value: 12, direction: 'up' as const, period: 'vs last month' },
         color: 'text-green-600',
@@ -147,21 +131,19 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
         acc[student.department] = {
           code: student.department,
           students: 0,
-          paidStudents: 0,
-          totalStudents: 0
+          totalFees: 0,
+          totalCollected: 0
         };
       }
       acc[student.department].students += 1;
-      acc[student.department].totalStudents += 1;
-      if (student.feeStatus === 'Paid') {
-        acc[student.department].paidStudents += 1;
-      }
+      acc[student.department].totalFees += student.totalFees;
+      acc[student.department].totalCollected += student.totalPaid;
       return acc;
     }, {} as any);
 
     return Object.values(deptStats).map((dept: any) => ({
       ...dept,
-      feeCollection: dept.totalStudents > 0 ? Math.round((dept.paidStudents / dept.totalStudents) * 100) : 0
+      feeCollection: dept.totalFees > 0 ? Math.round((dept.totalCollected / dept.totalFees) * 100) : 0
     }));
   }, [students]);
 
@@ -169,7 +151,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   useEffect(() => {
     if (initialLoad) {
       setInitialLoad(false);
-      return; // Skip the first effect as data is already loaded
+      return;
     }
 
     fetchStudents({
@@ -198,13 +180,35 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     }
   };
 
-  const handleViewStudent = (student: any) => {
-    toast({
-      title: "Student Profile",
-      description: `Viewing profile for ${student.name} (${student.roll_number})`,
-    });
-    console.log('View student profile:', student);
-    // Here you would typically navigate to student details page
+  const handleViewStudent = async (student: any) => {
+    try {
+      // Fetch complete student details from the database
+      const { data: studentData, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          departments (
+            name,
+            code
+          )
+        `)
+        .eq('id', student.id)
+        .single();
+
+      if (error) throw error;
+
+      if (studentData) {
+        setSelectedStudent(studentData);
+        setShowStudentModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching student details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load student details",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleContactStudent = (student: any) => {
@@ -378,21 +382,21 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
                           color: getFeeStatusColor(student.feeStatus).split(' ')[0]
                         },
                         {
+                          label: 'Total Fees',
+                          value: `₹${student.totalFees.toLocaleString()}`,
+                          icon: CreditCard,
+                          color: 'text-blue-600'
+                        },
+                        {
                           label: 'Scholarships',
                           value: `${student.scholarships.length} active`,
                           icon: Star,
                           color: 'text-purple-600'
-                        },
-                        {
-                          label: 'Department',
-                          value: student.department,
-                          icon: BookOpen,
-                          color: 'text-blue-600'
                         }
                       ]}
                       actions={[
                         {
-                          label: 'View Profile',
+                          label: 'View Details',
                           icon: Eye,
                           onClick: () => handleViewStudent(student)
                         },
@@ -452,6 +456,18 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       <div className="pb-20">
         {renderContent()}
       </div>
+
+      {/* Student Details Modal */}
+      {selectedStudent && (
+        <StudentDetailsModal
+          isOpen={showStudentModal}
+          onClose={() => {
+            setShowStudentModal(false);
+            setSelectedStudent(null);
+          }}
+          student={selectedStudent}
+        />
+      )}
     </div>
   );
 };
