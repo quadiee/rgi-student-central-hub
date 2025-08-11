@@ -80,7 +80,7 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       {
         title: 'Total Students',
         value: students.length.toString(),
-        subtitle: `${students.filter(s => s.feeStatus !== 'Inactive').length} active`,
+        subtitle: `${students.length} active`,
         icon: Users,
         trend: { value: 5, direction: 'up' as const, period: 'vs last sem' },
         color: 'text-blue-600',
