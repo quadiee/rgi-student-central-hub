@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useToast } from '../components/ui/use-toast';
@@ -25,7 +25,7 @@ export const useChairmanStudents = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStudents = async (filters?: {
+  const fetchStudents = useCallback(async (filters?: {
     department?: string;
     semester?: number;
     feeStatus?: string;
@@ -147,13 +147,14 @@ export const useChairmanStudents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
+  // Only fetch once on mount, no automatic refetching
   useEffect(() => {
     if (user) {
       fetchStudents();
     }
-  }, [user]);
+  }, [user?.id]);
 
   return {
     students,

@@ -62,7 +62,7 @@ export const useInstitutionalStats = () => {
     };
 
     fetchStats();
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id to prevent unnecessary re-fetches
 
   return { stats, loading, error };
 };

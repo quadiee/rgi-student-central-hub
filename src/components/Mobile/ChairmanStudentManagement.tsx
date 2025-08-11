@@ -29,6 +29,7 @@ import { useChairmanStudents } from '../../hooks/useChairmanStudents';
 import { useInstitutionalStats } from '../../hooks/useInstitutionalStats';
 import { useScholarshipStats } from '../../hooks/useScholarshipStats';
 import { useFeeTypeAnalytics } from '../../hooks/useFeeTypeAnalytics';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../ui/use-toast';
 
 interface ChairmanStudentManagementProps {
@@ -42,13 +43,17 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [selectedFeeStatus, setSelectedFeeStatus] = useState('all');
   const [activeSection, setActiveSection] = useState('overview');
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  // Debounce search term to prevent excessive API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const { students, loading: studentsLoading, fetchStudents } = useChairmanStudents();
   const { stats: institutionalStats, loading: statsLoading } = useInstitutionalStats();
   const { stats: scholarshipStats, loading: scholarshipLoading } = useScholarshipStats();
   const { analytics: feeAnalytics } = useFeeTypeAnalytics();
 
-  const loading = studentsLoading || statsLoading || scholarshipLoading;
+  const loading = studentsLoading || (initialLoad && (statsLoading || scholarshipLoading));
 
   // Calculate real stats from students data
   const realStats = React.useMemo(() => {
@@ -160,15 +165,20 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
     }));
   }, [students]);
 
+  // Apply filters when they change (with debounced search)
   useEffect(() => {
-    // Apply filters when they change
+    if (initialLoad) {
+      setInitialLoad(false);
+      return; // Skip the first effect as data is already loaded
+    }
+
     fetchStudents({
       department: selectedDepartment,
       semester: selectedSemester === 'all' ? undefined : parseInt(selectedSemester),
       feeStatus: selectedFeeStatus,
-      searchTerm: searchTerm.trim() || undefined
+      searchTerm: debouncedSearchTerm.trim() || undefined
     });
-  }, [selectedDepartment, selectedSemester, selectedFeeStatus, searchTerm, fetchStudents]);
+  }, [selectedDepartment, selectedSemester, selectedFeeStatus, debouncedSearchTerm, fetchStudents]);
 
   const getFeeStatusColor = (status: string) => {
     switch (status) {
@@ -328,9 +338,19 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
               </div>
             </div>
 
+            {/* Show subtle loading indicator for filter changes */}
+            {studentsLoading && !initialLoad && (
+              <div className="text-center py-2">
+                <div className="inline-flex items-center space-x-2 text-sm text-gray-500">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                  <span>Updating...</span>
+                </div>
+              </div>
+            )}
+
             {/* Student List */}
             <div className="space-y-3">
-              {students.length === 0 ? (
+              {students.length === 0 && !studentsLoading ? (
                 <Card>
                   <CardContent className="text-center py-8">
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
