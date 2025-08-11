@@ -182,12 +182,12 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
 
   const handleViewStudent = async (student: any) => {
     try {
-      // Fetch complete student details from the database
+      // Fetch complete student details from the database using the specific relationship
       const { data: studentData, error } = await supabase
         .from('profiles')
         .select(`
           *,
-          departments (
+          departments!profiles_department_id_fkey (
             name,
             code
           )
@@ -198,7 +198,32 @@ const ChairmanStudentManagement: React.FC<ChairmanStudentManagementProps> = ({ c
       if (error) throw error;
 
       if (studentData) {
-        setSelectedStudent(studentData);
+        // Transform the data to match the expected Student interface
+        const transformedStudent = {
+          id: studentData.id,
+          name: studentData.name || 'N/A',
+          email: studentData.email || 'N/A',
+          rollNumber: studentData.roll_number || 'N/A',
+          department: studentData.departments?.name || 'N/A',
+          course: 'B.Tech', // Default course
+          section: studentData.year_section || 'N/A',
+          year: studentData.year || 0,
+          semester: studentData.semester || 0,
+          phone: studentData.phone,
+          address: studentData.address,
+          guardianName: null, // Not available in profiles table
+          guardianPhone: null, // Not available in profiles table
+          emergencyContact: null, // Not available in profiles table
+          bloodGroup: null, // Not available in profiles table
+          admissionDate: studentData.created_at,
+          profileImage: studentData.profile_photo_url,
+          feeStatus: student.feeStatus || 'Pending',
+          totalFees: student.totalFees || 0,
+          paidAmount: student.totalPaid || 0,
+          dueAmount: student.dueAmount || 0
+        };
+
+        setSelectedStudent(transformedStudent);
         setShowStudentModal(true);
       }
     } catch (error) {

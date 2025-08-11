@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -137,7 +136,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
 
   const handleViewFaculty = async (faculty: any) => {
     try {
-      // Fetch complete faculty details from the database
+      // Fetch complete faculty details from the database using the specific relationship
       const { data: facultyData, error } = await supabase
         .from('faculty_profiles')
         .select(`
@@ -148,7 +147,7 @@ const ChairmanFacultyManagement: React.FC<ChairmanFacultyManagementProps> = ({ c
             email,
             phone,
             department_id,
-            departments (
+            departments!profiles_department_id_fkey (
               name,
               code
             )

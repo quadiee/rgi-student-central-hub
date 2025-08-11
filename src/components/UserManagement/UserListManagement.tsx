@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Edit, Trash2, MoreVertical, Eye, UserCheck, UserX } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -57,7 +56,7 @@ const UserListManagement: React.FC<UserListManagementProps> = ({ refreshTrigger,
         .from('profiles')
         .select(`
           *,
-          departments:department_id (
+          departments:department_id!profiles_department_id_fkey (
             name,
             code
           )
