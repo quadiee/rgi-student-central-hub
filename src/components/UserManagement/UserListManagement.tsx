@@ -56,7 +56,7 @@ const UserListManagement: React.FC<UserListManagementProps> = ({ refreshTrigger,
         .from('profiles')
         .select(`
           *,
-          departments:department_id!profiles_department_id_fkey (
+          departments!profiles_department_id_fkey (
             name,
             code
           )
