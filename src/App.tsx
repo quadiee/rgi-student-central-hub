@@ -1,103 +1,64 @@
-
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from './components/ui/toaster';
-import ProtectedRoute from './components/Auth/ProtectedRoute';
-import SupabaseAuthPage from './components/Auth/SupabaseAuthPage';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import AuthPage from './pages/AuthPage';
+import InvitationSignup from './pages/InvitationSignup';
+import RoleDashboard from './components/Dashboard/RoleDashboard';
 import ModernLayout from './components/Layout/ModernLayout';
-import Dashboard from './components/Dashboard/Dashboard';
-import AttendanceHub from './pages/AttendanceHub';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
+import UserProfile from './components/Profile/UserProfile';
+import ChairmanStudentManagement from './components/Mobile/ChairmanStudentManagement';
 import EnhancedFeeManagement from './components/Fees/EnhancedFeeManagement';
-import Students from './pages/Students';
-import Faculty from './pages/Faculty';
-import FacultyDashboard from './pages/FacultyDashboard';
-import UserManagement from './pages/UserManagement';
-import './App.css';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import SimplifiedFeeManagementRoute from './components/Fees/SimplifiedFeeManagementRoute';
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/auth" element={<SupabaseAuthPage />} />
-          
-          {/* Protected routes with layout */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <ModernLayout>
-                <Dashboard />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/attendance" element={
-            <ProtectedRoute>
-              <ModernLayout>
-                <AttendanceHub />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/fees" element={
-            <ProtectedRoute>
-              <ModernLayout>
-                <EnhancedFeeManagement />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/students" element={
-            <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
-              <ModernLayout>
-                <Students />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/faculty" element={
-            <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman', 'hod']}>
-              <ModernLayout>
-                <Faculty />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/faculty-dashboard" element={
-            <ProtectedRoute allowedRoles={['faculty']}>
-              <ModernLayout>
-                <FacultyDashboard />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/user-management" element={
-            <ProtectedRoute allowedRoles={['admin', 'principal', 'chairman']}>
-              <ModernLayout>
-                <UserManagement />
-              </ModernLayout>
-            </ProtectedRoute>
-          } />
-          
-          {/* Redirect root to dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          
-          {/* Catch all - redirect to dashboard */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-        <Toaster />
-      </Router>
-    </QueryClientProvider>
+    <Router>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/invitation-signup" element={<InvitationSignup />} />
+        
+        <Route path="/" element={
+          <ProtectedRoute>
+            <ModernLayout>
+              <RoleDashboard />
+            </ModernLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ModernLayout>
+              <UserProfile />
+            </ModernLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Add the simplified fee management route */}
+        <Route path="/simplified-fees" element={
+          <ProtectedRoute>
+            <ModernLayout>
+              <SimplifiedFeeManagementRoute />
+            </ModernLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/chairman-students" element={
+          <ProtectedRoute>
+            <ModernLayout>
+              <ChairmanStudentManagement />
+            </ModernLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/enhanced-fees" element={
+          <ProtectedRoute>
+            <ModernLayout>
+              <EnhancedFeeManagement />
+            </ModernLayout>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </Router>
   );
 }
 
