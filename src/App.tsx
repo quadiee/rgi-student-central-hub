@@ -1,11 +1,12 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import AuthPage from './pages/AuthPage';
-import InvitationSignup from './pages/InvitationSignup';
-import RoleDashboard from './components/Dashboard/RoleDashboard';
+import AuthPage from './components/Auth/AuthPage';
+import InvitationSignup from './components/Auth/InvitationSignup';
+import RoleDashboard from './components/Mobile/RoleDashboard';
 import ModernLayout from './components/Layout/ModernLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
-import UserProfile from './components/Profile/UserProfile';
+import UserProfile from './components/Auth/UserProfile';
 import ChairmanStudentManagement from './components/Mobile/ChairmanStudentManagement';
 import EnhancedFeeManagement from './components/Fees/EnhancedFeeManagement';
 import SimplifiedFeeManagementRoute from './components/Fees/SimplifiedFeeManagementRoute';
